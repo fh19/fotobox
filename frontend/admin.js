@@ -280,10 +280,92 @@ async function createEvent() {
   }
 }
 
+/* --- status formatting ------------------------------------------------------
+ * The tile shows the fields listed in ui-screens.md. Anything the backend
+ * cannot determine (cpu_temp and uptime return null off the Pi) is shown as
+ * "unbekannt" rather than as an empty row. */
+
+const UNKNOWN = "unbekannt";
+
+function fmtUptime(seconds) {
+  if (seconds === null || seconds === undefined) return UNKNOWN;
+  const total = Math.floor(seconds);
+  const days = Math.floor(total / 86400);
+  const hours = Math.floor((total % 86400) / 3600);
+  const minutes = Math.floor((total % 3600) / 60);
+  const parts = [];
+  if (days) parts.push(`${days} ${days === 1 ? "Tag" : "Tage"}`);
+  if (hours) parts.push(`${hours} Std.`);
+  parts.push(`${minutes} Min.`);
+  return parts.join(", ");
+}
+
+function fmtBytes(bytes) {
+  if (bytes === null || bytes === undefined) return UNKNOWN;
+  const gb = bytes / 1e9;
+  if (gb >= 1) return `${gb.toLocaleString("de-DE", { maximumFractionDigits: 1 })} GB`;
+  return `${Math.round(bytes / 1e6).toLocaleString("de-DE")} MB`;
+}
+
+function fmtCamera(cam) {
+  if (!cam) return UNKNOWN;
+  return cam.available ? cam.model || "verfügbar" : "nicht verfügbar";
+}
+
+/* PrinterState arrives as the raw backend value; the UI is German throughout. */
+const PRINTER_STATE = {
+  idle: "bereit",
+  printing: "druckt",
+  error: "Fehler",
+  offline: "nicht erreichbar",
+};
+
+function fmtPrinter(p) {
+  if (!p) return UNKNOWN;
+  if (!p.available) return "nicht verfügbar";
+  const state = PRINTER_STATE[p.state] || p.state || UNKNOWN;
+  const parts = [p.paused ? "angehalten" : state];
+  if (p.prints_remaining_estimate !== null && p.prints_remaining_estimate !== undefined) {
+    parts.push(`${p.prints_remaining_estimate} Blatt`);
+  }
+  if (p.queue_length) parts.push(`Warteschlange ${p.queue_length}`);
+  return parts.join(" · ");
+}
+
+function fmtStorage(st) {
+  if (!st) return UNKNOWN;
+  let text = `${fmtBytes(st.free_bytes)} frei`;
+  if (st.blocked) text += " — Speicher voll";
+  else if (st.warning) text += " — wird knapp";
+  return text;
+}
+
+/* Renders label/value pairs into the <dl>. `warn` marks a row visually. */
+function renderStatus(rows) {
+  const box = $("status-box");
+  box.textContent = "";
+  for (const [label, value, warn] of rows) {
+    const dt = document.createElement("dt");
+    dt.textContent = label;
+    const dd = document.createElement("dd");
+    dd.textContent = value;
+    if (warn) dd.classList.add("status__warn");
+    box.append(dt, dd);
+  }
+}
+
 async function loadStatus() {
   const s = await api("GET", "/api/admin/system");
   $("event-current").textContent = `Aktuell: ${s.event.name} (${s.event.photo_count} Fotos)`;
-  $("status-box").textContent = JSON.stringify(s, null, 2);
+  const storage = s.storage || {};
+  renderStatus([
+    ["Kamera", fmtCamera(s.camera), s.camera && !s.camera.available],
+    ["Drucker", fmtPrinter(s.printer), s.printer && (!s.printer.available || s.printer.paused)],
+    ["Speicher", fmtStorage(storage), storage.warning || storage.blocked],
+    ["CPU-Temperatur", s.cpu_temp === null || s.cpu_temp === undefined ? UNKNOWN : `${s.cpu_temp} °C`],
+    ["Uptime", fmtUptime(s.uptime_seconds)],
+    ["Version", s.versions && s.versions.python ? `Python ${s.versions.python}` : UNKNOWN],
+  ]);
 }
 
 async function shutdown() {

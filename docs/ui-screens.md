@@ -185,6 +185,13 @@ Person bedient, die weiß, was sie tut.
 Kacheln:
 
 1. **Status** — Kamera, Drucker, Speicher, CPU-Temperatur, Uptime, letzte 20 Log-Einträge
+
+   Darstellung als Beschriftung/Wert-Liste, nicht als JSON. Werte, die das Backend
+   nicht ermitteln kann, erscheinen als `unbekannt`. Zeilen mit Störung (Kamera oder
+   Drucker nicht verfügbar, Drucker angehalten, Speicher knapp oder voll) werden rot
+   hervorgehoben. Die Druckerzustände heißen deutsch: `bereit`, `druckt`, `Fehler`,
+   `nicht erreichbar`, bei pausierter Warteschlange `angehalten`.
+
 2. **Drucker** — großer Button `Drucker fortsetzen` (nach Papier-/Bandwechsel),
    `Warteschlange leeren`, `Testdruck`, `Zähler zurücksetzen (108 Blatt)`
 3. **Event** — aktives Event, Bildzahl, `Neues Event anlegen`
