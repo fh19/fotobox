@@ -138,8 +138,8 @@ async def printer_cancel_all(
     return JSONResponse(_engine(request).printer_cancel_all())
 
 
-@router.post("/printer/paper-reset")
-async def printer_paper_reset(
+@router.post("/printer/counter-reset")
+async def printer_counter_reset(
     request: Request, x_fotobox_pin: str | None = Header(default=None)
 ) -> Response:
     _require_pin(request, x_fotobox_pin)

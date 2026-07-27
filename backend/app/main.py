@@ -44,11 +44,29 @@ async def _timer_loop(engine: Engine, interval: float) -> None:
         await asyncio.sleep(interval)
 
 
+async def _print_status_loop(engine: Engine, interval: float) -> None:
+    """Ask CUPS what became of the open print jobs and persist the outcome.
+
+    Runs off the event loop: pycups calls are blocking. Errors are logged and
+    the loop keeps going — a print job outcome is never worth taking the box
+    down for.
+    """
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            await asyncio.to_thread(engine.reconcile_print_jobs)
+        except Exception:
+            log.exception("Druckauftragsstatus konnte nicht abgeglichen werden")
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     engine: Engine = app.state.engine
     interval = app.state.config.runtime.tick_interval_seconds
     task = asyncio.create_task(_timer_loop(engine, interval))
+    prints = asyncio.create_task(
+        _print_status_loop(engine, app.state.config.hardware.printer.status_poll_seconds)
+    )
     # Catch up on any pipelines a crash/restart left pending, off the event loop.
     recovery = asyncio.create_task(asyncio.to_thread(engine.recover_pending_pipelines))
     log.info("Fotobox bereit (Hardware=%s).", app.state.config.hardware.mode)
@@ -56,9 +74,12 @@ async def _lifespan(app: FastAPI):
         yield
     finally:
         task.cancel()
+        prints.cancel()
         recovery.cancel()
         with suppress(asyncio.CancelledError):
             await task
+        with suppress(asyncio.CancelledError):
+            await prints
         with suppress(asyncio.CancelledError, Exception):
             await recovery
 

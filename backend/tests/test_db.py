@@ -12,7 +12,11 @@ EXPECTED_TABLES = {
     "photos",
     "print_jobs",
     "events_log",
+    "counters",
 }
+
+# Derived from the files on disk, so adding a migration does not break the test.
+LATEST_VERSION = len(list(db.MIGRATIONS_DIR.glob("*.sql")))
 
 EXPECTED_PHOTO_COLUMNS = {
     "id",
@@ -34,7 +38,7 @@ EXPECTED_PHOTO_COLUMNS = {
 def test_migration_creates_schema(tmp_path):
     conn = db.connect(tmp_path / "fotobox.db")
     version = db.migrate(conn)
-    assert version == 1
+    assert version == LATEST_VERSION
 
     tables = {
         row["name"]
@@ -71,9 +75,9 @@ def test_single_active_event_index_enforced(tmp_path):
 def test_migration_is_idempotent(tmp_path):
     path = tmp_path / "fotobox.db"
     conn = db.connect(path)
-    assert db.migrate(conn) == 1
+    assert db.migrate(conn) == LATEST_VERSION
     # Running again applies nothing and keeps the schema intact.
-    assert db.migrate(conn) == 1
+    assert db.migrate(conn) == LATEST_VERSION
     assert db.count_photos(conn, event_id=1) == 0
 
 

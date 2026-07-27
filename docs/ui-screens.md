@@ -193,7 +193,7 @@ Kacheln:
    `nicht erreichbar`, bei pausierter Warteschlange `angehalten`.
 
 2. **Drucker** — großer Button `Drucker fortsetzen` (nach Papier-/Bandwechsel),
-   `Warteschlange leeren`, `Testdruck`, `Zähler zurücksetzen (108 Blatt)`
+   `Warteschlange leeren`, `Testdruck`, `Druckzähler zurücksetzen`
 3. **Event** — aktives Event, Bildzahl, `Neues Event anlegen`
 4. **Hintergründe & Rahmen** — Liste der hochgeladenen Einträge (Name, Modus) mit
    `Löschen`; Upload per `Name`, `Modus` (Rahmen/Overlay/Greenscreen/KI) und Datei.

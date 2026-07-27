@@ -81,8 +81,9 @@ async function loadAll() {
 async function loadPrinter() {
   const p = await api("GET", "/api/admin/printer");
   $("printer-status").textContent =
-    `Status: ${p.state} · pausiert: ${p.paused ? "ja" : "nein"} · ` +
-    `Warteschlange: ${p.queue_length} · Rest ~${p.prints_remaining_estimate ?? "?"} Blatt`;
+    `Status: ${PRINTER_STATE[p.state] || p.state} · pausiert: ${p.paused ? "ja" : "nein"} · ` +
+    `Warteschlange: ${p.queue_length} · ` +
+    `gedruckt: ${p.prints_done_event ?? "?"} (Event), ${p.prints_total ?? "?"} (gesamt)`;
 }
 
 async function printerAction(path, confirmMsg) {
@@ -325,9 +326,6 @@ function fmtPrinter(p) {
   if (!p.available) return "nicht verfügbar";
   const state = PRINTER_STATE[p.state] || p.state || UNKNOWN;
   const parts = [p.paused ? "angehalten" : state];
-  if (p.prints_remaining_estimate !== null && p.prints_remaining_estimate !== undefined) {
-    parts.push(`${p.prints_remaining_estimate} Blatt`);
-  }
   if (p.queue_length) parts.push(`Warteschlange ${p.queue_length}`);
   return parts.join(" · ");
 }
@@ -358,9 +356,12 @@ async function loadStatus() {
   const s = await api("GET", "/api/admin/system");
   $("event-current").textContent = `Aktuell: ${s.event.name} (${s.event.photo_count} Fotos)`;
   const storage = s.storage || {};
+  const p = s.printer || {};
   renderStatus([
     ["Kamera", fmtCamera(s.camera), s.camera && !s.camera.available],
     ["Drucker", fmtPrinter(s.printer), s.printer && (!s.printer.available || s.printer.paused)],
+    ["Gedruckt (Event)", p.prints_done_event ?? UNKNOWN],
+    ["Gedruckt (gesamt)", p.prints_total ?? UNKNOWN],
     ["Speicher", fmtStorage(storage), storage.warning || storage.blocked],
     ["CPU-Temperatur", s.cpu_temp === null || s.cpu_temp === undefined ? UNKNOWN : `${s.cpu_temp} °C`],
     ["Uptime", fmtUptime(s.uptime_seconds)],
@@ -476,7 +477,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("printer-test").addEventListener("click", () =>
     printerAction("/api/admin/printer/test-page", "Testdruck starten? (verbraucht ein Blatt)")
   );
-  $("printer-reset").addEventListener("click", () => printerAction("/api/admin/printer/paper-reset"));
+  $("printer-reset").addEventListener("click", () => printerAction("/api/admin/printer/counter-reset", "Druckzähler wirklich auf 0 setzen?"));
   $("cam-apply").addEventListener("click", applyCamera);
   $("cam-calibrate").addEventListener("click", calibrate);
   $("bg-upload").addEventListener("click", uploadBackground);

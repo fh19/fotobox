@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app import db
 from app.clock import RealClock
 from app.main import create_app
 from tests.conftest import make_config
@@ -28,7 +29,8 @@ def test_printer_status_shape(tmp_path):
         "available",
         "state",
         "paused",
-        "prints_remaining_estimate",
+        "prints_done_event",
+        "prints_total",
         "queue_length",
     }
 
@@ -42,11 +44,15 @@ def test_resume_re_enables_after_paper_out(tmp_path):
     assert body["available"] is True
 
 
-def test_paper_reset_restores_counter(tmp_path):
+def test_counter_reset_zeroes_the_running_total(tmp_path):
     app = _app(tmp_path)
-    app.state.engine.backends.printer._remaining = 5
-    body = TestClient(app).post("/api/admin/printer/paper-reset", headers=PIN).json()
-    assert body["prints_remaining_estimate"] == 108
+    engine = app.state.engine
+    db.increment_counter(engine.conn, "prints_total", 7)
+    engine.conn.commit()
+    assert engine.printer_status()["prints_total"] == 7
+
+    body = TestClient(app).post("/api/admin/printer/counter-reset", headers=PIN).json()
+    assert body["prints_total"] == 0
 
 
 def test_cancel_all(tmp_path):

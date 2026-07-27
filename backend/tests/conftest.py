@@ -99,7 +99,7 @@ def make_engine(tmp_path: Path, clock: FakeClock):
         backends = Backends(
             camera=MockCamera(),
             preview=MockPreview(),
-            printer=MockPrinter(remaining=config.printing.sheets_per_cartridge),
+            printer=MockPrinter(),
         )
         return Engine(config, clock, conn, backends, Broadcaster())
 

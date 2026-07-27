@@ -33,6 +33,9 @@ from app.states import State
 
 log = logging.getLogger("fotobox.engine")
 
+# Name of the resettable running total in the counters table.
+PRINTS_TOTAL = "prints_total"
+
 
 class NotFound(Exception):
     """A referenced resource does not exist (maps to HTTP 404)."""
@@ -264,7 +267,8 @@ class Engine:
             "available": printer.available(),
             "state": str(printer.state()),
             "paused": printer.paused(),
-            "prints_remaining_estimate": printer.prints_remaining_estimate(),
+            "prints_done_event": db.count_event_prints_done(self.conn, self.active_event["id"]),
+            "prints_total": db.get_counter(self.conn, PRINTS_TOTAL),
             "queue_length": printer.queue_length(),
         }
 
@@ -279,9 +283,35 @@ class Engine:
         return self.printer_status()
 
     def printer_reset_counter(self) -> dict:
-        self.backends.printer.reset_counter()
-        self._log("info", "printer", "paper_reset", "Zähler zurückgesetzt")
+        """Zero the running total. The per-event count comes from print_jobs and
+        is not touched — it is history, not a counter."""
+        db.reset_counter(self.conn, PRINTS_TOTAL)
+        self.conn.commit()
+        self._log("info", "printer", "counter_reset", "Druckzähler zurückgesetzt")
         return self.printer_status()
+
+    def reconcile_print_jobs(self) -> int:
+        """Ask the printer what became of the still-open jobs and persist it.
+
+        Returns the number of jobs that reached ``done`` in this pass, so the
+        caller can tell whether anything changed. Jobs the backend cannot judge
+        (``None`` — purged from the CUPS history) stay open and are retried.
+        """
+        printer = self.backends.printer
+        finished = 0
+        for row in db.pending_print_jobs(self.conn):
+            state = printer.job_state(row["cups_job_id"])
+            if state is None or state == "pending":
+                continue
+            db.update_print_job_status(
+                self.conn, job_id=row["id"], status=state, finished_at=self.clock.now()
+            )
+            if state == "done":
+                db.increment_counter(self.conn, PRINTS_TOTAL)
+                finished += 1
+        if finished or self.conn.in_transaction:
+            self.conn.commit()
+        return finished
 
     def printer_test_page(self) -> dict:
         from app.pipeline.testpage import make_test_page
@@ -742,7 +772,6 @@ class Engine:
                 "state": str(printer.state()),
                 "paused": printer.paused(),
                 "message": None,
-                "prints_remaining_estimate": printer.prints_remaining_estimate(),
             },
             "camera": {"available": camera.available(), "model": camera.model()},
             "preview": {"available": preview.available()},

@@ -60,8 +60,7 @@ Vollständiger Zustand. Beim Laden der Seite einmal abrufen, danach reicht der W
     "available": true,
     "state": "idle",
     "paused": false,
-    "message": null,
-    "prints_remaining_estimate": 87
+    "message": null
   },
   "camera": { "available": true, "model": "Nikon D7000" },
   "preview": { "available": true },
@@ -84,8 +83,19 @@ Vollständiger Zustand. Beim Laden der Seite einmal abrufen, danach reicht der W
 ```
 
 `printer.state`: `idle` | `printing` | `error` | `offline`
-`printer.prints_remaining_estimate` ist eine Schätzung aus einem im Admin gesetzten
-Zählerstand, keine Messung — der Selphy meldet den Bandstand nicht.
+
+Die Druckzähler stehen nicht im Gäste-Status, sondern nur unter
+`GET /api/admin/printer` und `GET /api/admin/system`:
+
+- `prints_done_event` — erfolgreich gedruckte Aufträge des aktiven Events, gezählt
+  aus `print_jobs` mit `status = 'done'`
+- `prints_total` — laufende Gesamtzahl seit dem letzten Zurücksetzen, persistent in
+  der Tabelle `counters`
+
+Beides zählt nur tatsächlich fertiggestellte Drucke. Den Status pflegt eine
+Abgleichschleife nach, die im Takt von `hardware.printer.status_poll_seconds` die
+offenen Aufträge bei CUPS abfragt. Ist ein Auftrag aus der CUPS-Historie verschwunden,
+bleibt er offen statt geraten zu werden.
 
 ### `GET /api/backgrounds`
 
@@ -196,7 +206,7 @@ Falsche PIN: `401`. Nach 5 Fehlversuchen 60 s Sperre.
 | `GET` | `/api/admin/system` | CPU-Temperatur, Speicher, Uptime, Versionen |
 | `POST` | `/api/admin/printer/resume` | `cupsenable` — Queue nach Papierfehler entsperren |
 | `POST` | `/api/admin/printer/cancel-all` | Warteschlange leeren |
-| `POST` | `/api/admin/printer/paper-reset` | Zählerstand nach Bandwechsel zurücksetzen |
+| `POST` | `/api/admin/printer/counter-reset` | Laufenden Druckzähler auf 0 setzen |
 | `POST` | `/api/admin/printer/test-page` | Testdruck |
 | `GET`/`PUT` | `/api/admin/config` | Laufzeitkonfiguration lesen/schreiben |
 | `POST` | `/api/admin/calibration` | Crop/Offset Vorschau ↔ DSLR speichern |

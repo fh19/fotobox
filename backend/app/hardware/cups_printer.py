@@ -22,6 +22,17 @@ _IPP_IDLE = 3
 _IPP_PROCESSING = 4
 _IPP_STOPPED = 5
 
+# IPP job-state values → the states the engine persists in print_jobs.
+_JOB_STATE = {
+    3: "pending",  # pending
+    4: "pending",  # pending-held
+    5: "pending",  # processing
+    6: "pending",  # processing-stopped
+    7: "cancelled",  # canceled
+    8: "failed",  # aborted
+    9: "done",  # completed
+}
+
 # printer-state-reasons substrings that mean "cannot print right now".
 _BLOCKING_REASONS = ("media-empty", "media-needed", "marker-supply-empty", "offline", "shutdown")
 
@@ -45,9 +56,6 @@ class CupsPrinter:
     def __init__(self, config: Config) -> None:
         self._config = config
         self._queue = config.hardware.printer.queue_name
-        # The band level is not reported by the Selphy — track it from the admin
-        # counter (reset on a band change).
-        self._remaining = config.printing.sheets_per_cartridge
         self._conn = None
 
     # --- protocol -----------------------------------------------------------
@@ -82,15 +90,23 @@ class CupsPrinter:
         # A paper/band-out stops the CUPS queue → resume re-enables it (M6).
         return attrs.get("printer-state") == _IPP_STOPPED
 
-    def prints_remaining_estimate(self) -> int | None:
-        return self._remaining
-
     def submit(self, path: str) -> int:
         conn = self._connection()
-        job_id = conn.printFile(self._queue, path, "Fotobox", dict(_PRINT_OPTIONS))
-        if self._remaining > 0:
-            self._remaining -= 1
-        return job_id
+        return conn.printFile(self._queue, path, "Fotobox", dict(_PRINT_OPTIONS))
+
+    def job_state(self, job_id: int) -> str | None:
+        """Read ``job-state`` for a submitted job.
+
+        Relies on the CUPS job history (``PreserveJobHistory``, on by default);
+        once a job is purged the attributes are gone and we report ``None``
+        rather than guessing an outcome.
+        """
+        try:
+            attrs = self._connection().getJobAttributes(job_id)
+        except Exception as exc:
+            log.debug("Job %s nicht abfragbar: %s", job_id, exc)
+            return None
+        return _JOB_STATE.get(attrs.get("job-state"))
 
     # --- admin operations ---------------------------------------------------
 
@@ -102,9 +118,6 @@ class CupsPrinter:
 
     def cancel_all(self) -> None:
         self._connection().cancelAllJobs(self._queue)
-
-    def reset_counter(self) -> None:
-        self._remaining = self._config.printing.sheets_per_cartridge
 
     def queue_length(self) -> int:
         try:

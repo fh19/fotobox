@@ -259,7 +259,13 @@ def insert_print_job(
 
 
 def count_event_prints(conn: sqlite3.Connection, event_id: int) -> int:
-    """Count print jobs that were handed to the printer for this event's photos."""
+    """Count print jobs that were handed to the printer for this event's photos.
+
+    Deliberately counts submitted jobs, not finished ones — this backs the
+    ``printing.max_per_event`` limit, which must apply the moment a job is
+    queued. For the "how many were actually printed" display use
+    :func:`count_event_prints_done`.
+    """
     row = conn.execute(
         """
         SELECT COUNT(*) AS n
@@ -270,6 +276,68 @@ def count_event_prints(conn: sqlite3.Connection, event_id: int) -> int:
         (event_id,),
     ).fetchone()
     return row["n"]
+
+
+def count_event_prints_done(conn: sqlite3.Connection, event_id: int) -> int:
+    """Successfully printed jobs for this event's photos."""
+    row = conn.execute(
+        """
+        SELECT COUNT(*) AS n
+        FROM print_jobs pj
+        JOIN photos p ON p.id = pj.photo_id
+        WHERE p.event_id = ? AND pj.status = 'done'
+        """,
+        (event_id,),
+    ).fetchone()
+    return row["n"]
+
+
+def pending_print_jobs(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Jobs that still have an open outcome and carry a CUPS job id."""
+    return conn.execute(
+        """
+        SELECT id, cups_job_id, status
+        FROM print_jobs
+        WHERE status IN ('queued', 'printing') AND cups_job_id IS NOT NULL
+        """
+    ).fetchall()
+
+
+def update_print_job_status(
+    conn: sqlite3.Connection, *, job_id: int, status: str, finished_at: datetime | None
+) -> None:
+    conn.execute(
+        "UPDATE print_jobs SET status = ?, finished_at = ? WHERE id = ?",
+        (status, finished_at.isoformat() if finished_at else None, job_id),
+    )
+
+
+# --- Counters ---------------------------------------------------------------
+
+
+def get_counter(conn: sqlite3.Connection, name: str) -> int:
+    row = conn.execute("SELECT value FROM counters WHERE name = ?", (name,)).fetchone()
+    return row["value"] if row else 0
+
+
+def increment_counter(conn: sqlite3.Connection, name: str, by: int = 1) -> None:
+    conn.execute(
+        """
+        INSERT INTO counters (name, value) VALUES (?, ?)
+        ON CONFLICT(name) DO UPDATE SET value = value + excluded.value
+        """,
+        (name, by),
+    )
+
+
+def reset_counter(conn: sqlite3.Connection, name: str) -> None:
+    conn.execute(
+        """
+        INSERT INTO counters (name, value) VALUES (?, 0)
+        ON CONFLICT(name) DO UPDATE SET value = 0
+        """,
+        (name,),
+    )
 
 
 # --- Log --------------------------------------------------------------------

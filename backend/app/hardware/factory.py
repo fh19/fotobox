@@ -53,7 +53,7 @@ def build_preview(config: Config, selected: DetectedPreview | None):
 
 def build_printer(config: Config):
     if _use_mock(config, config.hardware.printer.backend):
-        return MockPrinter(remaining=config.printing.sheets_per_cartridge)
+        return MockPrinter()
     from app.hardware.cups_printer import CupsPrinter
 
     return CupsPrinter(config)

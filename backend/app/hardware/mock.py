@@ -56,11 +56,13 @@ class MockPreview:
 
 
 class MockPrinter:
-    def __init__(self, available: bool = True, remaining: int = 108) -> None:
+    def __init__(self, available: bool = True) -> None:
         self._available = available
         self._paused = False
-        self._remaining = remaining
         self._next_job_id = 1
+        # Submitted jobs finish right away so mock development shows realistic
+        # counters; tests override single jobs via set_job_state().
+        self._job_states: dict[int, str] = {}
 
     def set_available(self, value: bool) -> None:
         self._available = value
@@ -81,17 +83,19 @@ class MockPrinter:
     def paused(self) -> bool:
         return self._paused
 
-    def prints_remaining_estimate(self) -> int | None:
-        return self._remaining
+    def set_job_state(self, job_id: int, state: str) -> None:
+        self._job_states[job_id] = state
 
     def submit(self, path: str) -> int:
         if not self.available():
             raise RuntimeError("printer_unavailable")
         job_id = self._next_job_id
         self._next_job_id += 1
-        if self._remaining > 0:
-            self._remaining -= 1
+        self._job_states[job_id] = "done"
         return job_id
+
+    def job_state(self, job_id: int) -> str | None:
+        return self._job_states.get(job_id)
 
     # --- admin operations ---------------------------------------------------
 
@@ -100,10 +104,9 @@ class MockPrinter:
         self._available = True
 
     def cancel_all(self) -> None:
-        pass
-
-    def reset_counter(self) -> None:
-        self._remaining = 108
+        for job_id, state in list(self._job_states.items()):
+            if state == "pending":
+                self._job_states[job_id] = "cancelled"
 
     def queue_length(self) -> int:
-        return 0
+        return sum(1 for s in self._job_states.values() if s == "pending")

@@ -100,7 +100,7 @@ Die Kacheln:
 | Kachel | Wofür |
 |---|---|
 | **Status** | Kamera, Drucker, Speicher, CPU-Temperatur, Uptime, letzte Log-Einträge |
-| **Drucker** | **„Drucker fortsetzen"** (nach Papier-/Bandwechsel), Warteschlange leeren, Testdruck, Zähler zurücksetzen |
+| **Drucker** | **„Drucker fortsetzen"** (nach Papier-/Bandwechsel), Warteschlange leeren, Testdruck, Druckzähler zurücksetzen |
 | **Kamera** | Haupt-/Vorschaukamera wählen, **Ausrichtung kalibrieren** |
 | **Hintergründe & Rahmen** | Rahmen/Hintergründe hochladen, auflisten, löschen (Abschnitt 6) |
 | **Einstellungen** | Countdown-Dauer, Timeouts, Druck-Limits, Hintergrundauswahl ein/aus |
@@ -123,9 +123,9 @@ Zwei Ausnahmen — **bewusst nicht dauerhaft**:
 - Der **Access-Point** ist nach einem Neustart wieder **aus** (Sicherheitsnetz, damit die
   Box immer ins normale Netz zurückkehrt). Nach einem Neustart bei Bedarf erneut
   einschalten.
-- Der **Drucker-Restzähler** startet nach einem Neustart wieder bei 108. Er ist nur eine
-  Schätzung (der Drucker meldet den echten Bandstand nicht) — nach einem Neustart mit
-  angebrochener Kassette den Zähler ggf. anpassen.
+- Die **Druckzähler** überstehen Neustarts. „Gedruckt (Event)" zählt die fertigen Drucke
+  des laufenden Events, „Gedruckt (gesamt)" läuft bis zum nächsten Zurücksetzen weiter.
+  Eine Restanzeige des Bandvorrats gibt es nicht — der Drucker meldet den Bandstand nicht.
 
 ---
 
@@ -133,8 +133,8 @@ Zwei Ausnahmen — **bewusst nicht dauerhaft**:
 
 ### Papier oder Farbkassette wechseln
 Wenn der Drucker stoppt (leer): neues Papier / neue Kassette einlegen, dann im Admin
-**Drucker → „Drucker fortsetzen"**. Bei **neuer Farbkassette** zusätzlich
-**„Zähler zurücksetzen (108 Blatt)"**, damit die Restanzeige wieder stimmt.
+**Drucker → „Drucker fortsetzen"**. Mehr ist nicht nötig — die Druckzähler hängen nicht
+am Papiervorrat.
 
 ### Kamera-Akku wechseln
 DSLR ausschalten, Akku tauschen, wieder einschalten. Falls die Box die Kamera danach als
@@ -198,7 +198,7 @@ Stromtrennung: **„Fotobox neu starten"**.
 | „Kleine Pause — die Fotobox ist gleich wieder da" | Kamera nicht verfügbar. DSLR einschalten/prüfen; Admin → Kamera erneut übernehmen. |
 | Countdown läuft, aber es kommt „Die Kamera hat nicht reagiert" | Die DSLR hat nicht ausgelöst (meist Autofokus findet keine Schärfe). **Objektiv auf `MF` (manueller Fokus) stellen** und die Schärfe einmal fest einstellen — dann löst sie immer aus. Die Box heilt sich nach wenigen Sekunden von selbst zurück zum Start. |
 | Druck-Knopf fehlt in der Vorschau | Drucker nicht bereit (leer/pausiert). Papier/Kassette prüfen, „Drucker fortsetzen". Fotos sind gespeichert. |
-| Drucker stoppt mitten im Abend | Papier oder Farbband leer → nachlegen → „Drucker fortsetzen"; bei neuer Kassette Zähler zurücksetzen. |
+| Drucker stoppt mitten im Abend | Papier oder Farbband leer → nachlegen → „Drucker fortsetzen". |
 | Ausdruck hat einen weißen Rand | Randlos-Einstellung; im Normalbetrieb bereits korrekt. Falls nicht, Support/Technik. |
 | Bildschirm bleibt schwarz | Monitor/Strom prüfen. Reagiert nichts, Box neu starten (Strom nur als letzte Option trennen). |
 | „Der Speicher ist voll" | Alte Events per USB sichern und Platz schaffen. |

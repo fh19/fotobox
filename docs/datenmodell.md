@@ -113,6 +113,11 @@ CREATE TABLE print_jobs (
 
 CREATE INDEX idx_print_jobs_photo ON print_jobs(photo_id);
 
+CREATE TABLE counters (
+    name  TEXT    PRIMARY KEY,
+    value INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE events_log (
     id         INTEGER PRIMARY KEY,
     ts         TEXT NOT NULL,
@@ -153,6 +158,25 @@ Original ist ja da.
 
 ## Migrationen
 
-`schema_version` plus nummerierte SQL-Dateien in `backend/migrations/001_init.sql`. Beim
+`schema_version` plus nummerierte SQL-Dateien in `backend/migrations/`. Beim
 Start werden fehlende Migrationen in einer Transaktion angewendet. Kein Alembic — bei
 diesem Umfang ist das Overhead.
+
+## Druckzähler
+
+`print_jobs.status` ist die Quelle für „wie viele Fotos wurden gedruckt". Eine
+Abgleichschleife fragt im Takt von `hardware.printer.status_poll_seconds` die offenen
+Aufträge bei CUPS ab und schreibt `done`, `failed` oder `cancelled` samt `finished_at`
+fort. Ist ein Auftrag aus der CUPS-Historie verschwunden, bleibt er offen — geraten wird
+nicht.
+
+Daraus ergeben sich zwei Werte im Admin-Bereich:
+
+- **Gedruckt (Event)** — Aufträge mit `status = 'done'` zu Fotos des aktiven Events.
+  Reine Historie, wird beim Anlegen eines neuen Events automatisch wieder 0.
+- **Gedruckt (gesamt)** — `counters.prints_total`, läuft über Events hinweg weiter und
+  wird nur durch `Druckzähler zurücksetzen` genullt.
+
+Beide zählen ausschließlich fertiggestellte Drucke. Der Grenzwert
+`printing.max_per_event` greift dagegen bewusst schon beim Einreihen und benutzt deshalb
+weiterhin `count_event_prints`, das alle nicht stornierten Aufträge zählt.
