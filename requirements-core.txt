@@ -1,0 +1,13 @@
+# Core runtime deps without the AI backend (rembg/onnxruntime).
+# Used on the Raspberry Pi 4: AI mode is lazy-imported and optional; chroma is
+# the practical default there. Install requirements.txt instead to add AI.
+fastapi==0.115.6
+python-multipart==0.0.32
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+PyYAML==6.0.2
+
+opencv-python-headless==5.0.0.93
+Pillow==12.3.0
+numpy==2.5.1
+qrcode==8.2

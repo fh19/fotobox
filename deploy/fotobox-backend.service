@@ -1,0 +1,21 @@
+[Unit]
+Description=Fotobox backend (FastAPI/uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/fotobox/backend
+Environment=FOTOBOX_HARDWARE=real
+Environment=FOTOBOX_DATA_DIR=/data
+ExecStart=/home/pi/fotobox/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 3
+Restart=always
+RestartSec=2
+# Long-lived requests (the MJPEG preview stream) block a graceful stop; force a
+# quick, clean restart instead of waiting out the default 90 s stop timeout.
+KillMode=mixed
+TimeoutStopSec=8
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fotobox — Admin</title>
+    <link rel="stylesheet" href="/admin.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <h1>Fotobox — Admin</h1>
+      <a href="/" class="link">← Fotobox</a>
+    </header>
+
+    <!-- PIN-Gate. Keypad because the kiosk has no keyboard; the input stays
+         editable so a keyboard still works during development. -->
+    <section id="gate" class="card card--gate">
+      <h2>PIN</h2>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="PIN" />
+      <!-- 4 x 3 rather than 3 x 4: with 120 px targets a fourth row would push
+           the login button off a 1280 x 800 screen. -->
+      <div id="pin-pad" class="pad">
+        <button type="button" class="pad__key" data-digit="1">1</button>
+        <button type="button" class="pad__key" data-digit="2">2</button>
+        <button type="button" class="pad__key" data-digit="3">3</button>
+        <button type="button" class="pad__key pad__key--aux" data-action="clear">✕</button>
+        <button type="button" class="pad__key" data-digit="4">4</button>
+        <button type="button" class="pad__key" data-digit="5">5</button>
+        <button type="button" class="pad__key" data-digit="6">6</button>
+        <button type="button" class="pad__key pad__key--aux" data-action="back">←</button>
+        <button type="button" class="pad__key" data-digit="7">7</button>
+        <button type="button" class="pad__key" data-digit="8">8</button>
+        <button type="button" class="pad__key" data-digit="9">9</button>
+        <button type="button" class="pad__key" data-digit="0">0</button>
+      </div>
+      <button id="pin-submit" class="btn btn--big">Anmelden</button>
+      <p id="pin-error" class="error"></p>
+    </section>
+
+    <main id="admin" class="hidden">
+      <!-- Drucker -->
+      <section class="card">
+        <h2>Drucker</h2>
+        <button id="printer-resume" class="btn btn--big">Drucker fortsetzen</button>
+        <p id="printer-status" class="muted"></p>
+        <div class="row">
+          <button id="printer-cancel" class="btn">Warteschlange leeren</button>
+          <button id="printer-test" class="btn">Testdruck</button>
+          <button id="printer-reset" class="btn">Zähler zurücksetzen (108 Blatt)</button>
+        </div>
+      </section>
+
+      <!-- Kamera -->
+      <section class="card">
+        <h2>Kamera</h2>
+        <label>Hauptkamera <select id="cam-select"></select></label>
+        <label>Vorschau-Backend <select id="prev-backend"></select></label>
+        <label>Vorschaugerät <select id="prev-device"></select></label>
+        <div class="row">
+          <button id="cam-apply" class="btn">Kamera übernehmen</button>
+          <button id="cam-calibrate" class="btn">Ausrichtung kalibrieren (Probefoto)</button>
+        </div>
+        <p id="cam-status" class="muted"></p>
+      </section>
+
+      <!-- Hintergründe / Rahmen -->
+      <section class="card">
+        <h2>Hintergründe &amp; Rahmen</h2>
+        <ul id="bg-list" class="bg-list"></ul>
+        <label>Name <input id="bg-name" type="text" placeholder="z. B. Hochzeitsrahmen" /></label>
+        <label
+          >Modus
+          <select id="bg-mode">
+            <option value="frame">Rahmen (Foto ins Fenster)</option>
+            <option value="overlay">Overlay (über dem Foto)</option>
+            <option value="chroma">Greenscreen</option>
+            <option value="ai">KI-Freisteller</option>
+          </select></label
+        >
+        <label>Datei <input id="bg-file" type="file" accept="image/png,image/jpeg" /></label>
+        <button id="bg-upload" class="btn">Hochladen</button>
+        <p id="bg-status" class="muted"></p>
+      </section>
+
+      <!-- Einstellungen -->
+      <section class="card">
+        <h2>Einstellungen</h2>
+        <label>Countdown-Dauer (s) <input id="cfg-countdown" type="number" min="1" /></label>
+        <label>Vorschau-Timeout (s) <input id="cfg-preview" type="number" min="1" /></label>
+        <label>Fehler-Timeout (s) <input id="cfg-error" type="number" min="1" /></label>
+        <label>Drucke pro Foto <input id="cfg-perphoto" type="number" min="0" /></label>
+        <label>Drucke pro Event <input id="cfg-perevent" type="number" min="0" /></label>
+        <label class="check"
+          ><input id="cfg-bgselect" type="checkbox" /> Hintergrundauswahl anzeigen</label
+        >
+        <button id="cfg-save" class="btn">Speichern</button>
+        <p id="cfg-status" class="muted"></p>
+      </section>
+
+      <!-- Event -->
+      <section class="card">
+        <h2>Event</h2>
+        <p id="event-current" class="muted"></p>
+        <input id="event-name" type="text" placeholder="Name des neuen Events" />
+        <button id="event-create" class="btn">Neues Event anlegen</button>
+      </section>
+
+      <!-- Netzwerk -->
+      <section class="card">
+        <h2>Netzwerk</h2>
+        <button id="net-ap" class="btn btn--big">Access-Point einschalten</button>
+        <p id="net-status" class="muted"></p>
+        <p class="muted">Galerie:</p>
+        <a id="net-gallery" class="gallery-url" href="#" target="_blank"></a>
+      </section>
+
+      <!-- Export -->
+      <section class="card">
+        <h2>Export</h2>
+        <button id="export-usb" class="btn btn--big">Auf USB-Stick kopieren</button>
+        <p id="export-status" class="muted"></p>
+      </section>
+
+      <!-- Status -->
+      <section class="card">
+        <h2>Status</h2>
+        <pre id="status-box" class="status"></pre>
+        <button id="status-refresh" class="btn">Aktualisieren</button>
+      </section>
+
+      <!-- System -->
+      <section class="card">
+        <h2>System</h2>
+        <button id="sys-reboot" class="btn btn--danger">Fotobox neu starten</button>
+        <button id="sys-shutdown" class="btn btn--danger">Herunterfahren</button>
+      </section>
+    </main>
+
+    <script src="/admin.js"></script>
+  </body>
+</html>

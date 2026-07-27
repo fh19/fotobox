@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Virtualenv
+.venv/
+
+# Local dev data (writable dir the Pi has at /data)
+devdata/
+*.db
+*.db-wal
+*.db-shm
+
+# Generated test fixtures (regenerate with `make fixtures`)
+backend/tests/fixtures/
+# NOTE: backend/tests/expected/ (regression references) is committed on purpose.
+
+# Dev-generated model/asset cache
+.u2net/

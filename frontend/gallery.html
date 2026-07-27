@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fotobox — Galerie</title>
+    <link rel="stylesheet" href="/gallery.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar__info">
+        <h1 id="event-name">Galerie</h1>
+        <p id="event-count" class="muted"></p>
+      </div>
+      <div class="topbar__actions">
+        <div class="toggle" id="variant-toggle" role="group" aria-label="Ansicht">
+          <button type="button" data-variant="processed" class="toggle__btn is-active">
+            Mit Hintergrund
+          </button>
+          <button type="button" data-variant="original" class="toggle__btn">Original</button>
+        </div>
+        <a id="download-all" class="download" href="#">Alle Fotos herunterladen (ZIP)</a>
+      </div>
+    </header>
+
+    <main>
+      <p id="empty" class="empty hidden">Noch keine Fotos vorhanden.</p>
+      <div id="grid" class="grid"></div>
+      <div class="more">
+        <button type="button" id="load-more" class="more__btn hidden">Mehr laden</button>
+      </div>
+    </main>
+
+    <div id="lightbox" class="lightbox hidden">
+      <button type="button" id="lightbox-close" class="lightbox__close" aria-label="Schließen">×</button>
+      <img id="lightbox-img" alt="" />
+    </div>
+
+    <script src="/gallery.js"></script>
+  </body>
+</html>

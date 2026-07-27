@@ -1,0 +1,121 @@
+# Fotobox — Beispielkonfiguration
+# Kopieren nach /data/config.yaml. Validiert über app/config.py (Pydantic).
+# Alle Werte hier sind Defaults; fehlende Schlüssel werden ergänzt, unbekannte
+# Schlüssel führen zu einem Fehler beim Start (kein stilles Ignorieren).
+
+hardware:
+  # real | mock — per Umgebungsvariable FOTOBOX_HARDWARE überschreibbar
+  mode: real
+
+  camera:
+    backend: gphoto2
+    select: auto                   # auto | Modellname | usb:BUS,DEV
+    autofocus: "off"               # "off" (manueller Fokus) | before_capture
+    capture_timeout_seconds: 15
+    reconnect_backoff_seconds: [1, 2, 5, 10, 30]
+    usbreset_after_failures: 3     # 0 = nie
+    fallback_to_preview: true      # DSLR weg (z.B. Akku leer) → Foto mit Vorschaukamera
+
+  preview:
+    backend: picamera2             # picamera2 | v4l2 | mock | auto
+    device: /dev/video0            # auto | /dev/videoN | Geräte-ID
+    width: 1280
+    height: 720
+    fps: 25
+    jpeg_quality: 80
+
+  printer:
+    backend: cups
+    queue_name: Selphy_CP1500
+    status_poll_seconds: 3
+
+countdown:
+  duration_seconds: 5
+  sound_enabled: false
+  sound_tick: /data/assets/sounds/tick.wav
+  sound_shutter: /data/assets/sounds/shutter.wav
+
+timeouts:
+  background_select_seconds: 45
+  countdown_cancel_grace_seconds: 1   # letzte Sekunde nicht mehr abbrechbar
+  capture_seconds: 20
+  processing_warn_seconds: 8
+  processing_seconds: 45
+  preview_seconds: 30
+  error_seconds: 6
+
+ui:
+  background_select_enabled: true
+  default_background: none            # wenn Auswahl deaktiviert ist
+  mirror_preview: true
+  idle_hint_pulse: true
+  flash_enabled: true                 # Bildschirm-Blitz als Aufhellung beim Auslösen
+  flash_duration_ms: 400              # Weiß-Dauer vor der Auslösung
+  admin_corner: top_left              # top_left | top_right
+  admin_longpress_seconds: 5
+  admin_pin: "2606"                   # ändern!
+
+pipeline:
+  # Reihenfolge der versuchten Verfahren, wenn ein Hintergrund "auto" gesetzt hat
+  chroma_defaults:
+    hue_center: 60
+    hue_tolerance: 25
+    saturation_min: 60
+    value_min: 40
+    spill_suppression: 0.7
+    edge_feather_px: 2
+  ai:
+    model: u2netp
+    model_path: /data/assets/models/u2netp.onnx
+    max_seconds: 20                   # danach Abbruch, Foto bleibt unbearbeitet
+  jpeg_quality: 95
+  thumbnail_width: 400
+
+printing:
+  enabled: true
+  orientation: landscape              # portrait | landscape — für den Abend fix
+  canvas_width: 1248
+  canvas_height: 1872
+  safe_margin_x: 25
+  safe_margin_y: 37
+  max_per_photo: 1
+  max_per_event: 108
+  queue_warn_length: 5
+  sheets_per_cartridge: 108
+  caption:
+    enabled: false
+    text: ""
+    position: bottom_center           # bottom_center | bottom_right | top_center
+    font: /data/assets/fonts/Cormorant-Regular.ttf
+    size_px: 44
+    color: "#ffffff"
+    shadow: true
+  qr:
+    enabled: false
+    base_url: "http://192.168.4.1:8000/p/"
+    size_px: 150
+    position: bottom_right
+
+storage:
+  data_dir: /data
+  warn_threshold_percent: 90
+  block_threshold_percent: 97         # darunter keine Auslösung mehr
+
+network:
+  gallery_enabled: true
+  access_point:
+    enabled: false                    # bewusst aus während der Veranstaltung
+    ssid: Fotobox
+    passphrase: ""                    # leer = offen
+    channel: 6
+    address: 192.168.4.1
+
+logging:
+  level: INFO
+  file: /data/logs/fotobox.log
+  max_bytes: 52428800
+  backup_count: 3
+
+runtime:
+  tick_interval_seconds: 0.1         # Takt für Countdown-Ticks und Timeouts
+  default_event_name: Fotobox        # Name des automatisch angelegten Events

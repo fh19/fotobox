@@ -1,0 +1,18 @@
+# Runtime dependencies for the Fotobox backend.
+# Installed locally at deploy time — no network access at runtime.
+fastapi==0.115.6
+python-multipart==0.0.32
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+PyYAML==6.0.2
+
+# Image pipeline (M3)
+opencv-python-headless==5.0.0.93
+Pillow==12.3.0
+numpy==2.5.1
+qrcode==8.2
+
+# AI background segmentation (M3, AI mode). Imported lazily; requires the local
+# ONNX model at pipeline.ai.model_path — no network access at runtime (rule 7).
+rembg==2.0.59
+onnxruntime==1.20.1

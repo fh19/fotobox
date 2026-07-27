@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <!-- Kiosk: kein Zoom, kein Doppeltipp, kein Pinch. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Fotobox</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body data-state="IDLE">
+    <!-- Unsichtbare Ecke: 5 s Langdruck öffnet den Admin (docs/ui-screens.md). -->
+    <div id="admin-corner"></div>
+
+    <div id="stage">
+      <!-- Persistentes Live-Bild (gespiegelt, siehe CSS). Bleibt auch bei
+           Verbindungsabbruch sichtbar. -->
+      <img id="preview" src="/preview/stream" alt="" />
+
+      <!-- Ergebnisfoto (NICHT gespiegelt). -->
+      <div id="result-layer">
+        <img id="result-photo" alt="" />
+      </div>
+
+      <!-- IDLE -->
+      <section id="screen-idle" class="screen screen--transparent">
+        <div id="idle-ready" class="stack">
+          <h1 class="heading" id="idle-heading">Bereit für dein Foto?</h1>
+          <p class="subtext">Tippe auf den Bildschirm</p>
+        </div>
+        <div id="idle-pause" class="stack hidden">
+          <h1 class="heading">Kleine Pause</h1>
+          <p class="subtext">Die Fotobox ist gleich wieder da</p>
+        </div>
+        <p id="idle-print-note" class="corner-note hidden">
+          Drucken ist gerade nicht möglich — Fotos werden gespeichert
+        </p>
+      </section>
+
+      <!-- BACKGROUND_SELECT -->
+      <section id="screen-background" class="screen screen--transparent">
+        <h1 class="heading heading--small">Wähle deinen Hintergrund</h1>
+        <div id="bg-tiles" class="tile-row"></div>
+        <button type="button" class="small-button" id="btn-cancel-bg">Abbrechen</button>
+      </section>
+
+      <!-- COUNTDOWN -->
+      <section id="screen-countdown" class="screen screen--transparent">
+        <div class="countdown-wrap">
+          <svg class="ring" viewBox="0 0 300 300" aria-hidden="true">
+            <circle class="ring__track" cx="150" cy="150" r="140" />
+            <circle id="countdown-ring" class="ring__value" cx="150" cy="150" r="140" />
+          </svg>
+          <div id="countdown-number" class="countdown-number">5</div>
+        </div>
+        <button type="button" class="small-button small-button--right" id="btn-cancel-countdown">
+          Abbrechen
+        </button>
+      </section>
+
+      <!-- PROCESSING (auch während CAPTURE sichtbar) -->
+      <section id="screen-processing" class="screen screen--solid">
+        <div class="spinner" aria-hidden="true"></div>
+        <h1 class="heading">Einen Moment …</h1>
+        <p class="subtext">Dein Foto wird fertig gemacht</p>
+        <p id="processing-warn" class="subtext hidden">Gleich ist es soweit</p>
+      </section>
+
+      <!-- PREVIEW -->
+      <section id="screen-preview" class="screen screen--solid">
+        <div class="preview-actions" id="preview-actions">
+          <button type="button" class="big-button" id="btn-print">Drucken</button>
+          <button type="button" class="big-button" id="btn-finish">Fertig</button>
+        </div>
+        <svg class="ring ring--corner" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="ring__track" cx="50" cy="50" r="44" />
+          <circle id="preview-ring" class="ring__value" cx="50" cy="50" r="44" />
+        </svg>
+      </section>
+
+      <!-- ERROR -->
+      <section id="screen-error" class="screen screen--solid">
+        <h1 class="heading">Da ist etwas schiefgelaufen</h1>
+        <p id="error-message" class="subtext"></p>
+        <p class="subtext">Versuch es gleich noch einmal</p>
+      </section>
+
+      <!-- Blitz-Effekt bei der Auslösung -->
+      <div id="flash"></div>
+
+      <!-- Reconnect-Overlay -->
+      <div id="reconnect-overlay" class="hidden">
+        <p class="subtext">Verbindung wird wiederhergestellt …</p>
+      </div>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
