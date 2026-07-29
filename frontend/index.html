@@ -15,9 +15,10 @@
     <div id="admin-corner"></div>
 
     <div id="stage">
-      <!-- Persistentes Live-Bild (gespiegelt, siehe CSS). Bleibt auch bei
-           Verbindungsabbruch sichtbar. -->
-      <img id="preview" src="/preview/stream" alt="" />
+      <!-- Persistentes Live-Bild (gespiegelt, siehe CSS). Die Frames werden per
+           Einzelbild-Polling geladen (app.js), damit ein hängender Stream das Bild
+           nie schwarz stehen lässt. -->
+      <img id="preview" alt="" />
 
       <!-- Ergebnisfoto (NICHT gespiegelt). -->
       <div id="result-layer">

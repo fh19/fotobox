@@ -34,6 +34,21 @@ def test_backgrounds_lists_ohne_hintergrund(client):
     assert body["backgrounds"][0]["name"] == "Ohne Hintergrund"
 
 
+def test_preview_frame_returns_single_jpeg(client):
+    # The kiosk polls /preview/frame (self-healing) instead of the long-lived
+    # MJPEG stream that could freeze the picture to black.
+    response = client.get("/preview/frame")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/jpeg"
+    assert "no-store" in response.headers.get("cache-control", "")
+    assert response.content[:2] == b"\xff\xd8"  # JPEG SOI marker
+
+
+def test_client_config_exposes_preview_fps(client):
+    # The poller paces itself from the configured camera fps.
+    assert client.get("/api/client-config").json()["preview_fps"] > 0
+
+
 def test_print_in_idle_is_conflict(client):
     response = client.post("/api/session/print")
     assert response.status_code == 409

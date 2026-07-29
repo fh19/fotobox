@@ -43,6 +43,7 @@ let uiConfig = {
   flash_enabled: true,
   processing_warn_seconds: 8,
   preview_seconds: 30,
+  preview_fps: 15,
   admin_corner: "top_left",
   admin_longpress_seconds: 5,
 };
@@ -362,15 +363,27 @@ function wireButtons() {
   });
 }
 
-function keepPreviewAlive() {
-  // If the MJPEG stream drops (e.g. backend restart), reconnect it so the live
-  // image recovers without a page reload.
+function startPreview() {
+  // Self-healing live preview: poll independent single frames instead of holding
+  // one long-lived MJPEG connection. Chromium can silently freeze or blank a
+  // multipart <img> stream — the connection stalls without firing "error", so the
+  // old reconnect-on-error never triggered and the picture went black while the
+  // text (WebSocket) and capture kept working. One request per frame recovers on
+  // its own every tick, so a stall can never leave the preview stuck.
   const img = el("preview");
-  img.addEventListener("error", () => {
-    window.setTimeout(() => {
-      img.src = `/preview/stream?ts=${Date.now()}`;
-    }, 1000);
+  const loader = new Image();
+  const interval = Math.max(40, Math.round(1000 / (uiConfig.preview_fps || 15)));
+  const next = () => {
+    loader.src = `/preview/frame?ts=${Date.now()}`;
+  };
+  loader.addEventListener("load", () => {
+    img.src = loader.src; // just loaded → served from cache, so the swap is flicker-free
+    window.setTimeout(next, interval);
   });
+  loader.addEventListener("error", () => {
+    window.setTimeout(next, 1000); // backend momentarily unreachable → retry
+  });
+  next();
 }
 
 function setupAdminCorner() {
@@ -398,9 +411,9 @@ function setupAdminCorner() {
 async function init() {
   hardenInput();
   wireButtons();
-  keepPreviewAlive();
   await loadUiConfig();
   if (!uiConfig.mirror_preview) body.classList.add("no-mirror");
+  startPreview();
   setupAdminCorner();
   connect();
 }

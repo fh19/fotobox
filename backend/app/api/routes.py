@@ -59,6 +59,7 @@ async def get_client_config(request: Request) -> JSONResponse:
             "flash_enabled": config.ui.flash_enabled,
             "processing_warn_seconds": config.timeouts.processing_warn_seconds,
             "preview_seconds": config.timeouts.preview_seconds,
+            "preview_fps": config.hardware.preview.fps,
             "admin_corner": config.ui.admin_corner,
             "admin_longpress_seconds": config.ui.admin_longpress_seconds,
         }
@@ -153,17 +154,43 @@ async def get_photo(request: Request, photo_id: int, variant: str) -> Response:
     return FileResponse(path, media_type="image/jpeg")
 
 
+@router.get("/preview/frame")
+async def preview_frame(request: Request) -> Response:
+    """A single current JPEG frame.
+
+    The kiosk polls this to drive a self-healing live preview: every frame is an
+    independent request, so a stalled or dropped connection can never leave the
+    preview stuck black — unlike a long-lived ``multipart/x-mixed-replace`` stream,
+    which Chromium can silently freeze without firing an ``error`` the frontend
+    could react to. The backend is read fresh on each call, so a rebuilt preview
+    (admin re-select / reconnect) is picked up immediately.
+    """
+    frame = _engine(request).backends.preview.frame()
+    return Response(
+        content=frame,
+        media_type="image/jpeg",
+        headers={"Cache-Control": "no-store, max-age=0"},
+    )
+
+
 @router.get("/preview/stream")
 async def preview_stream(request: Request) -> StreamingResponse:
+    """MJPEG stream (kept for compatibility; the kiosk uses ``/preview/frame``)."""
     engine = _engine(request)
     interval = 1.0 / engine.config.hardware.preview.fps
-    preview = engine.backends.preview
 
     async def frames():
         while True:
             if await request.is_disconnected():
                 break
-            frame = preview.frame()
+            # Read the current backend each iteration so a rebuilt preview is
+            # used instead of a dead reference; never let one bad frame end the
+            # stream.
+            try:
+                frame = engine.backends.preview.frame()
+            except Exception:
+                await asyncio.sleep(interval)
+                continue
             yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + frame + b"\r\n"
             await asyncio.sleep(interval)
 
