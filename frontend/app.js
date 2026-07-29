@@ -370,20 +370,34 @@ function startPreview() {
   // old reconnect-on-error never triggered and the picture went black while the
   // text (WebSocket) and capture kept working. One request per frame recovers on
   // its own every tick, so a stall can never leave the preview stuck.
+  //
+  // Each frame is fetched as a blob and shown via an in-memory object URL. The
+  // <img> is NEVER pointed at a network URL (the frame is served no-store, so a
+  // direct img.src would force a re-download and blank the picture for a moment) —
+  // the browser keeps showing the previous frame until the new blob is decoded and
+  // then swaps with no gap.
   const img = el("preview");
-  const loader = new Image();
   const interval = Math.max(40, Math.round(1000 / (uiConfig.preview_fps || 15)));
-  const next = () => {
-    loader.src = `/preview/frame?ts=${Date.now()}`;
+  let currentUrl = null;
+
+  const tick = async () => {
+    let delay = interval;
+    try {
+      const res = await fetch(`/preview/frame?ts=${Date.now()}`, { cache: "no-store" });
+      if (res.ok) {
+        const url = URL.createObjectURL(await res.blob());
+        img.src = url;
+        if (currentUrl) URL.revokeObjectURL(currentUrl); // free the previous frame
+        currentUrl = url;
+      } else {
+        delay = 1000; // backend up but no frame yet → back off a little
+      }
+    } catch (err) {
+      delay = 1000; // backend momentarily unreachable → retry, keep last frame visible
+    }
+    window.setTimeout(tick, delay);
   };
-  loader.addEventListener("load", () => {
-    img.src = loader.src; // just loaded → served from cache, so the swap is flicker-free
-    window.setTimeout(next, interval);
-  });
-  loader.addEventListener("error", () => {
-    window.setTimeout(next, 1000); // backend momentarily unreachable → retry
-  });
-  next();
+  tick();
 }
 
 function setupAdminCorner() {
