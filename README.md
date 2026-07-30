@@ -37,6 +37,13 @@ Vollständige Anleitung (inkl. Pi-5-Hinweise, read-only Root, KI-Modell):
 [`docs/installation.md`](docs/installation.md).
 Bedienung: [`docs/bedienungsanleitung.md`](docs/bedienungsanleitung.md).
 
+## Gehäuse (3D-Druck)
+
+Ein zweiteiliges, parametrisches Pi‑4‑Gehäuse mit 50‑mm‑Lüfter (inkl. Aussparung
+für das DS1307‑RTC‑Modul auf dem GPIO‑Stecker) liegt unter
+[`hardware/pi4-fan-case/`](hardware/pi4-fan-case/) — OpenSCAD‑Quelle plus fertige
+STL/3MF, Druck- und Montagehinweise in der dortigen README.
+
 ## Entwicklung
 
 ```bash
