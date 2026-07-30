@@ -18,7 +18,14 @@ APP_DIR="${APP_DIR:-/home/pi/fotobox}"
 DATA_DIR="${DATA_DIR:-/data}"
 VENV="$APP_DIR/.venv"
 PY="$VENV/bin/python"
-USER_NAME="${SUDO_USER:-pi}"
+USER_NAME="${SUDO_USER:-$(id -un)}"
+
+# Platform: the kiosk/desktop tweaks only apply on the Raspberry Pi OS desktop.
+# On any other Linux (a dev/backup box) we install the backend headless and skip
+# hostname/gvfs/pcmanfm/kiosk. Force with HEADLESS=1.
+is_pi() { grep -qi raspberry /proc/device-tree/model 2>/dev/null; }
+HEADLESS="${HEADLESS:-0}"
+is_pi || HEADLESS=1
 
 log() { printf '\n\033[1;34m==> %s\033[0m\n' "$*"; }
 
@@ -29,7 +36,11 @@ apt_packages() {
     python3-venv python3-dev \
     libgl1 libglib2.0-0t64 \
     fonts-dejavu-core \
-    chromium unclutter rsync curl
+    rsync curl
+  # Kiosk-Browser nur auf dem Pi-Desktop.
+  if [ "$HEADLESS" != "1" ]; then
+    sudo apt-get install -y --no-install-recommends chromium unclutter
+  fi
 }
 
 python_env() {
@@ -82,7 +93,16 @@ PYEOF
 
 backend_service() {
   log "systemd-Dienst fotobox-backend"
-  sudo cp "$APP_DIR/deploy/fotobox-backend.service" /etc/systemd/system/
+  # Template the unit so it works for any install path / user / data dir, not just
+  # the Pi's /home/pi/fotobox + user pi + /data.
+  local tmp
+  tmp="$(mktemp)"
+  sed -e "s#/home/pi/fotobox#$APP_DIR#g" \
+      -e "s#^User=pi\$#User=$USER_NAME#" \
+      -e "s#FOTOBOX_DATA_DIR=/data#FOTOBOX_DATA_DIR=$DATA_DIR#" \
+      "$APP_DIR/deploy/fotobox-backend.service" > "$tmp"
+  sudo cp "$tmp" /etc/systemd/system/fotobox-backend.service
+  rm -f "$tmp"
   sudo systemctl daemon-reload
   sudo systemctl enable fotobox-backend.service
   sudo systemctl restart fotobox-backend.service
@@ -161,11 +181,15 @@ main() {
   camera_deps
   printer_deps
   data_dir
-  set_hostname
-  disable_removable_media
-  free_camera_from_gvfs
+  if [ "$HEADLESS" != "1" ]; then
+    set_hostname
+    disable_removable_media
+    free_camera_from_gvfs
+  else
+    log "Headless/Nicht-Pi: Hostname, gvfs, Datei-Manager und Kiosk werden übersprungen"
+  fi
   backend_service
-  kiosk_autostart
+  [ "$HEADLESS" != "1" ] && kiosk_autostart
   verify
   log "Fertig. Guest-UI: http://$(hostname -I | awk '{print $1}'):8000/"
 }
