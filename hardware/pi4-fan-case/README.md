@@ -1,10 +1,27 @@
 # Raspberry-Pi-4-Gehäuse mit 50-mm-Lüfter
 
-Zweiteiliges Druckgehäuse für den Pi 4B der Fotobox, mit Aufnahme für einen
-Lüfter 50 × 50 × 10 mm auf dem Deckel. Quelle ist `pi4_case.scad` — alle Maße
-sind Parameter, nichts ist in der Geometrie festgeschrieben.
+Zweiteiliges Druckgehäuse für den Pi 4B der Fotobox, für einen Lüfter
+50 × 50 × 10 mm. Alle Maße sind Parameter, nichts ist in der Geometrie
+festgeschrieben.
 
-## Eckdaten
+## Zwei Varianten
+
+| | Variante 1 | Variante 2 |
+|---|---|---|
+| Datei | `pi4_case.scad` | `pi4_case_v2.scad` |
+| Lüfter | oben aufgeschraubt | innen, unter dem Deckel |
+| Platine | 4 Schrauben von unten | 2 Schrauben von oben, 2 Zentrierstifte |
+| Deckel | mit denselben 4 Schrauben | geklipst, 4 Rasthaken |
+| Gesamthöhe | 49,3 mm | 48,3 mm |
+| Kleinteile | 4 × M2,5 × 16, 4 × M4 lang | 2 × M2,5 × 6, 4 × M4 × 16 |
+
+Beide teilen sich `pi4_board.scad` — dort und nur dort stehen Platinenmaße und
+Anschlusspositionen.
+
+Die Abschnitte bis „Drucken" beschreiben Variante 1; Variante 2 hat einen
+eigenen Abschnitt weiter unten.
+
+## Eckdaten Variante 1
 
 | | |
 |---|---|
@@ -29,9 +46,13 @@ Gewinde in die vier Säulen des Deckels. Ein Schraubensatz klemmt also Platine
 und Deckel gleichzeitig. Die Schraubenköpfe sitzen versenkt im Boden, das
 Gehäuse steht damit plan auf.
 
-Ausschnitte: USB-C, 2 × Micro-HDMI, Klinke (Vorderseite), RJ45 und beide
-USB-Blöcke (rechts), microSD (links). Die Rückseite hat keine Anschlüsse und
-trägt deshalb das Lüftungsfeld.
+Ausschnitte: USB-C, 2 × Micro-HDMI, Klinke (Vorderseite), beide USB-Blöcke und
+RJ45 (rechts), microSD (links). Die Rückseite hat keine Anschlüsse und trägt
+deshalb das Lüftungsfeld.
+
+Auf der rechten Seite ist die Reihenfolge von der Vorderkante (Klinke) aus:
+USB 2.0, USB 3.0, RJ45. Der Netzwerkanschluss liegt also am GPIO-Ende — beim
+Pi 4 haben Ethernet und USB gegenüber dem Pi 3 die Plätze getauscht.
 
 ## Montage auf einer Platte
 
@@ -51,17 +72,38 @@ nicht an der Außenwand.
 
 Zwei Dinge zum Wissen:
 
-* Die linke Lasche liegt vor dem microSD-Schlitz, 4,5 mm darunter. Die Karte
-  kommt weiterhin heraus, ist aber fummeliger zu greifen. Wer das nicht will,
-  schiebt beide Laschen mit `-D ear_offset=19` aus dem Weg.
+* Die linke Lasche liegt vor der microSD-Öffnung, 3 mm unter deren Unterkante.
+  Beim Herausziehen der Karte dient sie eher als Fingerauflage. Ganz aus dem Weg
+  bekommt man sie nur mit `-D ear_offset=23 -D ear_w=16` — dann sitzt sie
+  allerdings dicht an der Ecke.
 * Zum Öffnen des Gehäuses muss es von der Platte, weil die Platinenschrauben von
   unten kommen.
 
 Mit `-D 'ear_axis="y"'` wandern die Laschen auf die langen Seiten. Dann liegen
 ihre Wurzeln allerdings unter dem Schlitzfeld und decken dort etwas ab.
 
-Für die Lüfterstromversorgung ist im Deckel ein Kabelschlitz (10 × 4 mm) direkt
-über GPIO-Pin 4 (5 V) und Pin 6 (GND).
+Für die Lüfterstromversorgung ist im Deckel ein Kabelschlitz (10 × 6 mm) direkt
+über GPIO-Pin 4 (5 V) und Pin 6 (GND). Er ist tief genug, um beide Pinreihen zu
+erreichen.
+
+## microSD-Öffnung
+
+Gilt für beide Varianten, die Geometrie steht in `pi4_board.scad`.
+
+Die Karte ragt nur etwa 2 mm über die Platinenkante hinaus, bis zur Außenfläche
+sind es aber 4 mm (1,6 mm Spiel + 2,4 mm Wand). Ein enger Schlitz legt diese
+2 mm also auf den Grund eines Tunnels — dann geht es nur noch mit der Pinzette.
+
+Die Öffnung ist deshalb ein Trichter: innen 22 × 9 mm, nach außen auf
+29 × 12,5 mm aufgeweitet. Entscheidend ist die Breite — neben der 11 mm breiten
+Karte bleiben links und rechts je 9 mm, sodass man sie an den Schmalseiten
+zwischen Daumen und Zeigefinger fassen kann statt von oben und unten. Die
+Flanken stehen unter 45°, drucken also ohne Stützmaterial.
+
+Stellschrauben in `port_cuts_local()`: `sd_w` (lichte Breite innen, 22) und
+`sd_flare` (Aufweitung pro Seite, 3,5). Beim Vergrößern von `sd_flare` prüfen,
+dass die Trichteroberkante nicht in die Lüftungsschlitze der linken Wand läuft —
+aktuell bleiben dort 0,9 mm.
 
 ## RTC-Modul auf dem GPIO-Stecker
 
@@ -89,17 +131,57 @@ Zwei Dinge dabei im Auge behalten:
   legen (`-D 'cable_pos=[30,53.5]'`) und den Lüfter woanders anklemmen, oder ihn
   gleich über einen USB-A-Stecker versorgen.
 
+## Variante 2 — Lüfter innen, Klipsdeckel
+
+`pi4_case_v2.scad`, außen 127 × 64 × 48,3 mm, Körper 93 × 64. Trotz des innen
+liegenden Lüfters 1 mm flacher als Variante 1, weil die 10 mm Lüfterhöhe in die
+Bauhöhe hineinwandern statt obendrauf zu kommen. Laschen, Füße und alle
+Anschlussausschnitte sind identisch zu Variante 1.
+
+**Lüfter.** Hängt in einer Tasche an der Deckelunterseite: ein umlaufender Rand
+nimmt ihn auf, vier M4-Blechschrauben von unten greifen 5 mm in den dort auf
+6 mm verdickten Deckel. Der Lüfter kommt beim Abnehmen des Deckels mit heraus,
+Kabel bleibt innen — der Kabelschlitz aus Variante 1 entfällt. Ansaugöffnung
+Ø 46 mm mit demselben Fingerschutz, Blasrichtung weiter nach unten auf die
+Platine. Über der Platine sind 33 mm frei: 18 mm für das RTC-Modul, 1,4 mm Luft,
+darüber der Lüfter.
+
+**Platine.** Vier Dome, paarweise auf den Diagonalen. Die beiden bei (3,5 | 3,5)
+und (61,5 | 52,5) nehmen je eine M2,5 × 6 von oben auf, die beiden anderen
+tragen Ø 2,4-Zentrierstifte, die in die Befestigungslöcher fassen. Zwei
+Schrauben halten die Platine, die vier Auflagepunkte verhindern, dass sie beim
+Einstecken eines USB-Steckers federt.
+
+**Deckel.** Vier Rasthaken, je zwei an den kurzen Seiten, rasten in eine Nut in
+der Innenwand. Bewusst nicht an den langen Seiten: dort sitzen Anschlüsse,
+Lüftungsfeld und die Lüftertasche. Die Nut liegt bei z ≈ 33 mm, also weit über
+allen Ausschnitten — das ist der Grund, warum das erst beim hohen Gehäuse geht.
+
+* Nase 0,7 mm tief, oben und unten angeschrägt: klickt beim Aufsetzen ein und
+  lässt sich mit festem Zug wieder abziehen
+* Vertikal liegt der Deckel auf der Wandoberkante auf, nicht auf den Haken
+* In der Mitte jeder kurzen Seite ist eine 16 mm breite Kerbe in der Oberkante,
+  um mit dem Fingernagel unter den Deckelrand zu kommen
+
+**Vorspannung nachstellen**, falls es zu stramm oder zu lose sitzt: `-D bead=0.5`
+(leichter) bzw. `-D bead=0.9` (fester). `-D tab_t=1.3` macht die Haken weicher.
+Erst an einem Deckel probieren, bevor beide Teile gedruckt werden.
+
+Weil kein Lüfter über den Deckel hinausragt und keine Schraube durch den Boden
+geht, sind hier auch die Füße massiv.
+
 ## Drucken
 
 Kein Supportmaterial nötig.
 
 * **Unterteil** — wie exportiert, Boden auf dem Druckbett.
 * **Deckel** — im Slicer um 180° um X drehen, sodass die Deckeloberseite auf dem
-  Bett liegt und die Säulen nach oben zeigen.
+  Bett liegt und Säulen bzw. Rasthaken nach oben zeigen.
 
-Empfohlen: PETG (Abwärme), 0,2 mm Schichthöhe, 4 Perimeter, 25 % Infill. Die
-Säulen brauchen die 4 Perimeter, sonst reißen sie beim Einschneiden der
-M2,5-Schrauben auf.
+Empfohlen: PETG (Abwärme), 0,2 mm Schichthöhe, 4 Perimeter, 25 % Infill. Säulen
+und Dome brauchen die 4 Perimeter, sonst reißen sie beim Einschneiden der
+M2,5-Schrauben auf. Bei Variante 2 die Rasthaken **nicht** mit mehr Perimetern
+oder Infill drucken — sie müssen federn.
 
 ## STL neu erzeugen
 
@@ -109,6 +191,14 @@ openscad -D 'part="base"' -o stl/pi4_case_base.stl pi4_case.scad
 
 ```bash
 openscad -D 'part="lid"' -o stl/pi4_case_lid.stl pi4_case.scad
+```
+
+```bash
+openscad -D 'part="base"' -o stl/pi4_case_v2_base.stl pi4_case_v2.scad
+```
+
+```bash
+openscad -D 'part="lid"' -o stl/pi4_case_v2_lid.stl pi4_case_v2.scad
 ```
 
 `part` kennt außerdem `"both"` (beide Teile nebeneinander, Vorschau) und

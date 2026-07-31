@@ -1,7 +1,7 @@
 // Raspberry Pi 4B enclosure with a 50 x 50 x 10 mm fan mounted on the lid.
 //
 // All dimensions in mm and parametric -- nothing is baked into the geometry.
-// Board data follows the official Raspberry Pi 4B mechanical drawing.
+// Board data and connector positions come from pi4_board.scad.
 //
 // Assembly: the PCB rests on four standoffs in the base. Four M2.5 screws enter
 // from underneath, pass through base standoff and PCB, and thread into the four
@@ -11,20 +11,14 @@
 //   openscad -D 'part="base"' -o stl/pi4_case_base.stl pi4_case.scad
 //   openscad -D 'part="lid"'  -o stl/pi4_case_lid.stl  pi4_case.scad
 
+include <pi4_board.scad>
+
 /* [Render] */
 part = "both";        // "base" | "lid" | "both" | "assembly"
 
 $fa = 2;
 $fs = 0.4;
 eps = 0.01;
-
-/* [Raspberry Pi 4B board] */
-pcb_x       = 85;
-pcb_y       = 56;
-pcb_t       = 1.4;
-hole_inset  = 3.5;    // mounting hole centre distance from board edge
-hole_dx     = 58;     // mounting hole grid
-hole_dy     = 49;
 
 /* [Enclosure] */
 fit         = 1.6;    // gap between PCB edge and inner wall, per side
@@ -61,8 +55,8 @@ fan_guard     = true;
 fan_guard_rib = 2.6;
 
 /* [Fan cable pass-through to GPIO pin 4/6] */
-cable_slot    = [10, 4];    // width x depth
-cable_pos     = [13, 53.5]; // in PCB coordinates
+cable_slot    = [10, 6];    // width x depth, deep enough to reach both pin rows
+cable_pos     = [13, 53.0]; // in PCB coordinates
 
 /* [Mounting to a plate] */
 // The case stands on four feet, so the floor slots exhaust into the gap
@@ -95,11 +89,6 @@ org_y   = wall + fit;
 pcb_bot = floor_t + standoff_h;
 pcb_top = pcb_bot + pcb_t;
 
-hole_pos = [[hole_inset,           hole_inset],
-            [hole_inset + hole_dx, hole_inset],
-            [hole_inset,           hole_inset + hole_dy],
-            [hole_inset + hole_dx, hole_inset + hole_dy]];
-
 /* ------------------------------------------------------------- primitives */
 module rbox(size, r) {
     linear_extrude(height = size[2])
@@ -121,28 +110,10 @@ module at_holes() {
 // Cut once out of the base walls and once out of the lid, so the lid lip is
 // automatically clipped away wherever a connector needs the full height.
 module port_cuts() {
-    depth = wall + fit + 2;
-
-    // front edge, PCB local y = 0: USB-C, 2x micro HDMI, 3.5 mm AV jack
-    module front(cx, w, h, z0 = -1) {
-        at_pcb(cx - w / 2, -depth + 1, z0) cube([w, depth, h]);
-    }
-    front(11.2, 13.0,  5.5);   // USB-C power
-    front(26.0, 12.0,  6.0);   // micro HDMI 0
-    front(39.5, 12.0,  6.0);   // micro HDMI 1
-    front(54.0, 10.0,  8.5);   // AV jack
-
-    // right edge, PCB local x = 85: ethernet and two USB stacks
-    module right(cy, w, h, z0 = -1) {
-        at_pcb(pcb_x - 1, cy - w / 2, z0) cube([depth, w, h]);
-    }
-    right(10.25, 18.0, 15.5);  // RJ45
-    right(29.00, 17.0, 17.5);  // USB 3.0 stack
-    right(47.00, 17.0, 17.5);  // USB 2.0 stack
-
-    // left edge: microSD card, sits underneath the board
-    at_pcb(-depth + 1, 28 - 8, -(standoff_h + pcb_t) + 0.5)
-        cube([depth, 16, standoff_h + pcb_t + 0.5]);
+    at_pcb(0, 0, 0)
+        port_cuts_local(wall + fit,
+                        -(standoff_h + pcb_t),        // opening starts at floor level
+                        standoff_h + pcb_t + 4.1);    // and ends above the PCB edge
 }
 
 /* ---------------------------------------------------------------- venting */

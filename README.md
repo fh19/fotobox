@@ -42,7 +42,10 @@ Bedienung: [`docs/bedienungsanleitung.md`](docs/bedienungsanleitung.md).
 Ein zweiteiliges, parametrisches Pi‑4‑Gehäuse mit 50‑mm‑Lüfter (inkl. Aussparung
 für das DS1307‑RTC‑Modul auf dem GPIO‑Stecker) liegt unter
 [`hardware/pi4-fan-case/`](hardware/pi4-fan-case/) — OpenSCAD‑Quelle plus fertige
-STL/3MF, Druck- und Montagehinweise in der dortigen README.
+STL/3MF, Druck- und Montagehinweise in der dortigen README. Zwei Varianten:
+Lüfter oben aufgeschraubt und verschraubter Deckel, oder Lüfter innen mit
+Klipsdeckel. Beide mit Anschraublaschen und Füßen für die Montage auf einer
+Platte.
 
 ## Entwicklung
 
