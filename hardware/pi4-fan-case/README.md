@@ -183,6 +183,10 @@ und Dome brauchen die 4 Perimeter, sonst reißen sie beim Einschneiden der
 M2,5-Schrauben auf. Bei Variante 2 die Rasthaken **nicht** mit mehr Perimetern
 oder Infill drucken — sie müssen federn.
 
+`stl/pi4_case_all.3mf` ist das fertig aufgestellte Projekt mit allen vier Teilen
+(Unterteil und Deckel beider Varianten). Nach jeder Änderung an den `.scad`
+neu slicen, sonst druckt man den alten Stand.
+
 ## STL neu erzeugen
 
 ```bash
