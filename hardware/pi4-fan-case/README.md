@@ -13,7 +13,8 @@ festgeschrieben.
 | Platine | 4 Schrauben von unten | 2 Schrauben von oben, 2 Zentrierstifte |
 | Deckel | mit denselben 4 Schrauben | geklipst, 4 Rasthaken |
 | Gesamthöhe | 49,3 mm | 48,3 mm |
-| Kleinteile | 4 × M2,5 × 16, 4 × M4 lang | 2 × M2,5 × 6, 4 × M4 × 16 |
+| Lüfterbefestigung | 4 Schrauben durch den Deckel | 4 angeformte Federlaschen |
+| Kleinteile | 4 × M2,5 × 16, 4 × M4 (Lüfter), 2 × M4 (Platte) | 2 × M2,5 × 6, 2 × M4 (Platte) |
 
 Beide teilen sich `pi4_board.scad` — dort und nur dort stehen Platinenmaße und
 Anschlusspositionen.
@@ -29,7 +30,7 @@ eigenen Abschnitt weiter unten.
 | Gehäusekörper | 93 × 64 mm |
 | Montage | 2 × M4, Lochabstand 113 mm, 5 mm Luftspalt unter dem Boden |
 | Lüfter | 50 × 50 × 10 mm, Lochbild 40 × 40 mm, Bohrungen Ø 4,4 mm |
-| Luftöffnung | Ø 46 mm mit gedrucktem Fingerschutz (6 Speichen + Ring) |
+| Luftöffnung | Ø 46 mm (Variante 2: Ø 48) mit gedrucktem Fingerschutz |
 | Platinenabstand | 3,5 mm unter der Platine, 24 mm über der Platine |
 | Verschraubung Gehäuse | 4 × M2,5 × 16 mm, selbstschneidend, von unten |
 | Lüfterschrauben | 4 × M4 × 25 mm oder die dem Lüfter beiliegenden Blechschrauben |
@@ -138,13 +139,32 @@ liegenden Lüfters 1 mm flacher als Variante 1, weil die 10 mm Lüfterhöhe in d
 Bauhöhe hineinwandern statt obendrauf zu kommen. Laschen, Füße und alle
 Anschlussausschnitte sind identisch zu Variante 1.
 
-**Lüfter.** Hängt in einer Tasche an der Deckelunterseite: ein umlaufender Rand
-nimmt ihn auf, vier M4-Blechschrauben von unten greifen 5 mm in den dort auf
-6 mm verdickten Deckel. Der Lüfter kommt beim Abnehmen des Deckels mit heraus,
-Kabel bleibt innen — der Kabelschlitz aus Variante 1 entfällt. Ansaugöffnung
-Ø 46 mm mit demselben Fingerschutz, Blasrichtung weiter nach unten auf die
-Platine. Über der Platine sind 33 mm frei: 18 mm für das RTC-Modul, 1,4 mm Luft,
-darüber der Lüfter.
+**Lüfter.** Wird von unten in eine Tasche an der Deckelunterseite gedrückt und
+von vier angeformten Federlaschen gehalten — keine Schrauben, kein Zusatzteil.
+Ein 3 mm hoher Rand führt ihn seitlich, die Laschen greifen 0,8 mm unter den
+Rahmen. Der Deckel ist dadurch überall gleich dick (2,4 mm), der Lüfter liegt
+plan an der Innenseite und damit direkt an der Ansaugöffnung. Für das Kabel ist
+der Rand an der Ecke zum GPIO-Stecker auf 8 mm ausgespart. Die Tasche ist exakt
+50,0 mm — am gedruckten Teil geprüft, der Lüfter geht hinein (`fan_fit`).
+
+Beide Flanken des Hakens sind Schrägen, keine rechtwinkelige Nase: der Deckel
+wird auf der Oberseite liegend gedruckt, die Haltefläche zeigt dabei nach unten
+und wäre sonst ein 90°-Überhang. Sie steht auf 45° (`fclip_bear_a`) — flacher
+braucht Stützmaterial. Die Einführschräge zeigt beim Drucken nach oben und ist
+deshalb frei wählbar, sie steht auf 30° (`fclip_lead_a`), damit der Lüfter sanft
+einrastet. Die Haltefläche beginnt genau auf Höhe der Lüfterunterseite, der
+Lüfter hat also kein Spiel.
+
+Zum Herausnehmen zwei gegenüberliegende Laschen nach außen drücken und den
+Lüfter kippen. Die Laschen federn über die vollen 12,2 mm frei — der Rand ist an
+diesen vier Stellen aufgetrennt, sonst wären sie am Fuß eingespannt. 12 × 1,2 mm
+Querschnitt, zusammen rund 18 N Auszugskraft bei etwa 1 % Randfaserdehnung: hält
+den 30-g-Lüfter um Größenordnungen und bleibt weit im elastischen Bereich.
+
+Ansaugöffnung Ø 48 mm mit Fingerschutz, Blasrichtung nach unten auf die Platine.
+Über der Platine sind 33 mm frei; der Lüfter beginnt 23 mm über ihr und lässt
+damit 5 mm über dem RTC-Modul. Wer es flacher will und die RTC-Höhe nachgemessen
+hat, kann `inner_h` um bis zu 3,6 mm reduzieren.
 
 **Platine.** Vier Dome, paarweise auf den Diagonalen. Die beiden bei (3,5 | 3,5)
 und (61,5 | 52,5) nehmen je eine M2,5 × 6 von oben auf, die beiden anderen
@@ -157,15 +177,24 @@ der Innenwand. Bewusst nicht an den langen Seiten: dort sitzen Anschlüsse,
 Lüftungsfeld und die Lüftertasche. Die Nut liegt bei z ≈ 33 mm, also weit über
 allen Ausschnitten — das ist der Grund, warum das erst beim hohen Gehäuse geht.
 
-* Nase 0,7 mm tief, oben und unten angeschrägt: klickt beim Aufsetzen ein und
+* Nase 0,85 mm tief, oben und unten angeschrägt: klickt beim Aufsetzen ein und
   lässt sich mit festem Zug wieder abziehen
+* Die Nase steht 0,1 mm über die Nutoberkante hinaus (`snap_preload`). Der
+  aufgesetzte Deckel hält die Haken damit leicht gespannt und wird auf die
+  Wandoberkante gezogen, statt zu klappern
 * Vertikal liegt der Deckel auf der Wandoberkante auf, nicht auf den Haken
 * In der Mitte jeder kurzen Seite ist eine 16 mm breite Kerbe in der Oberkante,
   um mit dem Fingernagel unter den Deckelrand zu kommen
 
-**Vorspannung nachstellen**, falls es zu stramm oder zu lose sitzt: `-D bead=0.5`
-(leichter) bzw. `-D bead=0.9` (fester). `-D tab_t=1.3` macht die Haken weicher.
-Erst an einem Deckel probieren, bevor beide Teile gedruckt werden.
+Bezugsmaß ist die Nut im Unterteil; die Nase wird dagegen gesetzt. Das ist
+Absicht: **`snap_preload` und `tab_t` ändern nur den Deckel**, das Unterteil
+bleibt gleich. Man kann den Sitz also nachstellen, ohne es neu zu drucken.
+`bead` verändert dagegen auch die Nuttiefe und damit beide Teile.
+
+**Nachstellen**, falls es zu stramm oder zu lose sitzt: `-D snap_preload=0.2`
+(fester) bzw. `-D snap_preload=0` (Spiel wie ohne Vorspannung), `-D tab_t=1.3`
+macht die Haken weicher. Erst einen Deckel probieren, bevor beide Teile
+gedruckt werden.
 
 Weil kein Lüfter über den Deckel hinausragt und keine Schraube durch den Boden
 geht, sind hier auch die Füße massiv.
@@ -180,8 +209,8 @@ Kein Supportmaterial nötig.
 
 Empfohlen: PETG (Abwärme), 0,2 mm Schichthöhe, 4 Perimeter, 25 % Infill. Säulen
 und Dome brauchen die 4 Perimeter, sonst reißen sie beim Einschneiden der
-M2,5-Schrauben auf. Bei Variante 2 die Rasthaken **nicht** mit mehr Perimetern
-oder Infill drucken — sie müssen federn.
+M2,5-Schrauben auf. Bei Variante 2 die Rasthaken und die Lüfterlaschen **nicht**
+mit mehr Perimetern oder Infill drucken — sie müssen federn.
 
 `stl/pi4_case_all.3mf` ist das fertig aufgestellte Projekt mit allen vier Teilen
 (Unterteil und Deckel beider Varianten). Nach jeder Änderung an den `.scad`

@@ -50,22 +50,37 @@ tab_w       = 14.0;
 tab_t       = 1.6;
 tab_len     = 6.0;    // free length of the cantilever
 tab_pos     = [20, 44];   // along the short wall, from the front edge
-bead        = 0.7;    // how far the tab noses into the groove
+bead        = 0.85;   // how far the tab noses into the groove
 bead_h      = 2.0;
+// The groove ends a touch below the top of the nose, so a seated lid keeps the
+// tabs slightly bent and is pulled down onto the wall instead of rattling.
+snap_preload = 0.1;
 pry_w       = 16.0;   // notch in the rim to get a fingernail under the lid
 pry_d       = 1.5;
 
 /* [Fan 50 x 50 x 10, inside] */
+// Held by four moulded spring clips, no screws and no local thickening -- the
+// lid stays lid_t thick everywhere, and the fan sits straight against it.
 fan_size      = 50;
 fan_thick     = 10;
-fan_bolt      = 40;
-fan_bore      = 46;   // air opening in the lid
+fan_bore      = 48;   // air opening in the lid; 1 mm of lid left over the fan
+                      // frame at mid side, the corners carry the contact
 fan_center    = [36, 27];   // in PCB coordinates, over SoC / RAM
-fan_pad       = 2.0;  // pocket wall around the fan
-fan_pad_h     = 3.6;  // extra lid thickness at the fan, holds the screw thread
-fan_rim_h     = 3.0;  // rim the fan drops into
-fan_pilot     = 3.3;  // M4 self tapping
-fan_pilot_d   = 5.0;
+fan_pad       = 2.0;  // rim wall around the fan
+fan_fit       = 0;    // pocket clearance on top of the nominal 50 mm, total.
+                      // 0 verified on the printed pocket, the fan goes in.
+fan_rim_h     = 3.0;  // locating rim the fan drops into
+fan_cable_w   = 8.0;  // gap in the rim for the fan lead
+fclip_w       = 12.0; // one clip per side, centred
+fclip_t       = 1.2;
+fclip_lip     = 0.8;  // how far the hook reaches under the fan frame
+// Both faces of the hook are ramps. The lid prints on its top face, so the hook
+// points upwards: its holding face is the one that overhangs, and at 45 deg it
+// still prints without support. The insertion ramp faces upwards while printing
+// and is therefore free -- flatter means it clips in more gently.
+fclip_bear_a  = 45;   // holding face, from horizontal. Do not go below 45.
+fclip_lead_a  = 30;   // insertion ramp, from horizontal
+fclip_gap     = 0.6;  // slot each side, so the clip is free of the rim
 fan_guard     = true;
 fan_guard_rib = 2.6;
 
@@ -98,11 +113,19 @@ pcb_bot = floor_t + standoff_h;
 pcb_top = pcb_bot + pcb_t;
 
 tab_bot  = base_h - lip_h - tab_len;   // free end of the cantilever
-bead_z   = tab_bot + 0.8;              // bottom of the nose
 lip_face = wall + lip_gap;             // outer face of lip and tabs
 
-// fan, hanging from the lid
-fan_top  = base_h - fan_pad_h;
+// The groove in the base is the reference, the nose on the lid is placed
+// against it: its top ends snap_preload above the top of the groove, so a
+// seated lid keeps the tabs slightly bent. Preload therefore lives entirely in
+// the lid -- the base stays as it is even when the fit is retuned.
+groove_z = tab_bot + 0.65;             // bottom of the groove
+groove_h = bead_h + 0.3;
+bead_z   = groove_z + groove_h - bead_h + snap_preload;
+
+// fan, hanging from the lid straight against its inner face
+fan_open = fan_size + fan_fit;
+fan_top  = base_h;
 fan_bot  = fan_top - fan_thick;
 
 /* ------------------------------------------------------------- primitives */
@@ -260,9 +283,9 @@ module snap_tabs() {
 
 // Matching groove, running along both short walls.
 module snap_groove() {
-    gz = bead_z - 0.15;
-    gh = bead_h + 0.3;
-    gd = bead + 0.2;
+    gh = groove_h;
+    gz = groove_z;
+    gd = bead + 0.05;
     for (x0 = [wall - gd, outer_x - wall - 0.1])
         translate([x0, corner_r + 2, gz])
             cube([gd + 0.1, outer_y - 2 * (corner_r + 2), gh]);
@@ -298,35 +321,62 @@ module base() {
 }
 
 /* -------------------------------------------------------------------- lid */
+// One spring clip, sitting on the -x side of the fan and hooking inwards under
+// its frame. Origin is the fan centre, z = 0 the lid inner face.
+module fan_clip() {
+    xi   = -fan_open / 2;                   // face the fan rests against
+    hook = fclip_lip / tan(fclip_bear_a);   // drop of the holding face
+    lead = fclip_lip / tan(fclip_lead_a);   // drop of the insertion ramp
+    len  = fan_thick + hook + lead;
+    translate([xi - fclip_t, -fclip_w / 2, -len]) cube([fclip_t, fclip_w, len]);
+    // The holding face starts exactly at the underside of the fan, so the fan
+    // has no play, and slopes away from there -- no square shoulder anywhere.
+    // The back of the profile reaches into the clip body; sharing a face
+    // exactly would leave the union non-manifold.
+    translate([0, fclip_w / 2, 0]) rotate([90, 0, 0])
+        linear_extrude(fclip_w)
+            polygon([[xi - fclip_t / 2, -fan_thick],
+                     [xi,               -fan_thick],
+                     [xi + fclip_lip,   -fan_thick - hook],
+                     [xi,               -fan_thick - hook - lead],
+                     [xi - fclip_t / 2, -fan_thick - hook - lead]]);
+}
+
 module fan_pocket() {
-    s = fan_size + 2 * fan_pad;
-    at_pcb(fan_center[0] - s / 2, fan_center[1] - s / 2, inner_h - fan_pad_h) {
-        rbox([s, s, fan_pad_h], 4);
-        // rim the fan drops into
-        translate([0, 0, -fan_rim_h])
-            difference() {
-                rbox([s, s, fan_rim_h], 4);
-                translate([fan_pad, fan_pad, -eps])
-                    rbox([fan_size, fan_size, fan_rim_h + 1], 3);
-            }
+    s = fan_open + 2 * fan_pad;
+    difference() {
+        at_pcb(fan_center[0] - s / 2, fan_center[1] - s / 2, inner_h - fan_rim_h)
+            rbox([s, s, fan_rim_h], 4);
+        at_pcb(fan_center[0] - fan_open / 2, fan_center[1] - fan_open / 2,
+               inner_h - fan_rim_h - 1)
+            rbox([fan_open, fan_open, fan_rim_h + 2], 3);
+        // way out for the fan lead, at the corner nearest the GPIO header
+        at_pcb(fan_center[0] - s / 2 - 1, fan_center[1] + s / 2 - fan_cable_w,
+               inner_h - fan_rim_h - 1)
+            cube([fan_pad + 2, fan_cable_w, fan_rim_h + 2]);
+        // free the clips from the rim, otherwise they are braced at the root
+        // and only bend over their upper part
+        at_pcb(fan_center[0], fan_center[1], inner_h - fan_rim_h - 1)
+            for (a = [0, 90, 180, 270]) rotate([0, 0, a])
+                translate([-s, -(fclip_w + 2 * fclip_gap) / 2, 0])
+                    cube([s, fclip_w + 2 * fclip_gap, fan_rim_h + 2]);
     }
+    at_pcb(fan_center[0], fan_center[1], inner_h)
+        for (a = [0, 90, 180, 270]) rotate([0, 0, a]) fan_clip();
 }
 
 module fan_cuts() {
-    at_pcb(fan_center[0], fan_center[1], inner_h) {
-        translate([0, 0, -fan_pad_h - fan_rim_h - 1])
-            cylinder(h = fan_pad_h + fan_rim_h + lid_t + 2, d = fan_bore);
-        for (sx = [-1, 1], sy = [-1, 1])
-            translate([sx * fan_bolt / 2, sy * fan_bolt / 2, -fan_pad_h - eps])
-                cylinder(h = fan_pilot_d, d = fan_pilot);
-    }
+    at_pcb(fan_center[0], fan_center[1], inner_h)
+        translate([0, 0, -1]) cylinder(h = lid_t + 2, d = fan_bore);
 }
 
 module fan_guard() {
     if (fan_guard)
         at_pcb(fan_center[0], fan_center[1], inner_h)
             intersection() {
-                cylinder(h = lid_t, d = fan_bore);
+                // slightly wider than the bore, so the ribs bite into the plate
+                // instead of sharing a surface with it -- that is not manifold
+                cylinder(h = lid_t, d = fan_bore + 0.4);
                 union() {
                     cylinder(h = lid_t, d = fan_guard_rib * 3);
                     for (a = [0 : 60 : 179])
