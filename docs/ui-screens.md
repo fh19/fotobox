@@ -194,13 +194,32 @@ Kacheln:
 
 2. **Drucker** — großer Button `Drucker fortsetzen` (nach Papier-/Bandwechsel),
    `Warteschlange leeren`, `Testdruck`, `Druckzähler zurücksetzen`
+
+2b. **Kamera** — Auswahl von `Hauptkamera`, `Vorschau-Backend` und `Vorschaugerät`,
+   darüber das Live-Bild der Vorschaukamera zur Ausrichtungskontrolle. Buttons:
+   `Kamera übernehmen`, `Neu suchen`, `Kamera zurücksetzen`, `Probefoto`,
+   `Ausrichtung kalibrieren`.
+
+   `Neu suchen` findet eine Kamera, die erst nach dem Start angeschlossen oder
+   eingeschaltet wurde — ohne Neustart der Box. `Kamera zurücksetzen` fragt vorher
+   nach (`Kamera zurücksetzen? Sie wird kurz vom USB getrennt.`) und ist die Antwort
+   auf eine Kamera, die am USB hängt, sich aber nicht mehr ansprechen lässt.
+   `Probefoto` zeigt das aufgenommene Bild mit Modell und Auflösung — daran erkennt
+   man sofort, ob wirklich die DSLR ausgelöst hat oder die Ersatzkamera.
+
+   Löst die Vorschaukamera als Ersatz aus, steht ganz oben in der Kachel in Orange:
+   `Ersatzkamera aktiv — Fotos kommen von der Vorschaukamera`.
 3. **Event** — aktives Event, Bildzahl, `Neues Event anlegen`
 4. **Hintergründe & Rahmen** — Liste der hochgeladenen Einträge (Name, Modus) mit
    `Löschen`; Upload per `Name`, `Modus` (Rahmen/Overlay/Greenscreen/KI) und Datei.
    `frame` rahmt das Foto im transparenten Fenster des PNG, `overlay` legt das PNG
    über das Foto
-5. **Einstellungen** — Countdown-Dauer, Timeouts, Druck-Limits,
+5. **Einstellungen** — Countdown-Dauer, `Auslöser-Vorlauf (ms)`, Timeouts, Druck-Limits,
    Hintergrundauswahl ein/aus
+
+   Der Vorlauf löst so viel früher aus, als der Countdown bei „0" ankommt, und gleicht
+   damit Blitzdauer und Kameralatenz aus. Die letzte Sekunde des Countdowns bleibt
+   immer stehen — ein zu großer Wert darf den Gästen nicht das Zählen wegnehmen.
 6. **Kalibrierung** — Live-Bild mit verschiebbarem Rahmen für den DSLR-Ausschnitt
 7. **Netzwerk** — Access-Point ein/aus, aktuelle IP-Adresse, Galerie-URL groß dargestellt
 8. **Export** — `Auf USB-Stick kopieren` mit Fortschrittsanzeige

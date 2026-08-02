@@ -66,6 +66,7 @@ async function login() {
 }
 
 async function loadAll() {
+  startAdminPreview(); // only after login — no polling while the PIN gate is up
   await Promise.all([
     loadPrinter(),
     loadCameras(),
@@ -136,6 +137,7 @@ async function loadCameras() {
   $("cam-status").textContent = c.capture.selected
     ? `Aktiv: ${c.capture.selected.model}`
     : "Keine Kamera erkannt";
+  $("cam-fallback").classList.toggle("hidden", !c.capture.fallback);
 }
 
 async function applyCamera() {
@@ -150,6 +152,94 @@ async function applyCamera() {
   } catch (e) {
     note("cam-status", "Fehler: " + e.message, false);
   }
+}
+
+async function rescanCameras() {
+  note("cam-status", "Suche läuft …");
+  try {
+    const c = await api("POST", "/api/admin/camera/rescan");
+    await loadCameras();
+    note(
+      "cam-status",
+      c.capture.selected ? `Gefunden: ${c.capture.selected.model}` : "Keine Kamera gefunden",
+      Boolean(c.capture.selected)
+    );
+  } catch (e) {
+    note("cam-status", "Fehler: " + e.message, false);
+  }
+}
+
+async function resetCameras() {
+  // Takes the camera off the USB bus for a moment — ask before doing that.
+  if (!window.confirm("Kamera zurücksetzen? Sie wird kurz vom USB getrennt.")) return;
+  note("cam-status", "Zurücksetzen läuft …");
+  try {
+    const c = await api("POST", "/api/admin/camera/reset");
+    await loadCameras();
+    note(
+      "cam-status",
+      c.capture.selected
+        ? `Zurückgesetzt, gefunden: ${c.capture.selected.model}`
+        : "Zurückgesetzt, aber keine Kamera gefunden",
+      Boolean(c.capture.selected)
+    );
+  } catch (e) {
+    note("cam-status", "Fehler: " + e.message, false);
+  }
+}
+
+async function testShot() {
+  note("cam-status", "Probefoto läuft …");
+  try {
+    const r = await api("POST", "/api/admin/camera/testshot");
+    note("cam-status", "Probefoto aufgenommen.");
+    $("cam-shot-info").textContent = `${r.model || "unbekannt"} · ${r.width}×${r.height}`;
+    const img = $("cam-shot");
+    // The endpoint needs the PIN header, so the image is fetched and shown as a blob.
+    const url = await apiBlobUrl(`/api/admin/camera/testshot.jpg?ts=${Date.now()}`);
+    if (img.dataset.url) URL.revokeObjectURL(img.dataset.url);
+    img.dataset.url = url;
+    img.src = url;
+    img.classList.remove("hidden");
+    await loadCameras();
+  } catch (e) {
+    note("cam-status", "Fehler: " + e.message, false);
+  }
+}
+
+async function apiBlobUrl(path) {
+  const res = await fetch(path, { headers: { "X-Fotobox-Pin": pin || "" }, cache: "no-store" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return URL.createObjectURL(await res.blob());
+}
+
+/* Live view of the preview camera, same self-healing polling as the kiosk
+ * (frontend/app.js startPreview): single frames instead of one long-lived MJPEG
+ * connection, because Chromium can silently freeze a multipart <img> without ever
+ * firing "error". Deliberately duplicated — there is no build pipeline, and the
+ * kiosk and the admin page load different scripts. */
+function startAdminPreview() {
+  const img = $("cam-live");
+  let currentUrl = null;
+
+  const tick = async () => {
+    let delay = 200; // 5 fps is plenty to check the framing
+    try {
+      const res = await fetch(`/preview/frame?ts=${Date.now()}`, { cache: "no-store" });
+      if (res.ok) {
+        const url = URL.createObjectURL(await res.blob());
+        img.src = url;
+        if (currentUrl) URL.revokeObjectURL(currentUrl);
+        currentUrl = url;
+      } else {
+        delay = 1000;
+      }
+    } catch (e) {
+      delay = 1000;
+    }
+    window.setTimeout(tick, delay);
+  };
+  tick();
 }
 
 async function calibrate() {
@@ -483,6 +573,9 @@ window.addEventListener("DOMContentLoaded", () => {
   );
   $("printer-reset").addEventListener("click", () => printerAction("/api/admin/printer/counter-reset", "Druckzähler wirklich auf 0 setzen?"));
   $("cam-apply").addEventListener("click", applyCamera);
+  $("cam-rescan").addEventListener("click", rescanCameras);
+  $("cam-reset").addEventListener("click", resetCameras);
+  $("cam-testshot").addEventListener("click", testShot);
   $("cam-calibrate").addEventListener("click", calibrate);
   $("bg-upload").addEventListener("click", uploadBackground);
   $("cfg-save").addEventListener("click", saveConfig);

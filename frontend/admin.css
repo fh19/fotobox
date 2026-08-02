@@ -215,3 +215,25 @@ input[type="checkbox"] {
   padding: 4px 10px;
   font-size: 14px;
 }
+
+/* Camera tile: live view of the preview camera and the last test shot. */
+.warn {
+  color: #ffb74d;
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+.cam-live,
+.cam-shot {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  aspect-ratio: 16 / 9;
+  object-fit: contain;
+  background: #000;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.cam-shot {
+  aspect-ratio: auto;
+  margin-top: 12px;
+}

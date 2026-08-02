@@ -53,14 +53,25 @@
       <!-- Kamera -->
       <section class="card">
         <h2>Kamera</h2>
+        <p id="cam-fallback" class="warn hidden">
+          Ersatzkamera aktiv — Fotos kommen von der Vorschaukamera
+        </p>
+        <img id="cam-live" class="cam-live" alt="Live-Bild der Vorschaukamera" />
         <label>Hauptkamera <select id="cam-select"></select></label>
         <label>Vorschau-Backend <select id="prev-backend"></select></label>
         <label>Vorschaugerät <select id="prev-device"></select></label>
         <div class="row">
           <button id="cam-apply" class="btn">Kamera übernehmen</button>
-          <button id="cam-calibrate" class="btn">Ausrichtung kalibrieren (Probefoto)</button>
+          <button id="cam-rescan" class="btn">Neu suchen</button>
+          <button id="cam-reset" class="btn">Kamera zurücksetzen</button>
+        </div>
+        <div class="row">
+          <button id="cam-testshot" class="btn">Probefoto</button>
+          <button id="cam-calibrate" class="btn">Ausrichtung kalibrieren</button>
         </div>
         <p id="cam-status" class="muted"></p>
+        <img id="cam-shot" class="cam-shot hidden" alt="Probefoto" />
+        <p id="cam-shot-info" class="muted"></p>
       </section>
 
       <!-- Hintergründe / Rahmen -->
