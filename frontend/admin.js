@@ -239,6 +239,7 @@ async function deleteBackground(id, name) {
 async function loadConfig() {
   const cfg = await api("GET", "/api/admin/config");
   $("cfg-countdown").value = cfg.countdown.duration_seconds;
+  $("cfg-lead").value = cfg.countdown.shutter_lead_ms;
   $("cfg-preview").value = cfg.timeouts.preview_seconds;
   $("cfg-error").value = cfg.timeouts.error_seconds;
   $("cfg-perphoto").value = cfg.printing.max_per_photo;
@@ -248,7 +249,10 @@ async function loadConfig() {
 
 async function saveConfig() {
   const updates = {
-    countdown: { duration_seconds: Number($("cfg-countdown").value) },
+    countdown: {
+      duration_seconds: Number($("cfg-countdown").value),
+      shutter_lead_ms: Number($("cfg-lead").value),
+    },
     timeouts: {
       preview_seconds: Number($("cfg-preview").value),
       error_seconds: Number($("cfg-error").value),

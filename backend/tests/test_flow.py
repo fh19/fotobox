@@ -130,3 +130,56 @@ def test_capture_failure_goes_to_error(make_engine, clock):
     assert engine.sm.error.code == "capture_failed"
     error_msgs = messages_of_type(engine, "error")
     assert error_msgs and error_msgs[0]["payload"]["code"] == "capture_failed"
+
+
+# --- shutter lead -----------------------------------------------------------
+#
+# The shutter is not instant: flash duration plus camera latency put the actual
+# exposure a moment after the countdown hits zero. The lead fires that much
+# earlier so the picture is taken when the guests expect it.
+
+
+def test_shutter_lead_fires_the_capture_early(make_engine, clock):
+    engine = make_engine(countdown__duration_seconds=3, countdown__shutter_lead_ms=600)
+    engine.start()
+    engine.select_background("none")
+
+    engine.tick()
+    clock.advance(2.3)
+    engine.tick()
+    assert engine.sm.state == State.COUNTDOWN  # 700 ms left, lead is 600 ms
+
+    clock.advance(0.15)
+    engine.tick()
+    assert engine.sm.state == State.PREVIEW  # fired at 2.45 s of a 3 s countdown
+
+
+def test_without_a_lead_the_capture_waits_for_zero(make_engine, clock):
+    engine = make_engine(countdown__duration_seconds=3)
+    engine.start()
+    engine.select_background("none")
+
+    engine.tick()
+    clock.advance(2.9)
+    engine.tick()
+    assert engine.sm.state == State.COUNTDOWN
+
+    clock.advance(0.2)
+    engine.tick()
+    assert engine.sm.state == State.PREVIEW
+
+
+def test_a_lead_longer_than_the_countdown_keeps_the_last_second(make_engine, clock):
+    """Guests still get a countdown — the lead is capped at duration minus one."""
+    engine = make_engine(countdown__duration_seconds=3, countdown__shutter_lead_ms=5000)
+    engine.start()
+    engine.select_background("none")
+
+    engine.tick()
+    clock.advance(0.8)
+    engine.tick()
+    assert engine.sm.state == State.COUNTDOWN  # lead capped to 2 s → not before t=1
+
+    clock.advance(0.4)
+    engine.tick()
+    assert engine.sm.state == State.PREVIEW

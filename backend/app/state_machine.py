@@ -222,7 +222,12 @@ class StateMachine:
             self._session.countdown_ticks_emitted += 1
             remaining = duration - (self._session.countdown_ticks_emitted - 1)
             self._emit("countdown_tick", {"remaining": remaining})
-        if elapsed >= duration:
+        # Fire early by the configured lead so the exposure lands on "0" instead of
+        # a second later — the shutter release is not instant (flash duration plus
+        # camera latency). The last second of the countdown always survives: a
+        # generous lead must never rob the guests of the count itself.
+        lead = min(self._config.countdown.shutter_lead_ms / 1000, max(0.0, duration - 1))
+        if elapsed >= duration - lead:
             self._set_state(State.CAPTURE)
 
     def _fire_timeout(self) -> None:

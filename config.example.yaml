@@ -31,6 +31,7 @@ hardware:
 
 countdown:
   duration_seconds: 5
+  shutter_lead_ms: 0             # so viel früher auslösen (Blitz + Kameralatenz)
   sound_enabled: false
   sound_tick: /data/assets/sounds/tick.wav
   sound_shutter: /data/assets/sounds/shutter.wav

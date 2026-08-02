@@ -65,6 +65,9 @@ class HardwareConfig(_Model):
 
 class CountdownConfig(_Model):
     duration_seconds: int = Field(ge=1)
+    # Vorlauf: so viel früher als "0" wird ausgelöst, um die Verzögerung zwischen
+    # Auslösebefehl und Belichtung auszugleichen (Blitz + Kameralatenz). 0 = aus.
+    shutter_lead_ms: int = Field(default=0, ge=0, le=5000)
     sound_enabled: bool = False
     sound_tick: str = ""
     sound_shutter: str = ""
