@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from app.hardware.v4l2_preview import V4l2Preview, _placeholder
+from app.hardware.v4l2_preview import V4l2Preview, placeholder_frame
 
 
 def test_placeholder_is_valid_jpeg():
-    data = _placeholder()
+    data = placeholder_frame()
     assert isinstance(data, bytes) and data[:2] == b"\xff\xd8"  # JPEG SOI marker
 
 

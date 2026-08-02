@@ -1,12 +1,16 @@
 """Real DSLR capture via python-gphoto2 (milestone M5).
 
-Only the shutter is driven here — the live preview comes from a separate camera
-(CLAUDE.md rule 1). ``python-gphoto2`` is imported lazily so the rest of the app
-runs on machines without it. Two verified essentials (see the M5 memory):
+The shutter is driven here; the camera handle itself belongs to
+:mod:`app.hardware.gphoto2_session`, which the live preview borrows too. Two
+verified essentials (see the M5 memory):
 
 - the OS must not let gvfs claim the camera (handled in deploy/setup.sh);
 - autofocus must not block the shutter — ``autofocus=off`` fires immediately with
   the current (manual) focus; ``before_capture`` drives AF first but still fires.
+
+What comes back is not always a JPEG: a Sony a7 IV set to RAW+JPEG hands us the
+``.ARW`` path first. ``image_quality`` from the config prevents that, and if the
+camera ignores the setting the JPEG is picked up from the following file event.
 """
 
 from __future__ import annotations
@@ -20,16 +24,23 @@ from PIL import Image
 from app.config import Config
 from app.hardware.base import CaptureResult
 from app.hardware.discovery import DetectedCamera
+from app.hardware.gphoto2_lock import CAMERA_LOCK
+from app.hardware.gphoto2_session import CameraSession, get_session, import_gphoto2
 
 log = logging.getLogger("fotobox.camera")
 
 _AVAILABILITY_TTL = 2.0  # seconds; avoid hammering USB on every status poll
+_JPEG_MAGIC = b"\xff\xd8\xff"
+_JPEG_SUFFIXES = (".jpg", ".jpeg")
 
 
 class Gphoto2Camera:
-    def __init__(self, config: Config, selected: DetectedCamera | None) -> None:
+    def __init__(
+        self, config: Config, selected: DetectedCamera | None, session: CameraSession | None = None
+    ) -> None:
         self._config = config
         self._selected = selected
+        self._session = session if session is not None else get_session(config, selected)
         self._available = selected is not None
         self._checked_at = 0.0
 
@@ -37,9 +48,20 @@ class Gphoto2Camera:
 
     def available(self) -> bool:
         now = time.monotonic()
-        if now - self._checked_at > _AVAILABILITY_TTL:
-            self._available = self._detect()
+        if now - self._checked_at <= _AVAILABILITY_TTL:
+            return self._available
+        # Never probe the USB device while a capture or a live-view frame owns it —
+        # that collision is what used to wedge the camera. A camera that is exposing
+        # right now is obviously there, so the cached answer is the correct one.
+        if not CAMERA_LOCK.acquire(blocking=False):
+            return self._available
+        try:
+            # An open session means the camera answered a moment ago; asking the USB
+            # bus again would only risk disturbing our own handle.
+            self._available = True if self._session.is_open() else self._detect()
             self._checked_at = now
+        finally:
+            CAMERA_LOCK.release()
         return self._available
 
     def model(self) -> str | None:
@@ -48,13 +70,19 @@ class Gphoto2Camera:
         return self._selected.model if self.available() else None
 
     def capture(self) -> CaptureResult:
-        gp = _import_gphoto2()
-        camera = self._open(gp)
-        try:
-            self._prepare_focus(gp, camera)
-            jpeg = self._trigger_and_download(gp, camera)
-        finally:
-            camera.exit()
+        timeout = self._config.hardware.camera.capture_timeout_seconds
+        with self._session.use(timeout=timeout) as camera:
+            try:
+                gp = import_gphoto2()
+                self._prepare_focus(gp, camera)
+                jpeg = self._trigger_and_download(gp, camera)
+            except Exception:
+                # Something went wrong on the wire: drop the handle so the next
+                # attempt starts from a fresh init instead of inheriting a broken
+                # session. Done while we still hold the lock (it is reentrant), so
+                # a busy camera never makes the error path wait on someone else.
+                self._session.invalidate()
+                raise
         width, height = _jpeg_size(jpeg)
         return CaptureResult(
             jpeg=jpeg,
@@ -67,7 +95,7 @@ class Gphoto2Camera:
 
     def _detect(self) -> bool:
         try:
-            gp = _import_gphoto2()
+            gp = import_gphoto2()
             detected = list(gp.Camera.autodetect())
         except Exception:
             return False
@@ -75,36 +103,16 @@ class Gphoto2Camera:
             return any(port == self._selected.port for _, port in detected)
         return len(detected) > 0
 
-    def _open(self, gp):
-        camera = gp.Camera()
-        # Address the chosen camera by its port when one is selected.
-        if self._selected is not None and self._selected.port:
-            port_info_list = gp.PortInfoList()
-            port_info_list.load()
-            index = port_info_list.lookup_path(self._selected.port)
-            if index >= 0:
-                camera.set_port_info(port_info_list[index])
-        camera.init()
-        return camera
-
     def _set_widget(self, gp, camera, name: str, value) -> bool:
-        try:
-            config = camera.get_config()
-            widget = config.get_child_by_name(name)
-            widget.set_value(value)
-            camera.set_config(config)
-            return True
-        except Exception as exc:  # widget missing / read-only on this body
-            log.debug("Kamera-Einstellung %s=%s nicht möglich: %s", name, value, exc)
-            return False
+        return self._session.set_widget(camera, name, value)
 
     def _prepare_focus(self, gp, camera) -> None:
+        # ``autofocus=off`` is set once when the session opens; only the AF-first
+        # mode has to touch the camera before every shot.
         if self._config.hardware.camera.autofocus == "before_capture":
             # Try to focus, but never let it block the shutter later.
             self._set_widget(gp, camera, "autofocus", "On")
             self._set_widget(gp, camera, "autofocusdrive", 1)
-        else:
-            self._set_widget(gp, camera, "autofocus", "Off")
 
     def _trigger_and_download(self, gp, camera) -> bytes:
         try:
@@ -113,22 +121,53 @@ class Gphoto2Camera:
             # AF-priority may still refuse; fall back to firing without focus.
             self._set_widget(gp, camera, "autofocus", "Off")
             path = camera.capture(gp.GP_CAPTURE_IMAGE)
-        camera_file = camera.file_get(path.folder, path.name, gp.GP_FILE_TYPE_NORMAL)
-        jpeg = bytes(camera_file.get_data_and_size())
-        # Tidy up the card so it does not fill during a long event.
-        try:
-            camera.file_delete(path.folder, path.name)
-        except Exception:
-            pass
+        if _is_jpeg_name(path.name):
+            jpeg = self._download(gp, camera, path.folder, path.name)
+            if jpeg.startswith(_JPEG_MAGIC):
+                return jpeg
+            log.warning("Kamera lieferte %s ohne JPEG-Inhalt — warte auf das JPEG", path.name)
+        else:
+            # RAW+JPEG: the RAW arrives first and is useless here, so it is not even
+            # downloaded (35 MB over USB). The JPEG follows as its own file event.
+            log.info("Kamera lieferte %s (RAW) — warte auf das JPEG", path.name)
+        jpeg = self._wait_for_jpeg(gp, camera)
+        if jpeg is None:
+            raise RuntimeError(
+                f"Kamera lieferte kein JPEG (nur {path.name}). "
+                "Bildqualität an der Kamera auf JPEG stellen."
+            )
         return jpeg
 
+    def _download(self, gp, camera, folder: str, name: str) -> bytes:
+        camera_file = camera.file_get(folder, name, gp.GP_FILE_TYPE_NORMAL)
+        data = bytes(camera_file.get_data_and_size())
+        # Tidy up the card so it does not fill during a long event. Not every body
+        # allows deletion (Sony refuses), hence the bare except.
+        try:
+            camera.file_delete(folder, name)
+        except Exception:
+            pass
+        return data
 
-def _import_gphoto2():
-    try:
-        import gphoto2 as gp
-    except Exception as exc:  # not installed on the dev machine
-        raise RuntimeError(f"python-gphoto2 nicht verfügbar: {exc}") from exc
-    return gp
+    def _wait_for_jpeg(self, gp, camera) -> bytes | None:
+        """Collect file events until a JPEG shows up or the capture timeout runs out."""
+        deadline = time.monotonic() + self._config.hardware.camera.capture_timeout_seconds
+        while True:
+            remaining_ms = int((deadline - time.monotonic()) * 1000)
+            if remaining_ms <= 0:
+                return None
+            event_type, event_data = camera.wait_for_event(remaining_ms)
+            if event_type == gp.GP_EVENT_TIMEOUT:
+                return None
+            if event_type != gp.GP_EVENT_FILE_ADDED or not _is_jpeg_name(event_data.name):
+                continue
+            data = self._download(gp, camera, event_data.folder, event_data.name)
+            if data.startswith(_JPEG_MAGIC):
+                return data
+
+
+def _is_jpeg_name(name: str) -> bool:
+    return name.lower().endswith(_JPEG_SUFFIXES)
 
 
 def _jpeg_size(jpeg: bytes) -> tuple[int, int]:

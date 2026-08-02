@@ -11,13 +11,17 @@ hardware:
     backend: gphoto2
     select: auto                   # auto | Modellname | usb:BUS,DEV
     autofocus: "off"               # "off" (manueller Fokus) | before_capture
+    image_quality: JPEG            # gphoto2-Wert von "imagequality"; leer = nicht ändern
+    capture_target: ""             # gphoto2-Wert von "capturetarget"; leer = nicht ändern
     capture_timeout_seconds: 15
     reconnect_backoff_seconds: [1, 2, 5, 10, 30]
     usbreset_after_failures: 3     # 0 = nie
     fallback_to_preview: true      # DSLR weg (z.B. Akku leer) → Foto mit Vorschaukamera
 
   preview:
-    backend: picamera2             # picamera2 | v4l2 | mock | auto
+    backend: picamera2             # picamera2 | v4l2 | gphoto2 | mock | auto
+                                   # gphoto2 = Live-Bild aus der DSLR (nur ohne
+                                   # eigene Vorschaukamera, siehe Regel 1)
     device: /dev/video0            # auto | /dev/videoN | Geräte-ID
     width: 1280
     height: 720

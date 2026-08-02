@@ -193,6 +193,42 @@ sudo systemctl restart fotobox-backend
 Verkabelung/Fokus: die DSLR sollte auf **manuellen Fokus** stehen (Fotobox löst sofort
 aus). Details in der Memory-Notiz zur Kamera.
 
+### Sony a7 IV (und andere Sony Alpha)
+
+Am Kameramenü nötig:
+
+- **USB → USB-Verbindungsmodus: PC-Fernbedienung** (sonst kein Auslösen über gphoto2)
+- **USB → USB-Stromversorgung: Aus.** Sonst lädt die Kamera aus dem Pi und der Pi geht in
+  Unterspannung (`vcgencmd get_throttled` ≠ 0x0) — das lässt auch die USB-Webcam der
+  Vorschau aussetzen.
+- **Bildqualität/Dateiformat**: Die Fotobox setzt vor jeder Auslösung
+  `camera.image_quality` (Default `JPEG`). Ohne das liefert die Kamera im Modus RAW+JPEG
+  zuerst die `.ARW` — 35 MB, die als Foto unbrauchbar sind. Bleibt die Kamera bei RAW+JPEG,
+  holt sich das Backend das JPEG aus dem Folge-Event.
+- **JPEG-Bildgröße M oder S** verkürzt die Übertragung spürbar (L ≈ 17 MB ≈ 4 s über USB —
+  das muss unter `camera.capture_timeout_seconds` bleiben).
+
+**Ohne separate Vorschaukamera:** `hardware.preview.backend: gphoto2` (oder im Admin
+unter Vorschau-Backend) holt das Live-Bild aus der DSLR selbst — 1024×768, ~30 Bilder/s,
+über denselben offenen Kamera-Handle wie der Auslöser. Mit angeschlossener Webcam bleibt
+`auto` bei dieser, so wie Regel 1 es vorsieht.
+
+**Auslöseverzögerung:** Die a7 IV braucht ab Auslösebefehl ~650 ms bis zur Belichtung
+(die Fotobox hält die Kamera dafür dauerhaft geöffnet; ohne das wären es 4,2 s, weil
+libgphoto2 nach jedem `init()` 3 s Sony-Startzeit abwartet). Wer den Rest ausgleichen
+will, stellt im Admin unter `Auslöser-Vorlauf (ms)` z. B. 650 ein — dann fällt die
+Belichtung auf das Ende des Countdowns statt kurz danach.
+
+Steht `[-53] Could not claim the USB device` im Log, hängt die Kamera am Bus, lässt sich
+aber nicht mehr ansprechen. Dafür gibt es im Admin-Bereich `Kamera zurücksetzen`
+(USB-Reset, kein Neustart nötig); nach `camera.usbreset_after_failures` Fehlversuchen
+in Folge macht die Box das von allein.
+
+Das CLI-`gphoto2` von Debian (libgphoto2 2.5.31) kann die a7 IV **nicht** auslösen
+(„Konnte Bild nicht aufnehmen"; alle PTP-Properties melden 0x2002). Das ist kein
+Fotobox-Fehler: das `python-gphoto2`-Rad im venv bringt libgphoto2 2.5.34 mit, und die
+funktioniert. Zum Testen also immer den venv-Python nehmen, nicht `gphoto2` aus der Shell.
+
 ## 8. Read-only Root (overlayroot) — als Letztes
 
 Schützt die SD gegen Korruption bei Stromausfall. Auf diesem System bereits eingerichtet;

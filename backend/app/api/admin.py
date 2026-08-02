@@ -103,6 +103,47 @@ async def post_cameras(
     )
 
 
+@router.post("/camera/rescan")
+async def post_camera_rescan(
+    request: Request, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    """Look for cameras again — for one connected after the box booted."""
+    _require_pin(request, x_fotobox_pin)
+    # Off the event loop: discovery talks to USB and can take a moment.
+    return JSONResponse(await asyncio.to_thread(_engine(request).rescan_cameras))
+
+
+@router.post("/camera/reset")
+async def post_camera_reset(
+    request: Request, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    """USB-reset the DSLR and reopen the preview device, then look again."""
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(await asyncio.to_thread(_engine(request).reset_cameras))
+
+
+@router.post("/camera/testshot")
+async def post_camera_testshot(
+    request: Request, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    """Take a photo that goes nowhere near the event — just to see what fires."""
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(await asyncio.to_thread(_engine(request).test_shot))
+
+
+@router.get("/camera/testshot.jpg")
+async def get_camera_testshot(
+    request: Request, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    _require_pin(request, x_fotobox_pin)
+    path = _engine(request).test_shot_path
+    if not path.exists():
+        return JSONResponse({"error": {"code": "not_found", "message": "Kein Probefoto"}}, 404)
+    return Response(
+        path.read_bytes(), media_type="image/jpeg", headers={"Cache-Control": "no-store"}
+    )
+
+
 @router.post("/calibration")
 async def post_calibration(
     request: Request, x_fotobox_pin: str | None = Header(default=None)

@@ -18,7 +18,7 @@ log = logging.getLogger("fotobox.preview")
 _placeholder_jpeg: bytes | None = None
 
 
-def _placeholder() -> bytes:
+def placeholder_frame() -> bytes:
     """A tiny dark frame shown until the first real frame arrives / on failure."""
     global _placeholder_jpeg
     if _placeholder_jpeg is None:
@@ -103,7 +103,7 @@ class V4l2Preview:
         with self._lock:
             if self._latest is not None:
                 return self._latest
-        return _placeholder()
+        return placeholder_frame()
 
     def close(self) -> None:
         self._stop.set()

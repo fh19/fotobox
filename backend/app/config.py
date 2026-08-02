@@ -33,6 +33,12 @@ class CameraConfig(_Model):
     # off = sofort auslösen (manueller Fokus, Fotobox-Standard, nie blockiert);
     # before_capture = AF vor der Auslösung, aber mit Auslösepriorität (blockiert nie).
     autofocus: Literal["off", "before_capture"] = "off"
+    # gphoto2-Widget-Werte, die vor dem Auslösen gesetzt werden; leer = Kamera nicht
+    # verändern. "JPEG" verhindert, dass eine Kamera im RAW+JPEG-Modus (Sony a7 IV)
+    # die unbrauchbare RAW-Datei liefert. Passt der Wert nicht zur Kamera, bleibt die
+    # Einstellung unverändert und der JPEG-Umweg unten greift.
+    image_quality: str = "JPEG"
+    capture_target: str = ""
     capture_timeout_seconds: float = Field(gt=0)
     reconnect_backoff_seconds: list[float]
     usbreset_after_failures: int = Field(ge=0)
@@ -42,8 +48,10 @@ class CameraConfig(_Model):
 
 
 class PreviewConfig(_Model):
-    backend: Literal["picamera2", "v4l2", "mock", "auto"] = "picamera2"
-    device: str = "/dev/video0"  # "auto", /dev/videoN oder Geräte-ID
+    # gphoto2 = Live-Bild aus der DSLR. Regel 1 will eine eigene Vorschaukamera;
+    # ohne zweite Kamera gäbe es sonst gar kein Live-Bild.
+    backend: Literal["picamera2", "v4l2", "gphoto2", "mock", "auto"] = "picamera2"
+    device: str = "/dev/video0"  # "auto", /dev/videoN, gphoto2-Port oder Geräte-ID
     width: int = Field(gt=0)
     height: int = Field(gt=0)
     fps: int = Field(gt=0)

@@ -15,6 +15,7 @@ from pathlib import Path
 
 from app.config import Config
 from app.hardware.discovery import DetectedCamera, DetectedPreview
+from app.hardware.gphoto2_lock import CAMERA_LOCK
 
 # Pi-internal V4L2 nodes (codec/ISP), not real capture cameras — filtered out.
 _NON_CAMERA = ("bcm2835", "codec", "isp", "hevc")
@@ -43,17 +44,34 @@ class RealDiscovery:
         self._config = config
 
     def cameras(self) -> list[DetectedCamera]:
-        try:
-            import gphoto2 as gp
+        # Under the lock: autodetect claims the USB device, and doing that while a
+        # capture holds it wedges the camera (see app.hardware.gphoto2_lock).
+        # Blocking is fine here — every caller runs off the event loop.
+        with CAMERA_LOCK:
+            try:
+                import gphoto2 as gp
 
-            return [
-                DetectedCamera(id=port, model=name, port=port, source="gphoto2")
-                for name, port in gp.Camera.autodetect()
-            ]
-        except Exception:
-            return []
+                return [
+                    DetectedCamera(id=port, model=name, port=port, source="gphoto2")
+                    for name, port in gp.Camera.autodetect()
+                ]
+            except Exception:
+                return []
 
     def previews(self) -> list[DetectedPreview]:
+        devices = self._video_devices()
+        # The DSLR can serve the live view too (gphoto2 capture_preview). Listed
+        # last on purpose: "auto" keeps preferring a real preview camera (rule 1),
+        # and only falls back to the DSLR when there is no webcam at all.
+        devices.extend(
+            DetectedPreview(
+                id=camera.id, name=camera.model, device=camera.port or camera.id, backend="gphoto2"
+            )
+            for camera in self.cameras()
+        )
+        return devices
+
+    def _video_devices(self) -> list[DetectedPreview]:
         # Real USB cameras only (drop Pi codec/ISP nodes), lowest node per physical
         # camera (its capture node), sorted numerically so "auto" picks video0.
         devices: list[DetectedPreview] = []
@@ -74,7 +92,7 @@ class RealDiscovery:
         return devices
 
 
-def build_real_preview(config: Config, selected: DetectedPreview):
+def build_real_preview(config: Config, selected: DetectedPreview, camera: DetectedCamera | None):
     backend = selected.backend if selected is not None else config.hardware.preview.backend
     if backend == "v4l2":
         from app.hardware.v4l2_preview import V4l2Preview
@@ -82,4 +100,9 @@ def build_real_preview(config: Config, selected: DetectedPreview):
         preview = config.hardware.preview
         device = selected.device if selected is not None else preview.device
         return V4l2Preview(device, preview.width, preview.height, preview.fps, preview.jpeg_quality)
-    raise NotImplementedError("Nur die V4L2-Vorschau (USB) ist implementiert; picamera2 folgt.")
+    if backend == "gphoto2":
+        # Shares the open camera handle with the shutter — see gphoto2_session.
+        from app.hardware.gphoto2_preview import Gphoto2Preview
+
+        return Gphoto2Preview(config, camera)
+    raise NotImplementedError("Nur V4L2- und DSLR-Vorschau sind implementiert; picamera2 folgt.")

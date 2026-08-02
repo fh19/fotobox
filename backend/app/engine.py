@@ -190,6 +190,7 @@ class Engine:
                 "autofocus": camera_cfg.autofocus,
                 "selected": _camera_json(manager.selected_camera),
                 "detected": [_camera_json(c) for c in cameras],
+                "fallback": manager.using_fallback,
             },
             "preview": {
                 "backend": preview_cfg.backend,
@@ -231,6 +232,75 @@ class Engine:
             save_config(self.config, self.config_path)
         return self.list_cameras()
 
+    def rescan_cameras(self) -> dict:
+        """Look for cameras again — for one plugged in after the box started."""
+        manager = self._require_manager()
+        found = manager.rescan()
+        self.backends = manager.backends
+        self._log(
+            "info",
+            "camera",
+            "rescan",
+            f"Kamera gefunden: {manager.camera.model()}" if found else "Keine Kamera gefunden",
+        )
+        return self.list_cameras()
+
+    def reset_cameras(self) -> dict:
+        """USB-reset the DSLR and reopen the preview device, then look again.
+
+        Recovers the box from a camera that is on the bus but cannot be claimed
+        (``[-53]``) without a reboot — see ``app.hardware.usb_reset``.
+        """
+        manager = self._require_manager()
+        if self.sm.state != State.IDLE:
+            raise ActionRejected("invalid_state", "Zurücksetzen nur im Ruhezustand möglich")
+        outcome = manager.reset()
+        self.backends = manager.backends
+        self._log("info", "camera", "reset", f"Kamera zurückgesetzt: {outcome}")
+        return {**self.list_cameras(), "reset": outcome}
+
+    def test_shot(self) -> dict:
+        """Take a photo that goes nowhere near the event — just to see what fires."""
+        result = self._capture_test_photo()
+        path = self.test_shot_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(result.jpeg)
+        manager = self.camera_manager
+        return {
+            "model": result.camera_model,
+            "width": result.width,
+            "height": result.height,
+            "fallback": manager.using_fallback if manager is not None else False,
+        }
+
+    @property
+    def test_shot_path(self) -> Path:
+        """Outside the event tree: a test shot is not a photo of the party."""
+        return self.config.data_dir / "tmp" / "testshot.jpg"
+
+    def _require_manager(self):
+        manager = self.camera_manager
+        if manager is None:
+            raise ActionRejected("unavailable", "Kameraauswahl ist nicht verfügbar")
+        return manager
+
+    def _capture_test_photo(self):
+        """Shared shutter release for calibration and test shot (admin, IDLE only)."""
+        if self.sm.state != State.IDLE:
+            raise ActionRejected("invalid_state", "Probefoto nur im Ruhezustand möglich")
+        try:
+            result = self.backends.camera.capture()
+        except Exception as exc:
+            self._log("error", "camera", "capture_failed", str(exc))
+            if self.camera_manager is not None:
+                self.camera_manager.note_capture_failed()
+            raise ActionRejected(
+                "capture_failed", "Probefoto konnte nicht aufgenommen werden"
+            ) from exc
+        if self.camera_manager is not None:
+            self.camera_manager.note_capture_ok()
+        return result
+
     def calibrate_orientation(self) -> dict:
         """Take a test photo and set portrait/landscape for the whole event.
 
@@ -238,16 +308,7 @@ class Engine:
         once; only per-shot auto-rotation is forbidden). Detected from the photo's
         EXIF-corrected aspect.
         """
-        if self.sm.state != State.IDLE:
-            raise ActionRejected("invalid_state", "Kalibrierung nur im Ruhezustand möglich")
-        try:
-            result = self.backends.camera.capture()
-        except Exception as exc:
-            self._log("error", "camera", "capture_failed", str(exc))
-            raise ActionRejected(
-                "capture_failed", "Probefoto konnte nicht aufgenommen werden"
-            ) from exc
-
+        result = self._capture_test_photo()
         orientation = detect_orientation(result.jpeg)
         self.config.printing.orientation = orientation
         if self.config_path is not None:
@@ -602,6 +663,9 @@ class Engine:
         if self._avail_check_at is not None and now < self._avail_check_at:
             return
         self._avail_check_at = now + timedelta(seconds=1)
+        # A DSLR that boots slower than the box only shows up on a later discovery.
+        if self.camera_manager is not None and self.camera_manager.rediscover_if_missing(now):
+            self.backends = self.camera_manager.backends
         current = (
             self.backends.camera.available(),
             self.backends.camera.model(),
@@ -638,12 +702,16 @@ class Engine:
             result = self._capture_with_timeout()
         except TimeoutError as exc:  # DSLR did not fire (e.g. focus failure)
             self._log("error", "camera", "camera_timeout", str(exc))
+            self._note_capture_failed()
             self.sm.capture_failed("camera_timeout")
             return True
         except Exception as exc:  # camera gone, download failed, ...
             self._log("error", "camera", "capture_failed", str(exc))
+            self._note_capture_failed()
             self.sm.capture_failed("capture_failed")
             return True
+        if self.camera_manager is not None:
+            self.camera_manager.note_capture_ok()
 
         # Rule 3: original file + DB row before the pipeline runs.
         photo_id = db.insert_photo(
@@ -663,6 +731,14 @@ class Engine:
         self.sm.capture_succeeded(photo_id)
         return True
 
+    def _note_capture_failed(self) -> None:
+        """Count the failure and let the manager reset the USB device if it repeats."""
+        if self.camera_manager is None:
+            return
+        if self.camera_manager.note_capture_failed():
+            self.backends = self.camera_manager.backends
+            self._log("info", "camera", "reset", "Kamera nach wiederholten Fehlern zurückgesetzt")
+
     def _capture_with_timeout(self):
         """Run the (blocking) DSLR capture with a hard timeout.
 
@@ -670,7 +746,10 @@ class Engine:
         at most ``camera.capture_timeout_seconds``. If the shutter never fires (a
         focus failure can hang gphoto2 indefinitely), we raise ``TimeoutError`` so
         the state machine recovers to ERROR → IDLE instead of freezing the whole
-        box. The orphaned thread is abandoned; the next capture uses a fresh one.
+        box. The orphaned thread is abandoned — Python cannot kill it, and it still
+        owns the camera. The next capture therefore fails fast on the camera lock
+        instead of hitting ``-53``, and ``usbreset_after_failures`` resets the USB
+        device once that has happened often enough (see ``_note_capture_failed``).
         """
         timeout = self.config.hardware.camera.capture_timeout_seconds
         box: dict = {}
@@ -773,7 +852,15 @@ class Engine:
                 "paused": printer.paused(),
                 "message": None,
             },
-            "camera": {"available": camera.available(), "model": camera.model()},
+            "camera": {
+                "available": camera.available(),
+                "model": camera.model(),
+                # The box keeps shooting with the webcam when the DSLR is gone — but
+                # it says so instead of letting the switch pass unnoticed.
+                "fallback": self.camera_manager.using_fallback
+                if self.camera_manager is not None
+                else False,
+            },
             "preview": {"available": preview.available()},
             "event": {
                 "id": event["id"],

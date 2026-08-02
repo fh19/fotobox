@@ -62,7 +62,7 @@ Vollständiger Zustand. Beim Laden der Seite einmal abrufen, danach reicht der W
     "paused": false,
     "message": null
   },
-  "camera": { "available": true, "model": "Nikon D7000" },
+  "camera": { "available": true, "model": "Nikon D7000", "fallback": false },
   "preview": { "available": true },
   "event": { "id": 1, "name": "Hochzeit Müller", "photo_count": 142 },
   "storage": { "free_bytes": 84327194624, "warning": false }
@@ -83,6 +83,10 @@ Vollständiger Zustand. Beim Laden der Seite einmal abrufen, danach reicht der W
 ```
 
 `printer.state`: `idle` | `printing` | `error` | `offline`
+
+`camera.fallback` ist `true`, wenn die DSLR fehlt und die Vorschaukamera als Ersatz
+auslöst (`camera.fallback_to_preview`). Die Box fotografiert dann weiter, sagt es aber —
+eine stille Umschaltung hat schon einmal einen ganzen Testlauf gekostet.
 
 Die Druckzähler stehen nicht im Gäste-Status, sondern nur unter
 `GET /api/admin/printer` und `GET /api/admin/system`:
@@ -164,6 +168,11 @@ macht das Frontend per CSS (`transform: scaleX(-1)`).
 Ist die Vorschaukamera nicht verfügbar, liefert der Endpoint ein Standbild
 (`assets/preview-unavailable.jpg`) statt eines Fehlers, damit die UI nicht bricht.
 
+Die Bildquelle bestimmt `hardware.preview.backend`: `v4l2` (USB-Webcam), `picamera2`
+(noch nicht gebaut) oder `gphoto2` — Live-Bild aus der DSLR für den Fall, dass gar keine
+zweite Kamera angeschlossen ist. `auto` bevorzugt weiterhin eine echte Vorschaukamera
+und greift erst zur DSLR, wenn keine da ist.
+
 ### `GET /api/photos/{id}/{variant}`
 
 `variant`: `original` | `processed` | `print` | `thumb`. Liefert JPEG.
@@ -209,6 +218,11 @@ Falsche PIN: `401`. Nach 5 Fehlversuchen 60 s Sperre.
 | `POST` | `/api/admin/printer/counter-reset` | Laufenden Druckzähler auf 0 setzen |
 | `POST` | `/api/admin/printer/test-page` | Testdruck |
 | `GET`/`PUT` | `/api/admin/config` | Laufzeitkonfiguration lesen/schreiben |
+| `GET`/`POST` | `/api/admin/cameras` | Erkannte Geräte + Auswahl lesen / Auswahl ändern |
+| `POST` | `/api/admin/camera/rescan` | Erneut suchen — für eine nach dem Start angeschlossene Kamera |
+| `POST` | `/api/admin/camera/reset` | USB-Reset der DSLR + Vorschaugerät neu öffnen, danach suchen |
+| `POST` | `/api/admin/camera/testshot` | Probefoto (nicht im Event): `{model, width, height, fallback}` |
+| `GET` | `/api/admin/camera/testshot.jpg` | Das zuletzt aufgenommene Probefoto |
 | `POST` | `/api/admin/calibration` | Crop/Offset Vorschau ↔ DSLR speichern |
 | `POST` | `/api/admin/event` | Neues Event anlegen und aktiv setzen |
 | `GET` | `/api/admin/backgrounds` | Alle hochgeladenen Hintergründe/Rahmen (inkl. deaktivierte) |
