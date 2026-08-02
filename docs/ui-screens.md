@@ -195,6 +195,14 @@ Kacheln:
 2. **Drucker** — großer Button `Drucker fortsetzen` (nach Papier-/Bandwechsel),
    `Warteschlange leeren`, `Testdruck`, `Druckzähler zurücksetzen`
 
+   Kann nicht gedruckt werden, steht der Grund orange über dem Status — sonst
+   bleibt nur Raten. Wortlaut: `Kein Papier`, `Farbband verbraucht`, `Papierstau`,
+   `Klappe offen`, `Drucker nicht erreichbar`, `Warteschlange angehalten`.
+
+   Nach einem Papierwechsel gibt die Box die angehaltene Queue von selbst wieder
+   frei (`printer.auto_resume_seconds`, Standard 20 s) — CUPS tut das nicht. Der
+   Button bleibt für den ungeduldigen Fall.
+
 2b. **Kamera** — Auswahl von `Hauptkamera`, `Vorschau-Backend` und `Vorschaugerät`,
    darüber das Live-Bild der Vorschaukamera zur Ausrichtungskontrolle. Buttons:
    `Kamera übernehmen`, `Neu suchen`, `Kamera zurücksetzen`, `Probefoto`,
@@ -220,6 +228,11 @@ Kacheln:
    Der Vorlauf löst so viel früher aus, als der Countdown bei „0" ankommt, und gleicht
    damit Blitzdauer und Kameralatenz aus. Die letzte Sekunde des Countdowns bleibt
    immer stehen — ein zu großer Wert darf den Gästen nicht das Zählen wegnehmen.
+
+   `Aufhellblitz (weißer Bildschirm)` und `Blitzdauer (ms)` steuern das Weißleuchten
+   während der Auslösung (`ui.flash_enabled`, `ui.flash_duration_ms`). Im hellen
+   Sektempfang stört es nur, im abendlichen Saal ist es das einzige Licht. Die
+   Änderung greift, sobald der Kiosk-Screen wieder geladen wird.
 6. **Kalibrierung** — Live-Bild mit verschiebbarem Rahmen für den DSLR-Ausschnitt
 7. **Netzwerk** — Access-Point ein/aus, aktuelle IP-Adresse, Galerie-URL groß dargestellt
 8. **Export** — `Auf USB-Stick kopieren` mit Fortschrittsanzeige

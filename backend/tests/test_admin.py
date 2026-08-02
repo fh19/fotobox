@@ -58,6 +58,21 @@ def test_config_put_changes_countdown_live(tmp_path):
     assert app.state.engine.config.countdown.duration_seconds == 3
 
 
+def test_config_put_changes_the_fill_flash(tmp_path):
+    """The white screen at capture time is a matter of taste and of the room."""
+    app = _app(tmp_path)
+    res = TestClient(app).put(
+        "/api/admin/config",
+        headers=PIN,
+        json={"ui": {"flash_enabled": True, "flash_duration_ms": 250}},
+    )
+    assert res.status_code == 200
+    assert app.state.engine.config.ui.flash_enabled is True
+    assert app.state.engine.config.ui.flash_duration_ms == 250
+    # The kiosk reads it from client-config when the page loads.
+    assert TestClient(app).get("/api/client-config").json()["flash_enabled"] is True
+
+
 def test_config_put_rejects_non_editable_section(tmp_path):
     client = TestClient(_app(tmp_path))
     res = client.put("/api/admin/config", headers=PIN, json={"hardware": {"mode": "real"}})

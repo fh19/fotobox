@@ -85,6 +85,10 @@ async function loadPrinter() {
     `Status: ${PRINTER_STATE[p.state] || p.state} · pausiert: ${p.paused ? "ja" : "nein"} · ` +
     `Warteschlange: ${p.queue_length} · ` +
     `gedruckt: ${p.prints_done_event ?? "?"} (Event), ${p.prints_total ?? "?"} (gesamt)`;
+  // The reason, prominently: "nicht verfügbar" alone made everyone guess.
+  const problem = $("printer-problem");
+  problem.textContent = p.message || "";
+  problem.classList.toggle("hidden", !p.message);
 }
 
 async function printerAction(path, confirmMsg) {
@@ -330,6 +334,8 @@ async function loadConfig() {
   const cfg = await api("GET", "/api/admin/config");
   $("cfg-countdown").value = cfg.countdown.duration_seconds;
   $("cfg-lead").value = cfg.countdown.shutter_lead_ms;
+  $("cfg-flash").checked = cfg.ui.flash_enabled;
+  $("cfg-flashms").value = cfg.ui.flash_duration_ms;
   $("cfg-preview").value = cfg.timeouts.preview_seconds;
   $("cfg-error").value = cfg.timeouts.error_seconds;
   $("cfg-perphoto").value = cfg.printing.max_per_photo;
@@ -351,7 +357,11 @@ async function saveConfig() {
       max_per_photo: Number($("cfg-perphoto").value),
       max_per_event: Number($("cfg-perevent").value),
     },
-    ui: { background_select_enabled: $("cfg-bgselect").checked },
+    ui: {
+      background_select_enabled: $("cfg-bgselect").checked,
+      flash_enabled: $("cfg-flash").checked,
+      flash_duration_ms: Number($("cfg-flashms").value),
+    },
   };
   try {
     await api("PUT", "/api/admin/config", updates);
