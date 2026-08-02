@@ -58,6 +58,20 @@ def test_resolve_preview_backend_and_device():
     assert resolve_preview("auto", "auto", []) is None
 
 
+def test_a_missing_preview_backend_falls_back_to_what_is_attached():
+    """Reported from the box: with `backend: gphoto2` saved and the DSLR
+    unplugged, the webcam was ignored — no live image, and because capture falls
+    back to the preview camera, no photos either. The setting is a preference."""
+    webcam = DetectedPreview(id="/dev/video0", name="eMeet", device="/dev/video0", backend="v4l2")
+
+    assert resolve_preview("auto", "gphoto2", [webcam]).id == "/dev/video0"
+    assert resolve_preview("usb:002,002", "gphoto2", [webcam]).id == "/dev/video0"
+    # A DSLR that is there still wins when it is the one asked for.
+    dslr = DetectedPreview(id="usb:002,002", name="a7 IV", device="usb:002,002", backend="gphoto2")
+    assert resolve_preview("auto", "gphoto2", [webcam, dslr]).id == "usb:002,002"
+    assert resolve_preview("auto", "auto", [webcam, dslr]).id == "/dev/video0"
+
+
 # --- manager (mock mode) ----------------------------------------------------
 
 
