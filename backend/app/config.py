@@ -62,6 +62,9 @@ class PrinterConfig(_Model):
     backend: Literal["cups", "mock"] = "cups"
     queue_name: str
     status_poll_seconds: float = Field(gt=0)
+    # CUPS hält die Queue nach einem Fehler angehalten, auch wenn Papier wieder
+    # eingelegt ist. So oft wird sie selbst wieder freigegeben. 0 = nur von Hand.
+    auto_resume_seconds: float = Field(default=20.0, ge=0)
 
 
 class HardwareConfig(_Model):

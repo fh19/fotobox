@@ -59,6 +59,10 @@ class MockPrinter:
     def __init__(self, available: bool = True) -> None:
         self._available = available
         self._paused = False
+        self._reason: str | None = None
+        # Set to True to mimic a supply that is still empty: resume() then leaves
+        # the queue stopped, the way CUPS does when the next job fails again.
+        self.supply_empty = False
         self._next_job_id = 1
         # Submitted jobs finish right away so mock development shows realistic
         # counters; tests override single jobs via set_job_state().
@@ -83,6 +87,18 @@ class MockPrinter:
     def paused(self) -> bool:
         return self._paused
 
+    def reason(self) -> str | None:
+        if self._reason is not None:
+            return self._reason
+        if not self._available:
+            return "offline"
+        return "stopped" if self._paused else None
+
+    def set_reason(self, value: str | None) -> None:
+        """Simulate a paper-out or similar: stops the queue, like CUPS does."""
+        self._reason = value
+        self._paused = value is not None
+
     def set_job_state(self, job_id: int, state: str) -> None:
         self._job_states[job_id] = state
 
@@ -100,8 +116,11 @@ class MockPrinter:
     # --- admin operations ---------------------------------------------------
 
     def resume(self) -> None:
+        if self.supply_empty:
+            return  # cupsenable runs, the next job fails, the queue stops again
         self._paused = False
         self._available = True
+        self._reason = None
 
     def cancel_all(self) -> None:
         for job_id, state in list(self._job_states.items()):

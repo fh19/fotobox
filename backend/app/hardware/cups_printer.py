@@ -33,12 +33,30 @@ _JOB_STATE = {
     9: "done",  # completed
 }
 
-# printer-state-reasons substrings that mean "cannot print right now".
-_BLOCKING_REASONS = ("media-empty", "media-needed", "marker-supply-empty", "offline", "shutdown")
+# printer-state-reasons substrings that mean "cannot print right now", each mapped
+# to the code the UI turns into a German sentence. Order matters: the first match
+# wins, so the specific supply problems come before the generic ones.
+_REASON_CODES = (
+    ("media-empty", "media_empty"),
+    ("media-needed", "media_empty"),
+    ("marker-supply-empty", "ribbon_empty"),
+    ("media-jam", "jam"),
+    ("cover-open", "cover_open"),
+    ("door-open", "cover_open"),
+    ("offline", "offline"),
+    ("shutdown", "offline"),
+)
+
+
+def _reason_code(reason: str) -> str | None:
+    for token, code in _REASON_CODES:
+        if token in reason:
+            return code
+    return None
 
 
 def _is_blocking(reason: str) -> bool:
-    return any(token in reason for token in _BLOCKING_REASONS)
+    return _reason_code(reason) is not None
 
 
 # Postcard, RGB, true borderless. On the Gutenprint CP1500 queue borderless is a
@@ -57,6 +75,7 @@ class CupsPrinter:
         self._config = config
         self._queue = config.hardware.printer.queue_name
         self._conn = None
+        self._logged_reason: tuple | None = None
 
     # --- protocol -----------------------------------------------------------
 
@@ -89,6 +108,40 @@ class CupsPrinter:
             return False
         # A paper/band-out stops the CUPS queue → resume re-enables it (M6).
         return attrs.get("printer-state") == _IPP_STOPPED
+
+    def reason(self) -> str | None:
+        """Why printing is impossible, as a stable code — or None when it is fine.
+
+        Without this the box only ever said "nicht verfügbar" and whoever ran the
+        party had to guess between paper, ribbon and an open lid.
+        """
+        attrs = self._attrs()
+        if attrs is None:
+            return "offline"
+        reasons = attrs.get("printer-state-reasons", [])
+        message = attrs.get("printer-state-message") or ""
+        stopped = attrs.get("printer-state") == _IPP_STOPPED
+        # Both fields carry it depending on who stopped the queue: the USB backend
+        # writes printer-state-reasons, while cupsdisable -r puts the text in
+        # printer-state-message and leaves reasons at ['paused'] (seen on the box).
+        code = next((c for c in map(_reason_code, [*reasons, message]) if c is not None), None)
+        if code is None and stopped:
+            code = "stopped"
+        if code is not None:
+            self._log_raw(reasons, message)
+        return code
+
+    def _log_raw(self, reasons: list, message: str) -> None:
+        """Record what the printer actually said, once per distinct problem.
+
+        The mapping to German is guesswork until a real supply-out happens on this
+        model; this line is what makes refining it possible after the fact.
+        """
+        seen = (tuple(reasons), message)
+        if seen == self._logged_reason:
+            return
+        self._logged_reason = seen
+        log.info("Drucker meldet: reasons=%s message=%r", list(reasons), message)
 
     def submit(self, path: str) -> int:
         conn = self._connection()

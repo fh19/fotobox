@@ -84,6 +84,10 @@ Vollständiger Zustand. Beim Laden der Seite einmal abrufen, danach reicht der W
 
 `printer.state`: `idle` | `printing` | `error` | `offline`
 
+`printer.message` nennt auf Deutsch den Grund, warum nicht gedruckt werden kann
+(`Kein Papier`, `Farbband verbraucht`, `Papierstau`, `Klappe offen`,
+`Drucker nicht erreichbar`, `Warteschlange angehalten`) — sonst `null`.
+
 `camera.fallback` ist `true`, wenn die DSLR fehlt und die Vorschaukamera als Ersatz
 auslöst (`camera.fallback_to_preview`). Die Box fotografiert dann weiter, sagt es aber —
 eine stille Umschaltung hat schon einmal einen ganzen Testlauf gekostet.

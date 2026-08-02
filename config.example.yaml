@@ -32,6 +32,7 @@ hardware:
     backend: cups
     queue_name: Selphy_CP1500
     status_poll_seconds: 3
+    auto_resume_seconds: 20        # gestoppte CUPS-Queue selbst freigeben; 0 = nur von Hand
 
 countdown:
   duration_seconds: 5

@@ -36,6 +36,17 @@ log = logging.getLogger("fotobox.engine")
 # Name of the resettable running total in the counters table.
 PRINTS_TOTAL = "prints_total"
 
+# Why the printer cannot print, in German (docs/ui-screens.md). "nicht verfügbar"
+# alone left whoever ran the party guessing between paper, ribbon and an open lid.
+PRINTER_REASON_TEXT = {
+    "media_empty": "Kein Papier",
+    "ribbon_empty": "Farbband verbraucht",
+    "jam": "Papierstau",
+    "cover_open": "Klappe offen",
+    "offline": "Drucker nicht erreichbar",
+    "stopped": "Warteschlange angehalten",
+}
+
 
 class NotFound(Exception):
     """A referenced resource does not exist (maps to HTTP 404)."""
@@ -44,6 +55,17 @@ class NotFound(Exception):
         super().__init__(message)
         self.code = code
         self.message = message
+
+
+def _printer_message(printer) -> str | None:
+    """German reason why printing is impossible, or None when all is well.
+
+    Mock printers have no ``reason()``; they simply never explain themselves.
+    """
+    reason = getattr(printer, "reason", None)
+    if not callable(reason):
+        return None
+    return PRINTER_REASON_TEXT.get(reason() or "")
 
 
 def _camera_json(camera) -> dict | None:
@@ -110,6 +132,7 @@ class Engine:
         # Throttled availability watch → push status when camera/printer come or go.
         self._avail_check_at = None
         self._last_avail = None
+        self._printer_resume_at = None
 
     # --- message plumbing ---------------------------------------------------
 
@@ -328,6 +351,7 @@ class Engine:
             "available": printer.available(),
             "state": str(printer.state()),
             "paused": printer.paused(),
+            "message": _printer_message(printer),
             "prints_done_event": db.count_event_prints_done(self.conn, self.active_event["id"]),
             "prints_total": db.get_counter(self.conn, PRINTS_TOTAL),
             "queue_length": printer.queue_length(),
@@ -652,6 +676,35 @@ class Engine:
             else:
                 return
 
+    def _auto_resume_printer(self, now) -> None:
+        """Re-enable a queue that CUPS stopped, in case the paper is back.
+
+        Refilling paper does not restart the queue — CUPS keeps it disabled until
+        someone runs ``cupsenable``, and its ``printer-state-reasons`` stay stale
+        until a job is attempted. Without this the box reported "nicht verfügbar"
+        for the rest of the evening even though the printer was ready. If the
+        supply really is still empty, the next job stops the queue again and this
+        just tries later. ``printer.auto_resume_seconds: 0`` turns it off.
+        """
+        interval = self.config.hardware.printer.auto_resume_seconds
+        printer = self.backends.printer
+        if interval <= 0 or not printer.paused():
+            self._printer_resume_at = None
+            return
+        if self._printer_resume_at is None:  # first tick: wait one interval
+            self._printer_resume_at = now + timedelta(seconds=interval)
+            return
+        if now < self._printer_resume_at:
+            return
+        self._printer_resume_at = now + timedelta(seconds=interval)
+        try:
+            printer.resume()
+        except Exception as exc:
+            log.debug("Drucker-Freigabe fehlgeschlagen: %s", exc)
+            return
+        if not printer.paused():
+            self._log("info", "printer", "auto_resume", "Drucker automatisch fortgesetzt")
+
     def _check_availability(self) -> None:
         """Push a fresh status when camera/printer/preview availability changes.
 
@@ -666,6 +719,7 @@ class Engine:
         # A DSLR that boots slower than the box only shows up on a later discovery.
         if self.camera_manager is not None and self.camera_manager.rediscover_if_missing(now):
             self.backends = self.camera_manager.backends
+        self._auto_resume_printer(now)
         current = (
             self.backends.camera.available(),
             self.backends.camera.model(),
@@ -850,7 +904,7 @@ class Engine:
                 "available": printer.available(),
                 "state": str(printer.state()),
                 "paused": printer.paused(),
-                "message": None,
+                "message": _printer_message(printer),
             },
             "camera": {
                 "available": camera.available(),
