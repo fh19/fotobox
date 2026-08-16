@@ -51,8 +51,8 @@ timeouts:
   error_seconds: 6
 
 ui:
-  background_select_enabled: true
-  default_background: none            # wenn Auswahl deaktiviert ist
+  background_select_enabled: false    # true nur, wenn es mehrere Hintergründe gibt
+  default_background: auto            # auto = vorhandener Rahmen | feste ID | none
   mirror_preview: true
   idle_hint_pulse: true
   flash_enabled: true                 # Bildschirm-Blitz als Aufhellung beim Auslösen

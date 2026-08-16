@@ -4,6 +4,9 @@
  * and sends it as X-Fotobox-Pin on every /api/admin/ call. */
 
 let pin = null;
+// Config and backgrounds load in parallel, either order — whichever arrives
+// second fills the background dropdown with the configured value.
+let configuredBackground = "auto";
 const $ = (id) => document.getElementById(id);
 
 async function api(method, path, body) {
@@ -268,6 +271,7 @@ const BG_MODE_LABEL = {
 
 async function loadBackgrounds() {
   const r = await api("GET", "/api/admin/backgrounds");
+  fillBackgroundChoice(r.backgrounds);
   const ul = $("bg-list");
   ul.innerHTML = "";
   if (r.backgrounds.length === 0) {
@@ -286,6 +290,28 @@ async function loadBackgrounds() {
     li.appendChild(del);
     ul.appendChild(li);
   }
+}
+
+/* Which background every photo gets when the guests are not asked. Filled from
+ * the uploaded ones, so a freshly uploaded frame can be picked right away. The
+ * value is kept across the refill — loadBackgrounds() also runs after an upload. */
+function fillBackgroundChoice(backgrounds) {
+  const sel = $("cfg-bgdefault");
+  const previous = sel.value || configuredBackground;
+  fillSelect(
+    sel,
+    [
+      { value: "auto", label: "Automatisch (vorhandener Rahmen)" },
+      { value: "none", label: "Ohne Hintergrund" },
+    ].concat(
+      backgrounds.map((bg) => ({
+        value: bg.id,
+        label: `${bg.name} · ${BG_MODE_LABEL[bg.mode] || bg.mode}${bg.enabled ? "" : " (aus)"}`,
+      }))
+    ),
+    previous
+  );
+  if (!sel.value) sel.value = "auto"; // configured id no longer exists
 }
 
 async function uploadBackground() {
@@ -341,6 +367,8 @@ async function loadConfig() {
   $("cfg-perphoto").value = cfg.printing.max_per_photo;
   $("cfg-perevent").value = cfg.printing.max_per_event;
   $("cfg-bgselect").checked = cfg.ui.background_select_enabled;
+  configuredBackground = cfg.ui.default_background;
+  $("cfg-bgdefault").value = configuredBackground;
 }
 
 async function saveConfig() {
@@ -359,6 +387,7 @@ async function saveConfig() {
     },
     ui: {
       background_select_enabled: $("cfg-bgselect").checked,
+      default_background: $("cfg-bgdefault").value || "auto",
       flash_enabled: $("cfg-flash").checked,
       flash_duration_ms: Number($("cfg-flashms").value),
     },

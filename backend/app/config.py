@@ -95,8 +95,11 @@ class TimeoutsConfig(_Model):
 
 
 class UIConfig(_Model):
-    background_select_enabled: bool = True
-    default_background: str = "none"
+    # Die Abfrage lohnt nur, wenn es wirklich etwas zu wählen gibt. Standard: aus —
+    # jedes Foto bekommt den Rahmen, ohne dass die Gäste etwas entscheiden müssen.
+    background_select_enabled: bool = False
+    # "auto" = der vorhandene Rahmen/Hintergrund; sonst eine feste ID oder "none".
+    default_background: str = "auto"
     mirror_preview: bool = True
     idle_hint_pulse: bool = True
     # Screen flash as a fill light: the screen turns white for flash_duration_ms

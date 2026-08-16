@@ -78,6 +78,10 @@ def make_config(tmp_path: Path, **overrides: Any) -> Config:
     # Flash off by default so the capture flow stays single-tick in flow tests;
     # the flash-phase test enables it explicitly.
     raw["ui"]["flash_enabled"] = False
+    # The shipped default skips the background question (one frame, no choice to
+    # make). Tests keep the selection screen as their baseline because most of
+    # them walk the full flow through it; the skip path has its own tests.
+    raw["ui"]["background_select_enabled"] = True
     for dotted, value in overrides.items():
         _deep_set(raw, dotted.replace("__", "."), value)
     return Config.model_validate(raw)

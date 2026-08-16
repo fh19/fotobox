@@ -165,8 +165,24 @@ class Engine:
     def start(self) -> None:
         if self._storage_status()["blocked"]:
             raise ActionRejected("storage_full", "Der Speicher ist voll")
-        self.sm.start()
+        default = self._default_background()
+        self.sm.start(
+            background_id=default.id if default else None,
+            background_mode=default.mode if default else None,
+        )
         self._drive()
+
+    def _default_background(self):
+        """What a session uses when the guests are not asked (M-extra).
+
+        ``ui.default_background: auto`` means "the frame, if this box has one" —
+        so uploading a frame is enough to get it on every photo, without also
+        editing the config. A fixed id still works and wins over the automatism.
+        """
+        configured = self.config.ui.default_background
+        if configured != "auto":
+            return self.backgrounds.get(configured)
+        return next((bg for bg in self.backgrounds.list() if bg.mode != "none"), None)
 
     def select_background(self, background_id: str) -> None:
         background = self.backgrounds.get(background_id)

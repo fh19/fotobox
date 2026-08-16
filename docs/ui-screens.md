@@ -48,6 +48,11 @@ Kein Start möglich, der Bildschirm reagiert nicht auf Berührung.
 
 ## `BACKGROUND_SELECT`
 
+**Standardmäßig übersprungen.** Gibt es genau einen Rahmen, ist die Frage „mit oder
+ohne" überflüssig — jedes Foto bekommt ihn, `IDLE` geht direkt nach `COUNTDOWN`.
+Der Screen erscheint nur mit `ui.background_select_enabled: true`, also wenn wirklich
+mehrere Hintergründe zur Wahl stehen.
+
 Live-Bild verkleinert oben, darunter eine horizontal scrollbare Kachelreihe der
 Hintergründe. Überschrift:
 
@@ -228,6 +233,12 @@ Kacheln:
    Der Vorlauf löst so viel früher aus, als der Countdown bei „0" ankommt, und gleicht
    damit Blitzdauer und Kameralatenz aus. Die letzte Sekunde des Countdowns bleibt
    immer stehen — ein zu großer Wert darf den Gästen nicht das Zählen wegnehmen.
+
+   `Hintergrundauswahl anzeigen` schaltet den Auswahl-Screen für die Gäste ein
+   (Standard: aus). `Hintergrund` bestimmt, was ohne Auswahl auf jedes Foto kommt:
+   `Automatisch (vorhandener Rahmen)`, `Ohne Hintergrund` oder ein hochgeladener
+   Eintrag. Bei `Automatisch` genügt es, einen Rahmen hochzuladen — er wird ohne
+   weitere Einstellung verwendet.
 
    `Aufhellblitz (weißer Bildschirm)` und `Blitzdauer (ms)` steuern das Weißleuchten
    während der Auslösung (`ui.flash_enabled`, `ui.flash_duration_ms`). Im hellen

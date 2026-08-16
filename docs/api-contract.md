@@ -41,8 +41,10 @@ Erlaubte Übergänge:
 
 Jeder andere Übergang ist ein Programmfehler und wirft `InvalidTransition`.
 
-Wird `BACKGROUND_SELECT` per Config deaktiviert (`ui.background_select_enabled: false`),
-geht `IDLE` direkt nach `COUNTDOWN` mit dem Hintergrund aus `ui.default_background`.
+`BACKGROUND_SELECT` ist standardmäßig deaktiviert (`ui.background_select_enabled: false`):
+`IDLE` geht direkt nach `COUNTDOWN` mit dem Hintergrund aus `ui.default_background`.
+Dessen Wert `auto` (Standard) heißt „der vorhandene Rahmen" — der erste aktive Eintrag,
+der nicht `none` ist. Gibt es keinen, wird ohne Rahmen fotografiert.
 
 ---
 

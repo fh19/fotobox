@@ -133,18 +133,21 @@ class StateMachine:
 
     # --- client-initiated transitions --------------------------------------
 
-    def start(self) -> None:
+    def start(self, background_id: str | None = None, background_mode: str | None = None) -> None:
+        """Begin a session. Without the selection screen the caller says what to use.
+
+        The engine resolves the default against the uploaded backgrounds (it owns
+        the registry), so the state machine only stores the answer.
+        """
         if self._state != State.IDLE:
             raise ActionRejected("invalid_state", "Es läuft bereits eine Sitzung")
         self._session = Session()
         if self._config.ui.background_select_enabled:
             self._set_state(State.BACKGROUND_SELECT)
-        else:
-            default = self._config.ui.default_background
-            if default != "none":
-                self._session.background_id = default
-            self._session.background_mode = "none" if default == "none" else None
-            self._set_state(State.COUNTDOWN)
+            return
+        self._session.background_id = None if background_id == "none" else background_id
+        self._session.background_mode = background_mode or "none"
+        self._set_state(State.COUNTDOWN)
 
     def select_background(self, background_id: str, background_mode: str) -> None:
         if self._state != State.BACKGROUND_SELECT:
