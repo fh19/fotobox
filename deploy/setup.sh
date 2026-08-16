@@ -116,7 +116,7 @@ kiosk_autostart() {
 # Fotobox-Kiosk. Ersetzt den Standard-Desktop-Autostart bewusst (kein Panel).
 /usr/bin/kanshi &
 # lwrespawn startet den Kiosk neu, falls Chromium abstürzt/gekillt wird (< 5 s zurück).
-/usr/bin/lwrespawn $APP_DIR/deploy/kiosk.sh http://localhost:8000/ >/tmp/fotobox-kiosk.log 2>&1 &
+/usr/bin/lwrespawn $APP_DIR/deploy/kiosk.sh http://localhost/ >/tmp/fotobox-kiosk.log 2>&1 &
 EOF
   # Desktop-Autologin, damit der Kiosk ohne Anmeldung hochkommt (B4 = Desktop Autologin).
   sudo raspi-config nonint do_boot_behaviour B4 || true
@@ -162,9 +162,9 @@ disable_removable_media() {
 verify() {
   log "Warten, bis das Backend antwortet"
   for _ in $(seq 1 30); do
-    if curl -fs http://localhost:8000/api/status >/dev/null; then
+    if curl -fs http://localhost/api/status >/dev/null; then
       echo "Backend OK:"
-      curl -s http://localhost:8000/api/status
+      curl -s http://localhost/api/status
       echo
       return 0
     fi
@@ -191,7 +191,7 @@ main() {
   backend_service
   [ "$HEADLESS" != "1" ] && kiosk_autostart
   verify
-  log "Fertig. Guest-UI: http://$(hostname -I | awk '{print $1}'):8000/"
+  log "Fertig. Guest-UI: http://$(hostname -I | awk '{print $1}')/"
 }
 
 main "$@"

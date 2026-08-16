@@ -118,7 +118,7 @@ Das erledigt:
 - **gvfs** vom automatischen Kamerazugriff abhalten (sonst „Could not claim" bei gphoto2)
 - Datei-Manager-Autostart für Wechselmedien aus, Bildschirmschoner aus, Hostname `fotobox`
 
-Danach läuft die Guest-UI schon: `http://<pi-ip>:8000/` (mit Mock-Vorschau/-Drucker).
+Danach läuft die Guest-UI schon: `http://<pi-ip>/` (mit Mock-Vorschau/-Drucker).
 
 ## 4. Drucker (Canon Selphy CP1500)
 
@@ -267,7 +267,7 @@ Achtung: AP-Betrieb kappt die WLAN-Verbindung ins Heimnetz (dann kein SSH über 
 sudo reboot
 ```
 
-Nach dem Boot sollte der Kiosk automatisch im Vollbild starten (`http://localhost:8000/`),
+Nach dem Boot sollte der Kiosk automatisch im Vollbild starten (`http://localhost/`),
 Backend `active`, RTC-Zeit korrekt. Admin-Bereich: lange in die konfigurierte
 Bildschirmecke drücken (PIN aus `ui.admin_pin`) oder `…/admin`.
 

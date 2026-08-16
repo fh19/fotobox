@@ -153,7 +153,7 @@ fi
 
 # --- done -------------------------------------------------------------------
 log "Installation fertig."
-echo "Guest-UI: http://$(hostname -I | awk '{print $1}'):8000/"
+echo "Guest-UI: http://$(hostname -I | awk '{print $1}')/"
 if [ "$IS_PI" = "1" ]; then
   cat <<'NEXT'
 

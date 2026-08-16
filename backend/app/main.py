@@ -19,7 +19,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import db
-from app.api import admin, gallery, routes, websocket
+from app.api import admin, captive, gallery, routes, websocket
 from app.api.admin import AdminAuth, LockedError, PinError
 from app.broadcaster import Broadcaster
 from app.clock import Clock, RealClock
@@ -164,6 +164,22 @@ def create_app(
     app.include_router(websocket.router)
     app.include_router(gallery.router)
     app.include_router(admin.router)
+    app.include_router(captive.router)
+
+    @app.exception_handler(404)
+    async def _not_found(request: Request, exc) -> Response:
+        """Send a guest on the guest WiFi to the gallery instead of a 404.
+
+        With the DNS hijack every hostname a phone tries lands here, so this is
+        what turns "connected to Fotobox" into an open gallery. Anywhere else a
+        404 stays a 404 — see app.api.captive.
+        """
+        if captive.is_captured(request):
+            return captive.redirect_to_gallery(request)
+        return JSONResponse(
+            status_code=404,
+            content={"error": {"code": "not_found", "message": "Nicht gefunden"}},
+        )
 
     @app.get("/gallery")
     async def gallery_page() -> Response:

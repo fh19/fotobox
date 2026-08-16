@@ -9,7 +9,11 @@ User=pi
 WorkingDirectory=/home/pi/fotobox/backend
 Environment=FOTOBOX_HARDWARE=real
 Environment=FOTOBOX_DATA_DIR=/data
-ExecStart=/home/pi/fotobox/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --timeout-graceful-shutdown 3
+# Port 80 so the box is reachable without one, and because a phone's captive
+# portal check only ever looks there. CAP_NET_BIND_SERVICE grants the privileged
+# port to the unprivileged pi user — no root, no iptables redirect.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+ExecStart=/home/pi/fotobox/.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 80 --timeout-graceful-shutdown 3
 Restart=always
 RestartSec=2
 # Long-lived requests (the MJPEG preview stream) block a graceful stop; force a

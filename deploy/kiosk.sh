@@ -3,7 +3,7 @@
 # Started from the desktop session's autostart (Wayland/labwc or Wayfire).
 set -u
 
-URL="${1:-http://localhost:8000/}"
+URL="${1:-http://localhost/}"
 
 # Wait until the backend answers, so the kiosk never shows a connection error.
 until curl -fs "$URL" >/dev/null 2>&1; do sleep 1; done

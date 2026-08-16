@@ -611,7 +611,9 @@ class Engine:
         ap = self.config.network.access_point
         try:
             if enabled:
-                system.ap_enable(ap.ssid, ap.passphrase, ap.channel, ap.address)
+                system.ap_enable(
+                    ap.ssid, ap.passphrase, ap.channel, ap.address, captive=ap.captive_portal
+                )
                 self._log("warning", "system", "ap_on", f"Access-Point '{ap.ssid}' an")
             else:
                 system.ap_disable()

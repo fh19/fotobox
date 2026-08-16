@@ -93,7 +93,7 @@ Hinweise:
 
 **Zugang:** Auf dem Startbildschirm die **obere linke Ecke 5 Sekunden** gedrückt halten →
 PIN-Feld → PIN **`2606`** → **Anmelden**.
-Alternativ im Browser eines Geräts im selben Netz: `http://<IP-der-Box>:8000/admin`.
+Alternativ im Browser eines Geräts im selben Netz: `http://<IP-der-Box>/admin`.
 
 Die Kacheln:
 
@@ -175,7 +175,10 @@ anzeigen" **aus**, und den Rahmen als Standard setzen.
 1. Admin → **Netzwerk** → **„Access-Point einschalten"**.
    ⚠️ Dabei bricht eine bestehende WLAN-Verbindung der Box ab — am **Touchscreen** bedienen.
 2. Gäste verbinden ihr Handy mit dem WLAN **„Fotobox"**.
-3. Die im Admin angezeigte **Galerie-URL** öffnen (`http://192.168.4.1:8000/gallery`).
+3. Die Galerie **öffnet sich von selbst** — das Handy meldet „Anmeldung erforderlich"
+   und zeigt die Fotos. Passiert das nicht (manche Handys unterdrücken es), im Browser
+   irgendeine Adresse eingeben, egal welche: alles landet in der Galerie. Notfalls
+   direkt `http://192.168.4.1/gallery`.
    Dort: alle Fotos ansehen, zwischen **„Mit Hintergrund"** und **„Original"** umschalten,
    **„Alle Fotos herunterladen (ZIP)"**.
 4. Danach den Access-Point wieder ausschalten (oder neu starten).
@@ -219,7 +222,7 @@ Stromtrennung: **„Fotobox neu starten"**.
 | Drucke pro Foto | 1 |
 | Kontingent pro Event | 108 (eine Farbkassette) |
 | WLAN-Name (Access-Point) | Fotobox |
-| Galerie-Adresse (im AP) | http://192.168.4.1:8000/gallery |
+| Galerie-Adresse (im AP) | http://192.168.4.1/gallery |
 | Admin-PIN | 2606 |
 
 Diese Werte lassen sich im Admin (Einstellungen / Netzwerk) jederzeit ändern.

@@ -40,8 +40,8 @@ def test_ap_toggle_on_and_off(tmp_path, monkeypatch):
     monkeypatch.setattr(system, "primary_ip", lambda: "192.168.0.134")
     monkeypatch.setattr(system, "ap_active", lambda: calls["enabled"])
 
-    def fake_enable(ssid, passphrase, channel, address):
-        calls.update(enabled=True, ssid=ssid, address=address)
+    def fake_enable(ssid, passphrase, channel, address, captive=False):
+        calls.update(enabled=True, ssid=ssid, address=address, captive=captive)
 
     monkeypatch.setattr(system, "ap_enable", fake_enable)
     monkeypatch.setattr(system, "ap_disable", lambda: calls.update(enabled=False))
@@ -50,6 +50,7 @@ def test_ap_toggle_on_and_off(tmp_path, monkeypatch):
     on = client.post("/api/admin/network/ap", json={"enabled": True}, headers=PIN).json()
     assert on == {"ap_enabled": True, "ssid": "Fotobox", "ip": "192.168.4.1"}
     assert calls["ssid"] == "Fotobox" and calls["address"] == "192.168.4.1"
+    assert calls["captive"] is True  # guests land in the gallery on connecting
 
     off = client.post("/api/admin/network/ap", json={"enabled": False}, headers=PIN).json()
     assert off["ap_enabled"] is False

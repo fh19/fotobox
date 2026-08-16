@@ -179,6 +179,16 @@ Die Bildquelle bestimmt `hardware.preview.backend`: `v4l2` (USB-Webcam), `picame
 zweite Kamera angeschlossen ist. `auto` bevorzugt weiterhin eine echte Vorschaukamera
 und greift erst zur DSLR, wenn keine da ist.
 
+### Captive Portal (nur im Access-Point-Modus)
+
+Die Prüf-URLs, mit denen Handys eine neue WLAN-Verbindung testen
+(`/generate_204`, `/hotspot-detect.html`, `/connecttest.txt` u. a.), antworten
+Clients **aus dem AP-Subnetz** mit `302` auf `/gallery`; jeder unbekannte Pfad
+ebenso. Damit öffnet sich die Galerie beim Verbinden von selbst. Außerhalb des
+AP-Subnetzes bleibt ein `404` ein `404` und die Prüf-URLs liefern `204`.
+Schalter: `network.access_point.captive_portal` (Standard an). Voraussetzung ist
+der DNS-Umbieger, den der AP-Start schreibt, und Port **80**.
+
 ### `GET /api/photos/{id}/{variant}`
 
 `variant`: `original` | `processed` | `print` | `thumb`. Liefert JPEG.

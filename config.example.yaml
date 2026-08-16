@@ -116,6 +116,7 @@ network:
     passphrase: ""                    # leer = offen
     channel: 6
     address: 192.168.4.1
+    captive_portal: true              # Verbinden öffnet die Galerie automatisch
 
 logging:
   level: INFO

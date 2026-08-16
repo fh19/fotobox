@@ -180,6 +180,9 @@ class AccessPointConfig(_Model):
     passphrase: str = ""
     channel: int = Field(ge=1, le=196)
     address: str = "192.168.4.1"
+    # Beim Verbinden mit dem Gäste-WLAN öffnet sich die Galerie von selbst
+    # (DNS-Umleitung + Antwort auf die Verbindungsprüfung der Handys).
+    captive_portal: bool = True
 
 
 class NetworkConfig(_Model):

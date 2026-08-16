@@ -141,7 +141,7 @@ Neue Hintergründe = Ordner reinkopieren. Kein Code-Deploy nötig.
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  Chromium im Kiosk-Modus (localhost:8000)       │
+│  Chromium im Kiosk-Modus (localhost)             │
 │  Frontend: Vanilla JS oder Svelte, kein Framework-Overkill │
 └───────────────┬─────────────────────────────────┘
                 │ HTTP + WebSocket

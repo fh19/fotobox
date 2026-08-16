@@ -8,10 +8,13 @@ return ``None`` rather than failing.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
+
+log = logging.getLogger("fotobox.system")
 
 _THERMAL = Path("/sys/class/thermal/thermal_zone0/temp")
 
@@ -19,6 +22,8 @@ _THERMAL = Path("/sys/class/thermal/thermal_zone0/temp")
 # created with autoconnect=no so a reboot always returns to the normal WiFi — the
 # safety net if the AP ever locks us out of the box.
 _AP_CON = "fotobox-ap"
+# NetworkManager's dnsmasq for shared connections reads this directory.
+_CAPTIVE_DNS_CONF = Path("/etc/NetworkManager/dnsmasq-shared.d/fotobox-captive.conf")
 
 # Where a USB stick is mounted for an event export (auto-mount is disabled on the
 # kiosk, so the backend mounts it itself).
@@ -86,8 +91,54 @@ def ap_active() -> bool:
         return False
 
 
-def ap_enable(ssid: str, passphrase: str, channel: int, address: str) -> None:
+def captive_dns_write(address: str) -> bool:
+    """Point every hostname at the box, so joining the WiFi opens the gallery.
+
+    NetworkManager runs its own dnsmasq for ``ipv4.method=shared`` and reads extra
+    settings from ``dnsmasq-shared.d``. ``address=/#/<ip>`` answers *any* name with
+    the box, which is what makes a phone's connectivity check fail and its captive
+    portal pop up. Written when the AP goes up, removed when it goes down — the
+    normal WiFi must keep resolving real names.
+    """
+    try:
+        _CAPTIVE_DNS_CONF.parent.mkdir(parents=True, exist_ok=True)
+        content = f"# Fotobox captive portal — automatisch erzeugt\naddress=/#/{address}\n"
+        subprocess.run(
+            ["sudo", "tee", str(_CAPTIVE_DNS_CONF)],
+            input=content,
+            text=True,
+            capture_output=True,
+            check=True,
+            timeout=10,
+        )
+        return True
+    except Exception as exc:
+        log.warning("Captive-DNS konnte nicht geschrieben werden: %s", exc)
+        return False
+
+
+def captive_dns_remove() -> None:
+    """Drop the DNS hijack again — otherwise the box resolves nothing sensibly."""
+    try:
+        subprocess.run(
+            ["sudo", "rm", "-f", str(_CAPTIVE_DNS_CONF)],
+            capture_output=True,
+            check=True,
+            timeout=10,
+        )
+    except Exception as exc:
+        log.warning("Captive-DNS konnte nicht entfernt werden: %s", exc)
+
+
+def ap_enable(
+    ssid: str, passphrase: str, channel: int, address: str, captive: bool = False
+) -> None:
     """(Re)create and activate the guest access point on wlan0."""
+    # Before the AP comes up: NM starts its dnsmasq with the connection.
+    if captive:
+        captive_dns_write(address)
+    else:
+        captive_dns_remove()
     # Recreate the profile from scratch so config changes always take effect.
     subprocess.run(
         ["sudo", "nmcli", "connection", "delete", _AP_CON],
@@ -157,6 +208,7 @@ def ap_disable() -> None:
         capture_output=True,
         timeout=30,
     )
+    captive_dns_remove()
 
 
 # --- USB export (M7b) -------------------------------------------------------
