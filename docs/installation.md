@@ -209,9 +209,13 @@ Am Kameramenü nötig:
   das muss unter `camera.capture_timeout_seconds` bleiben).
 
 **Ohne separate Vorschaukamera:** `hardware.preview.backend: gphoto2` (oder im Admin
-unter Vorschau-Backend) holt das Live-Bild aus der DSLR selbst — 1024×768, ~30 Bilder/s,
-über denselben offenen Kamera-Handle wie der Auslöser. Mit angeschlossener Webcam bleibt
-`auto` bei dieser, so wie Regel 1 es vorsieht.
+unter Vorschau-Backend) holt das Live-Bild aus der Kamera selbst — 1024×768, ~30 Bilder/s,
+über denselben offenen Kamera-Handle wie der Auslöser.
+
+⚠️ **Nur bei spiegellosen Kameras.** Eine Spiegelreflex (D7200) klappt für Live View den
+Spiegel hoch und ist damit in unter einer Stunde leer. `auto` wählt die Kamera deshalb
+**nie** von selbst als Vorschau — ohne Webcam gibt es dann lieber gar kein Live-Bild als
+einen leeren Akku mitten in der Feier. Fotografieren geht in diesem Zustand normal weiter.
 
 **Akkuwechsel:** Die Kamera darf im Betrieb aus- und wieder eingeschaltet werden. Sie
 kommt unter einer neuen USB-Gerätenummer zurück; die Box merkt das von selbst und nimmt

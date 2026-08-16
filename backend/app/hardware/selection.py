@@ -41,15 +41,26 @@ def resolve_preview(
     A configured backend that is not attached must not leave the box without a
     live image: with ``backend: gphoto2`` saved and the DSLR unplugged, the
     preview went dark *and* photos stopped working, because capture falls back to
-    the preview camera. So the preference is tried first and anything detected is
-    used rather than nothing.
+    the preview camera. So the preference is tried first and anything else that is
+    attached is used rather than nothing.
+
+    The DSLR is the exception and is **never** chosen automatically. On a mirrored
+    body live view flips the mirror up and empties the battery in well under an
+    hour, so it takes an explicit ``backend: gphoto2`` or the camera's port as
+    ``device`` — a deliberate choice, sensible on a mirrorless body.
     """
     if not previews:
         return None
-    preferred = previews
+    wants_dslr = backend == "gphoto2" or any(
+        p.backend == "gphoto2" and device in (p.id, p.device) for p in previews
+    )
+    usable = previews if wants_dslr else [p for p in previews if p.backend != "gphoto2"]
+    if not usable:
+        return None
+    preferred = usable
     if backend not in ("auto", "mock"):
-        preferred = [p for p in previews if p.backend == backend]
-    for candidates in (preferred, previews):
+        preferred = [p for p in usable if p.backend == backend]
+    for candidates in (preferred, usable):
         if not candidates:
             continue
         if device == "auto":
@@ -58,5 +69,5 @@ def resolve_preview(
             if device in (preview.id, preview.device):
                 return preview
     # Neither the wanted backend nor the wanted device is here — take what is.
-    log.warning("Vorschau %s/%s nicht gefunden, nutze %s", backend, device, previews[0].device)
-    return previews[0]
+    log.warning("Vorschau %s/%s nicht gefunden, nutze %s", backend, device, usable[0].device)
+    return usable[0]

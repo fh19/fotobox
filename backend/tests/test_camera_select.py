@@ -74,7 +74,19 @@ def test_a_missing_preview_backend_falls_back_to_what_is_attached():
     # A DSLR that is there still wins when it is the one asked for.
     dslr = DetectedPreview(id="usb:002,002", name="a7 IV", device="usb:002,002", backend="gphoto2")
     assert resolve_preview("auto", "gphoto2", [webcam, dslr]).id == "usb:002,002"
+    assert resolve_preview("usb:002,002", "auto", [webcam, dslr]).id == "usb:002,002"
     assert resolve_preview("auto", "auto", [webcam, dslr]).id == "/dev/video0"
+
+
+def test_the_dslr_is_never_the_automatic_preview():
+    """Live view flips a DSLR's mirror up and drains the battery within the hour
+    (D7200 on the box). Without an explicit choice: no live image instead."""
+    dslr = DetectedPreview(id="usb:001,004", name="D7200", device="usb:001,004", backend="gphoto2")
+    assert resolve_preview("auto", "auto", [dslr]) is None
+    assert resolve_preview("auto", "v4l2", [dslr]) is None
+    # Asked for by backend or by port, it is used.
+    assert resolve_preview("auto", "gphoto2", [dslr]).id == "usb:001,004"
+    assert resolve_preview("usb:001,004", "auto", [dslr]).id == "usb:001,004"
 
 
 # --- manager (mock mode) ----------------------------------------------------
@@ -460,3 +472,136 @@ def test_without_a_camera_ever_seen_the_long_wait_stays(tmp_path, monkeypatch):
     manager._discovery.cameras_list = _cams()
     assert manager.rediscover_if_missing(now + timedelta(seconds=11)) is False
     assert manager.rediscover_if_missing(now + timedelta(seconds=33)) is True
+
+
+# --- preview device disappears ----------------------------------------------
+#
+# Reported from the box: the webcam was unplugged and the kiosk had no live image
+# at all, even though the DSLR was attached and can serve one. The preview device
+# was resolved once at startup and never looked at again.
+
+
+class _SwitchablePreview:
+    """Available only while its device is still in the discovery list."""
+
+    def __init__(self, selected, discovery):
+        self.selected = selected
+        self._discovery = discovery
+        self.closed = False
+
+    def available(self) -> bool:
+        if self.selected is None:
+            return False
+        return any(p.device == self.selected.device for p in self._discovery.previews_list)
+
+    def frame(self) -> bytes:
+        return b"\xff\xd8\xff"
+
+    def close(self) -> None:
+        self.closed = True
+
+
+class _PreviewDiscovery:
+    def __init__(self, previews):
+        self.previews_list = list(previews)
+
+    def cameras(self):
+        return []
+
+    def previews(self):
+        return list(self.previews_list)
+
+
+def _webcam():
+    return DetectedPreview(id="/dev/video0", name="eMeet", device="/dev/video0", backend="v4l2")
+
+
+def _dslr_preview():
+    return DetectedPreview(
+        id="usb:001,004", name="Nikon DSC D7200", device="usb:001,004", backend="gphoto2"
+    )
+
+
+def _preview_manager(tmp_path, monkeypatch, discovery):
+    monkeypatch.setattr(
+        factory,
+        "build_preview",
+        lambda config, selected, camera=None: _SwitchablePreview(selected, discovery),
+    )
+    config = make_config(tmp_path)
+    config.hardware.camera.reconnect_backoff_seconds = [1.0]
+    manager = CameraManager(config)
+    manager._discovery = discovery
+    manager.rebuild()
+    return manager
+
+
+def test_a_second_webcam_takes_over_when_the_first_is_unplugged(tmp_path, monkeypatch):
+    other = DetectedPreview(id="/dev/video2", name="Logitech", device="/dev/video2", backend="v4l2")
+    discovery = _PreviewDiscovery([_webcam(), other])
+    manager = _preview_manager(tmp_path, monkeypatch, discovery)
+    assert manager.selected_preview.device == "/dev/video0"
+
+    now = datetime(2026, 8, 16, 21, 0, 0)
+    discovery.previews_list = [other]  # first webcam pulled
+    assert manager.repair_preview_if_missing(now) is False  # arms the retry
+    assert manager.repair_preview_if_missing(now + timedelta(seconds=2)) is True
+    assert manager.selected_preview.device == "/dev/video2"
+    assert manager.backends.preview.available() is True
+
+
+def test_the_dslr_never_takes_over_by_itself(tmp_path, monkeypatch):
+    """A mirrored body flips the mirror up for live view and is empty within the
+    hour. Reported for the D7200 — the live image is not worth the battery."""
+    discovery = _PreviewDiscovery([_webcam(), _dslr_preview()])
+    manager = _preview_manager(tmp_path, monkeypatch, discovery)
+
+    now = datetime(2026, 8, 16, 21, 0, 0)
+    discovery.previews_list = [_dslr_preview()]  # only the DSLR left
+    manager.repair_preview_if_missing(now)
+    assert manager.repair_preview_if_missing(now + timedelta(seconds=2)) is False
+    assert manager.selected_preview is None  # no live image beats a dead battery
+
+
+def test_the_dslr_is_used_when_it_is_asked_for(tmp_path, monkeypatch):
+    """Explicitly configured, it is a fine preview — a mirrorless a7 IV delivers
+    1024x768 in 9-34 ms without any mechanical part moving."""
+    discovery = _PreviewDiscovery([_webcam(), _dslr_preview()])
+    monkeypatch.setattr(
+        factory,
+        "build_preview",
+        lambda config, selected, camera=None: _SwitchablePreview(selected, discovery),
+    )
+    config = make_config(
+        tmp_path, hardware__preview__backend="gphoto2", hardware__preview__device="auto"
+    )
+    manager = CameraManager(config)
+    manager._discovery = discovery
+    manager.rebuild()
+
+    assert manager.selected_preview.backend == "gphoto2"
+
+
+def test_a_working_preview_is_never_torn_down(tmp_path, monkeypatch):
+    """Rebuilding costs the live image a moment — only do it when it is gone."""
+    discovery = _PreviewDiscovery([_webcam()])
+    manager = _preview_manager(tmp_path, monkeypatch, discovery)
+    preview = manager.preview
+
+    now = datetime(2026, 8, 16, 21, 0, 0)
+    for offset in (0, 5, 60):
+        assert manager.repair_preview_if_missing(now + timedelta(seconds=offset)) is False
+    assert manager.preview is preview
+    assert preview.closed is False
+
+
+def test_the_fallback_camera_follows_the_new_preview(tmp_path, monkeypatch):
+    """Capture falls back to the preview camera — it must not hold the dead one."""
+    discovery = _PreviewDiscovery([_webcam(), _dslr_preview()])
+    manager = _preview_manager(tmp_path, monkeypatch, discovery)
+
+    now = datetime(2026, 8, 16, 21, 0, 0)
+    discovery.previews_list = [_dslr_preview()]
+    manager.repair_preview_if_missing(now)
+    manager.repair_preview_if_missing(now + timedelta(seconds=2))
+    assert manager.camera._preview is manager.preview

@@ -89,6 +89,8 @@ class CameraManager:
         self._retry_step = 0
         self._failures = 0  # consecutive capture failures, for the automatic USB reset
         self._camera_was_seen = False  # a camera that was here once comes back fast
+        self._preview_retry_at: datetime | None = None
+        self._preview_retry_step = 0
         self.rebuild()
 
     def discover(self) -> tuple[list[DetectedCamera], list[DetectedPreview]]:
@@ -190,6 +192,44 @@ class CameraManager:
             self._retry_at = None
             self._retry_step = 0
         return found
+
+    def repair_preview_if_missing(self, now: datetime) -> bool:
+        """Pick a new preview source while there is no live image; True when fixed.
+
+        Unplugging the webcam left the kiosk without any live image even though the
+        DSLR was attached and could have served one: the preview device is resolved
+        at startup and was never looked at again. Retries use the same backoff as
+        the camera — a dead device must not be reopened once a second.
+
+        Only runs while the preview is *unavailable*, so a working live image is
+        never torn down. Coming back to a preferred device that reappears is left
+        to "Kamera übernehmen"; interrupting a working preview for a nicer source
+        is not worth it mid-event.
+        """
+        if self.preview is not None and self.preview.available():
+            self._preview_retry_at = None
+            self._preview_retry_step = 0
+            return False
+        backoff = self._backoff()
+        if not backoff:
+            return False
+        if self._preview_retry_at is None:
+            self._preview_retry_at = now + timedelta(seconds=backoff[0])
+            return False
+        if now < self._preview_retry_at:
+            return False
+        step = min(self._preview_retry_step + 1, len(backoff) - 1)
+        self._preview_retry_step = step
+        self._preview_retry_at = now + timedelta(seconds=backoff[step])
+        _, previews = self.discover()
+        self._rebuild_preview(previews)
+        self._wrap_camera()  # the fallback camera holds a reference to the preview
+        fixed = self.preview.available()
+        if fixed:
+            log.info("Vorschau wiederhergestellt: %s", self.selected_preview.device)
+            self._preview_retry_at = None
+            self._preview_retry_step = 0
+        return fixed
 
     def rescan(self) -> bool:
         """Run discovery again and rebuild the capture camera. True when one is there.

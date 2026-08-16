@@ -27,9 +27,11 @@ Canon Selphy CP1500. Läuft offline.
    (Pi Camera Module 3), *nicht* aus der DSLR. Die DSLR wird ausschließlich zum Auslösen
    angesprochen. Das ist Absicht — nicht „korrigieren".
    *Ausnahme seit 2026-08-02:* Läuft die Box ohne zweite Kamera, liefert
-   `preview.backend: gphoto2` das Live-Bild aus der DSLR (`app/hardware/gphoto2_preview.py`,
-   teilt sich den Kamera-Handle mit dem Auslöser). Der Standard bleibt die eigene
-   Vorschaukamera; `auto` wählt die DSLR erst, wenn keine Webcam da ist.
+   `preview.backend: gphoto2` das Live-Bild aus der Kamera (`app/hardware/gphoto2_preview.py`,
+   teilt sich den Kamera-Handle mit dem Auslöser). Das muss **bewusst** eingestellt
+   werden — `auto` wählt es nie: bei einer Spiegelreflex (D7200) klappt der Spiegel
+   für Live View hoch und leert den Akku in unter einer Stunde. Sinnvoll nur bei
+   spiegellosen Kameras (a7 IV). Der Standard bleibt die eigene Vorschaukamera.
 2. **Kein Hardwarezugriff außerhalb von `backend/app/hardware/`.** Businesslogik spricht
    nur mit den Protokollen `CameraBackend`, `PrinterBackend`, `PreviewBackend`.
    Kein `subprocess`, kein `gphoto2`, kein `pycups` in `state_machine.py` oder `pipeline/`.

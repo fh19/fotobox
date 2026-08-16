@@ -735,8 +735,12 @@ class Engine:
             return
         self._avail_check_at = now + timedelta(seconds=1)
         # A DSLR that boots slower than the box only shows up on a later discovery.
-        if self.camera_manager is not None and self.camera_manager.rediscover_if_missing(now):
-            self.backends = self.camera_manager.backends
+        if self.camera_manager is not None:
+            manager = self.camera_manager
+            # A camera that is gone, and a preview source that is gone — both can
+            # be replaced by whatever else is attached, without anyone noticing.
+            if manager.rediscover_if_missing(now) or manager.repair_preview_if_missing(now):
+                self.backends = manager.backends
         self._auto_resume_printer(now)
         current = (
             self.backends.camera.available(),

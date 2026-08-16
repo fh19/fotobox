@@ -21,8 +21,11 @@ hardware:
 
   preview:
     backend: picamera2             # picamera2 | v4l2 | gphoto2 | mock | auto
-                                   # gphoto2 = Live-Bild aus der DSLR (nur ohne
-                                   # eigene Vorschaukamera, siehe Regel 1)
+                                   # gphoto2 = Live-Bild aus der Kamera. Wird von
+                                   # "auto" NIE gewählt: bei einer Spiegelreflex
+                                   # klappt der Spiegel hoch und der Akku ist in
+                                   # unter einer Stunde leer. Nur bewusst setzen,
+                                   # sinnvoll bei spiegellosen Kameras.
     device: /dev/video0            # auto | /dev/videoN | Geräte-ID
     width: 1280
     height: 720
