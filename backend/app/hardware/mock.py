@@ -52,6 +52,13 @@ class MockPreview:
         return self._available
 
     def frame(self) -> bytes:
+        # This class is also what a real box gets when no preview device was
+        # found at all. Handing out a synthetic picture there froze the kiosk on
+        # something that looked like a live image (api-contract: a still frame).
+        if not self._available:
+            from app.hardware.v4l2_preview import placeholder_frame
+
+            return placeholder_frame()
         return _PREVIEW_FRAME
 
 

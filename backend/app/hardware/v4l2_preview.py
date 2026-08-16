@@ -100,8 +100,11 @@ class V4l2Preview:
         return self._opened and self._latest is not None
 
     def frame(self) -> bytes:
+        # Only while the device is actually delivering. Handing out the last frame
+        # of an unplugged camera freezes the kiosk on a picture that looks live —
+        # far more confusing than an obviously blank one (api-contract).
         with self._lock:
-            if self._latest is not None:
+            if self._opened and self._latest is not None:
                 return self._latest
         return placeholder_frame()
 

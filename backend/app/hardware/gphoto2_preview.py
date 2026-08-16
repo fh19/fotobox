@@ -90,8 +90,10 @@ class Gphoto2Preview:
             return self._latest is not None and time.monotonic() - self._latest_at < _STALE_AFTER
 
     def frame(self) -> bytes:
+        # Stale frames are not served: a frozen picture reads as a working live
+        # image and hides that the camera is gone.
         with self._lock:
-            if self._latest is not None:
+            if self._latest is not None and time.monotonic() - self._latest_at < _STALE_AFTER:
                 return self._latest
         return placeholder_frame()
 
