@@ -739,8 +739,11 @@ class Engine:
             manager = self.camera_manager
             # A camera that is gone, and a preview source that is gone — both can
             # be replaced by whatever else is attached, without anyone noticing.
-            if manager.rediscover_if_missing(now) or manager.repair_preview_if_missing(now):
-                self.backends = manager.backends
+            manager.rediscover_if_missing(now)
+            manager.repair_preview_if_missing(now)
+            # Always re-read: the preview repair finishes on its own thread, so
+            # there is no return value to react to.
+            self.backends = manager.backends
         self._auto_resume_printer(now)
         current = (
             self.backends.camera.available(),

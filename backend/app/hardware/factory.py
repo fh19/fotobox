@@ -8,6 +8,7 @@ while preview and printer stay mocked until that hardware is attached.
 from __future__ import annotations
 
 import logging
+import threading
 from datetime import datetime, timedelta
 
 from app.config import Config
@@ -91,6 +92,7 @@ class CameraManager:
         self._camera_was_seen = False  # a camera that was here once comes back fast
         self._preview_retry_at: datetime | None = None
         self._preview_retry_step = 0
+        self._repair_thread: threading.Thread | None = None
         self.rebuild()
 
     def discover(self) -> tuple[list[DetectedCamera], list[DetectedPreview]]:
@@ -108,13 +110,18 @@ class CameraManager:
         self.selected_preview = resolve_preview(
             self.config.hardware.preview.device, self.config.hardware.preview.backend, previews
         )
+        # Release the old device *first*: V4L2 hands out a camera exclusively, so
+        # opening /dev/video0 while the previous grabber still holds it fails every
+        # single time — a repair loop that could never succeed. During the gap the
+        # preview must still answer (an unavailable one), never be None: opening a
+        # camera takes seconds, and every /preview/frame in that window would crash.
         old_preview = self.preview
-        self.preview = build_preview(self.config, self.selected_preview, self.selected_camera)
-        # Free the old preview device (e.g. a V4L2 webcam) so it isn't left busy.
-        if old_preview is not None and old_preview is not self.preview:
+        self.preview = MockPreview(available=False)
+        if old_preview is not None:
             close = getattr(old_preview, "close", None)
             if callable(close):
                 close()
+        self.preview = build_preview(self.config, self.selected_preview, self.selected_camera)
 
     def _build_primary(self, cameras: list[DetectedCamera]) -> None:
         self.selected_camera = resolve_camera(self.config.hardware.camera.select, cameras)
@@ -193,8 +200,11 @@ class CameraManager:
             self._retry_step = 0
         return found
 
-    def repair_preview_if_missing(self, now: datetime) -> bool:
-        """Pick a new preview source while there is no live image; True when fixed.
+    def repair_preview_if_missing(self, now: datetime) -> None:
+        """Pick a new preview source while there is no live image.
+
+        Schedules the work in the background and returns at once — read
+        :attr:`preview` on a later tick to see the result.
 
         Unplugging the webcam left the kiosk without any live image even though the
         DSLR was attached and could have served one: the preview device is resolved
@@ -209,27 +219,38 @@ class CameraManager:
         if self.preview is not None and self.preview.available():
             self._preview_retry_at = None
             self._preview_retry_step = 0
-            return False
+            return
         backoff = self._backoff()
         if not backoff:
-            return False
+            return
         if self._preview_retry_at is None:
             self._preview_retry_at = now + timedelta(seconds=backoff[0])
-            return False
+            return
         if now < self._preview_retry_at:
-            return False
+            return
+        if self._repair_thread is not None and self._repair_thread.is_alive():
+            return
         step = min(self._preview_retry_step + 1, len(backoff) - 1)
         self._preview_retry_step = step
         self._preview_retry_at = now + timedelta(seconds=backoff[step])
-        _, previews = self.discover()
-        self._rebuild_preview(previews)
-        self._wrap_camera()  # the fallback camera holds a reference to the preview
-        fixed = self.preview.available()
-        if fixed:
+        # Off the event loop: opening a V4L2 device that is present but unhealthy
+        # blocks for seconds inside OpenCV, and doing that on the tick made the
+        # whole box stop answering. The result is picked up on a later tick.
+        self._repair_thread = threading.Thread(target=self._repair_preview_now, daemon=True)
+        self._repair_thread.start()
+
+    def _repair_preview_now(self) -> None:
+        try:
+            _, previews = self.discover()
+            self._rebuild_preview(previews)
+            self._wrap_camera()  # the fallback camera holds a reference to the preview
+        except Exception as exc:
+            log.warning("Vorschau-Reparatur fehlgeschlagen: %s", exc)
+            return
+        if self.preview.available():
             log.info("Vorschau wiederhergestellt: %s", self.selected_preview.device)
             self._preview_retry_at = None
             self._preview_retry_step = 0
-        return fixed
 
     def rescan(self) -> bool:
         """Run discovery again and rebuild the capture camera. True when one is there.

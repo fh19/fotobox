@@ -149,3 +149,56 @@ def test_upload_frame_without_alpha_is_rejected(tmp_path):
 def test_delete_none_is_404(tmp_path):
     client = _client(tmp_path)
     assert client.delete("/api/admin/backgrounds/none", headers=PIN).status_code == 404
+
+
+# --- the frame is prepared once, not per photo ------------------------------
+#
+# Measured on the box: loading and LANCZOS-scaling a 3780x2504 frame PNG cost
+# 1.2 s, and frame mode did it twice per photo — 2.4 s of a 3.7 s pipeline,
+# identical work for every guest.
+
+
+def test_the_scaled_frame_is_kept_on_disk(tmp_path):
+    from app.pipeline.compose import _scaled_path, overlay_for, window_for
+
+    source = tmp_path / "overlay.png"
+    _overlay_with_window(800, 600, (100, 100, 400, 300)).save(source)
+    size = (400, 300)
+    scaled = _scaled_path(source, size)
+    assert not scaled.exists()
+
+    prepared = overlay_for(source, size)
+    assert prepared.size == size
+    assert scaled.exists()  # survives a restart, so the first photo is fast too
+
+    # A fresh process (empty memory cache) reads the file instead of rescaling.
+    from app.pipeline import compose
+
+    compose._prepared.cache_clear()
+    compose._window.cache_clear()
+    again = overlay_for(source, size)
+    assert again.size == size
+    assert window_for(source, size) is not None
+
+
+def test_a_replaced_frame_is_not_served_from_the_old_cache(tmp_path):
+    from app.pipeline import compose
+    from app.pipeline.compose import _scaled_path, overlay_for
+
+    source = tmp_path / "overlay.png"
+    _overlay_with_window(800, 600, (100, 100, 400, 300)).save(source)
+    size = (400, 300)
+    overlay_for(source, size)
+    assert _scaled_path(source, size).exists()
+
+    # Admin uploads a new frame with a different window.
+    compose._prepared.cache_clear()
+    compose._window.cache_clear()
+    _overlay_with_window(800, 600, (0, 0, 200, 150)).save(source)
+    import os
+
+    later = _scaled_path(source, size).stat().st_mtime_ns + 10**9
+    os.utime(source, ns=(later, later))
+
+    x, y, w, h = compose.window_for(source, size)
+    assert (w, h) == (100, 75)  # the new window, scaled to the canvas

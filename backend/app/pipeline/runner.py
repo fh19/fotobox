@@ -24,7 +24,7 @@ from app.backgrounds import Background
 from app.config import Config
 from app.pipeline import ai, chroma
 from app.pipeline.caption import draw_caption
-from app.pipeline.compose import apply_overlay, composite, detect_window
+from app.pipeline.compose import apply_overlay, composite, overlay_for, window_for
 from app.pipeline.errors import PipelineError
 from app.pipeline.geometry import Canvas, canvas_for, contain_resize, cover_resize
 from app.pipeline.qr import draw_qr
@@ -84,7 +84,11 @@ def _compose(
 
     # Overlay: always in overlay/frame mode; for chroma/ai only if an overlay.png exists.
     if background.overlay_path is not None and background.overlay_path.exists():
-        result = apply_overlay(result, Image.open(background.overlay_path))
+        # Prepared once and cached — this used to reload and rescale the frame for
+        # every single photo, the largest item in the pipeline (see overlay_for).
+        result = apply_overlay(
+            result, overlay_for(background.overlay_path, (canvas.width, canvas.height))
+        )
 
     if config.printing.caption.enabled:
         draw_caption(result, config.printing.caption, canvas)
@@ -119,12 +123,9 @@ def _place_in_frame(background: Background, original: Image.Image, canvas: Canva
     if background.overlay_path is None or not background.overlay_path.exists():
         raise PipelineError("Rahmen-PNG fehlt für Rahmen-Modus")
 
-    overlay = Image.open(background.overlay_path).convert("RGBA")
-    if overlay.size != (canvas.width, canvas.height):
-        overlay = overlay.resize((canvas.width, canvas.height), Image.LANCZOS)
-
-    window = background.window or detect_window(overlay) or (0, 0, canvas.width, canvas.height)
-    x, y, w, h = window
+    size = (canvas.width, canvas.height)
+    window = background.window or window_for(background.overlay_path, size)
+    x, y, w, h = window or (0, 0, canvas.width, canvas.height)
 
     try:
         fill = ImageColor.getrgb(background.background_color)

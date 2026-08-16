@@ -522,6 +522,15 @@ def _dslr_preview():
     )
 
 
+def _wait_repair(manager):
+    """The repair runs off the event loop — opening a V4L2 device can block for
+    seconds inside OpenCV, and doing that on the tick froze the whole box."""
+    thread = manager._repair_thread
+    assert thread is not None, "keine Reparatur angestoßen"
+    thread.join(timeout=5)
+    assert not thread.is_alive()
+
+
 def _preview_manager(tmp_path, monkeypatch, discovery):
     monkeypatch.setattr(
         factory,
@@ -544,8 +553,9 @@ def test_a_second_webcam_takes_over_when_the_first_is_unplugged(tmp_path, monkey
 
     now = datetime(2026, 8, 16, 21, 0, 0)
     discovery.previews_list = [other]  # first webcam pulled
-    assert manager.repair_preview_if_missing(now) is False  # arms the retry
-    assert manager.repair_preview_if_missing(now + timedelta(seconds=2)) is True
+    manager.repair_preview_if_missing(now)  # arms the retry
+    manager.repair_preview_if_missing(now + timedelta(seconds=2))
+    _wait_repair(manager)
     assert manager.selected_preview.device == "/dev/video2"
     assert manager.backends.preview.available() is True
 
@@ -559,7 +569,8 @@ def test_the_dslr_never_takes_over_by_itself(tmp_path, monkeypatch):
     now = datetime(2026, 8, 16, 21, 0, 0)
     discovery.previews_list = [_dslr_preview()]  # only the DSLR left
     manager.repair_preview_if_missing(now)
-    assert manager.repair_preview_if_missing(now + timedelta(seconds=2)) is False
+    manager.repair_preview_if_missing(now + timedelta(seconds=2))
+    _wait_repair(manager)
     assert manager.selected_preview is None  # no live image beats a dead battery
 
 
@@ -590,7 +601,8 @@ def test_a_working_preview_is_never_torn_down(tmp_path, monkeypatch):
 
     now = datetime(2026, 8, 16, 21, 0, 0)
     for offset in (0, 5, 60):
-        assert manager.repair_preview_if_missing(now + timedelta(seconds=offset)) is False
+        manager.repair_preview_if_missing(now + timedelta(seconds=offset))
+    assert manager._repair_thread is None  # nothing was even scheduled
     assert manager.preview is preview
     assert preview.closed is False
 
@@ -604,4 +616,31 @@ def test_the_fallback_camera_follows_the_new_preview(tmp_path, monkeypatch):
     discovery.previews_list = [_dslr_preview()]
     manager.repair_preview_if_missing(now)
     manager.repair_preview_if_missing(now + timedelta(seconds=2))
+    _wait_repair(manager)
     assert manager.camera._preview is manager.preview
+
+
+def test_the_preview_never_goes_missing_during_a_repair(tmp_path, monkeypatch):
+    """Opening a camera takes seconds. While the old device is closed and the new
+    one comes up, /preview/frame must still get an answer — a None preview there
+    crashed every request with AttributeError."""
+    seen: list[object] = []
+    discovery = _PreviewDiscovery([_webcam()])
+    holder: dict[str, CameraManager] = {}
+
+    def slow_build(config, selected, camera=None):
+        manager = holder.get("manager")
+        if manager is not None:
+            seen.append(manager.preview)  # what a request would have found meanwhile
+        return _SwitchablePreview(selected, discovery)
+
+    monkeypatch.setattr(factory, "build_preview", slow_build)
+    manager = CameraManager(make_config(tmp_path))
+    manager._discovery = discovery
+    holder["manager"] = manager
+    manager.rebuild()
+
+    seen.clear()
+    manager._rebuild_preview(discovery.previews())
+    assert seen and all(p is not None for p in seen)
+    assert all(p.frame() for p in seen)  # answers with a placeholder, does not crash
