@@ -333,13 +333,16 @@ def test_a_failed_capture_drops_the_handle(monkeypatch, config):
     assert camera.exited is True
 
 
-def test_availability_trusts_an_open_session(monkeypatch, config):
-    """With our own handle open, asking the USB bus again only risks disturbing it."""
+def test_an_open_handle_is_no_proof_the_camera_is_there(monkeypatch, config):
+    """Reported after a battery change: the camera comes back under a new USB
+    device number, and the still-open handle kept claiming "da" — so nothing
+    re-detected it and the next photo failed with -52 and fell back to the
+    webcam. The bus is asked, never the handle."""
     camera = _FakeCamera("capt0001.jpg", {})
     session = _session(monkeypatch, config, camera)
     backend = Gphoto2Camera(config, session.selected, session=session)
-    monkeypatch.setattr(backend, "_detect", lambda: pytest.fail("darf nicht abgefragt werden"))
+    session._camera = camera  # handle open, but the camera was switched off
+    monkeypatch.setattr(backend, "_detect", lambda: False)
 
-    session._camera = camera  # session open
     backend._checked_at = 0.0
-    assert backend.available() is True
+    assert backend.available() is False

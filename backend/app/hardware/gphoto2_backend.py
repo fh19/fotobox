@@ -56,9 +56,10 @@ class Gphoto2Camera:
         if not CAMERA_LOCK.acquire(blocking=False):
             return self._available
         try:
-            # An open session means the camera answered a moment ago; asking the USB
-            # bus again would only risk disturbing our own handle.
-            self._available = True if self._session.is_open() else self._detect()
+            # Always ask the bus, never the handle: after a battery change the
+            # camera comes back under a new USB device number, and our still-open
+            # handle would keep claiming "da" until a photo failed with -52.
+            self._available = self._detect()
             self._checked_at = now
         finally:
             CAMERA_LOCK.release()

@@ -11,10 +11,17 @@ import logging
 
 from app.hardware.discovery import DetectedCamera, DetectedPreview
 
-log = logging.getLogger("fotobox.preview")
+log = logging.getLogger("fotobox.camera")
 
 
 def resolve_camera(select: str, cameras: list[DetectedCamera]) -> DetectedCamera | None:
+    """Pick the capture camera. ``select`` is a preference, not a demand.
+
+    A pinned port goes stale the moment the camera is switched off and on (it
+    comes back under a new USB device number), and a pinned model goes stale when
+    the body is swapped. Neither should send anyone into the admin menu, so an
+    attached camera is used even when it is not the one that was asked for.
+    """
     if not cameras:
         return None
     if select == "auto":
@@ -22,7 +29,8 @@ def resolve_camera(select: str, cameras: list[DetectedCamera]) -> DetectedCamera
     for camera in cameras:
         if select in (camera.id, camera.model, camera.port):
             return camera
-    return None
+    log.warning("Kamera %s nicht gefunden, nutze %s", select, cameras[0].model)
+    return cameras[0]
 
 
 def resolve_preview(

@@ -43,8 +43,13 @@ def test_resolve_camera_by_model_and_port():
 
 
 def test_resolve_camera_unknown_or_empty():
-    assert resolve_camera("Canon", _cams()) is None
     assert resolve_camera("auto", []) is None
+    # A pinned camera that is not attached must not disable the one that is: the
+    # pin goes stale on every battery change (new USB device number) and on every
+    # body swap, and nobody should have to open the admin menu for that.
+    assert resolve_camera("Canon EOS", _cams()).model == "Nikon DSC D7200"
+    assert resolve_camera("usb:001,099", _cams()).model == "Nikon DSC D7200"
+    assert resolve_camera("Sony Alpha 6000", _cams()).model == "Sony Alpha 6000"
 
 
 def test_resolve_preview_backend_and_device():
@@ -348,3 +353,69 @@ def test_selection_persists_to_config_file(tmp_path):
     with TestClient(app) as client:
         client.post("/api/admin/cameras", headers=PIN, json={"camera_select": "Sony Alpha 6000"})
     assert load_config(path).hardware.camera.select == "Sony Alpha 6000"
+
+
+# --- battery change ---------------------------------------------------------
+#
+# Reported from the box: after switching the camera off and on, photos came from
+# the webcam until someone re-picked the camera in the admin menu. It returns
+# under a *new* USB device number, so the stored port goes stale.
+
+
+class _PortAwareCamera:
+    """Available exactly while its port is on the bus — like the real backend."""
+
+    def __init__(self, selected, discovery):
+        self._selected = selected
+        self._discovery = discovery
+
+    def available(self) -> bool:
+        if self._selected is None:
+            return False
+        return any(c.port == self._selected.port for c in self._discovery.cameras_list)
+
+    def model(self) -> str | None:
+        return self._selected.model if self.available() else None
+
+    def capture(self):
+        raise AssertionError("kein Foto nötig, um die Kamera wiederzufinden")
+
+
+def _nikon(port: str) -> DetectedCamera:
+    return DetectedCamera(id=port, model="Nikon DSC D7200", port=port, source="gphoto2")
+
+
+def test_a_camera_that_comes_back_on_a_new_port_is_picked_up(tmp_path, monkeypatch):
+    discovery = _CountingDiscovery([_nikon("usb:001,004")])
+    monkeypatch.setattr(
+        factory, "build_camera", lambda config, selected: _PortAwareCamera(selected, discovery)
+    )
+    config = make_config(tmp_path)
+    config.hardware.camera.reconnect_backoff_seconds = [1.0]
+    manager = CameraManager(config)
+    manager._discovery = discovery
+    manager.rebuild()
+    assert manager.camera.available() is True
+
+    now = datetime(2026, 8, 16, 20, 0, 0)
+    discovery.cameras_list = []  # battery out
+    manager.rediscover_if_missing(now)  # arms the retry
+    discovery.cameras_list = [_nikon("usb:001,005")]  # back, new device number
+
+    assert manager.rediscover_if_missing(now + timedelta(seconds=2)) is True
+    assert manager.selected_camera.port == "usb:001,005"
+    assert manager.camera.available() is True
+    # No photo had to be sacrificed to notice.
+
+
+def test_the_stale_handle_is_dropped_before_looking_again(tmp_path, monkeypatch):
+    """The dead handle of a switched-off camera must not be reused (-52)."""
+    closed: list[int] = []
+    monkeypatch.setattr(factory, "close_session", lambda: closed.append(1))
+    manager = _missing_camera_manager(tmp_path, monkeypatch)
+    now = datetime(2026, 8, 16, 20, 0, 0)
+
+    manager.rediscover_if_missing(now)
+    assert closed == []  # first tick only arms the retry
+    manager.rediscover_if_missing(now + timedelta(seconds=5))
+    assert closed == [1]

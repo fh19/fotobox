@@ -164,6 +164,9 @@ class CameraManager:
             return False
         self._retry_step = min(self._retry_step + 1, len(backoff) - 1)
         self._retry_at = now + timedelta(seconds=backoff[self._retry_step])
+        # Drop the handle first: a camera that was switched off leaves a dead one
+        # behind, and reusing it would fail with -52 on the first photo.
+        close_session()
         self._rebuild_camera(self._discovery.cameras())
         found = self._primary.available()
         if found:
