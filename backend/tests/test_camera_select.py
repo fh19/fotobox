@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import time
 from datetime import datetime, timedelta
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.clock import RealClock
@@ -14,6 +16,7 @@ from app.hardware.factory import CameraManager
 from app.hardware.mock import MockCamera
 from app.hardware.selection import resolve_camera, resolve_preview
 from app.main import create_app
+from app.state_machine import ActionRejected
 from tests.conftest import make_config
 
 PIN = {"X-Fotobox-Pin": "2606"}  # matches config.example.yaml admin_pin
@@ -644,3 +647,28 @@ def test_the_preview_never_goes_missing_during_a_repair(tmp_path, monkeypatch):
     manager._rebuild_preview(discovery.previews())
     assert seen and all(p is not None for p in seen)
     assert all(p.frame() for p in seen)  # answers with a placeholder, does not crash
+
+
+def test_a_stuck_camera_does_not_hang_the_admin(tmp_path, clock):
+    """A camera stuck mid-operation held the test-shot request open for minutes.
+    The admin path uses the same timeout as the guest flow."""
+    import threading
+
+    config = make_config(tmp_path, hardware__camera__capture_timeout_seconds=0.2)
+    engine = create_app(config, clock).state.engine
+
+    never_returns = threading.Event()
+
+    def wedged():
+        never_returns.wait(30)
+        raise AssertionError("darf nie so weit kommen")
+
+    engine.backends.camera.capture = wedged
+    try:
+        started = time.monotonic()
+        with pytest.raises(ActionRejected) as exc:
+            engine.test_shot()
+        assert time.monotonic() - started < 5
+        assert exc.value.code == "capture_failed"
+    finally:
+        never_returns.set()

@@ -324,11 +324,16 @@ class Engine:
         return manager
 
     def _capture_test_photo(self):
-        """Shared shutter release for calibration and test shot (admin, IDLE only)."""
+        """Shared shutter release for calibration and test shot (admin, IDLE only).
+
+        Through the same timeout as the guest flow: a camera stuck mid-operation
+        held the admin request open for minutes, which looks like a dead box to
+        whoever is trying to diagnose it.
+        """
         if self.sm.state != State.IDLE:
             raise ActionRejected("invalid_state", "Probefoto nur im Ruhezustand möglich")
         try:
-            result = self.backends.camera.capture()
+            result = self._capture_with_timeout()
         except Exception as exc:
             self._log("error", "camera", "capture_failed", str(exc))
             if self.camera_manager is not None:
