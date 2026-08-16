@@ -39,6 +39,11 @@ class CameraConfig(_Model):
     # Einstellung unverändert und der JPEG-Umweg unten greift.
     image_quality: str = "JPEG"
     capture_target: str = ""
+    # Bildgröße, z.B. "4496x3000" (Nikon M). Leer = Kamera nicht verändern. Selbst
+    # die kleinste Stufe liefert mehr Pixel, als das Postkartenformat auflöst; eine
+    # Stufe kleiner halbiert dafür Übertragung und Pipeline-Zeit. Die gültigen Werte
+    # sind kameraspezifisch — siehe Log beim Start, unpassende bleiben wirkungslos.
+    image_size: str = ""
     capture_timeout_seconds: float = Field(gt=0)
     reconnect_backoff_seconds: list[float]
     # Obergrenze für die Suchabstände, sobald einmal eine Kamera da war: ein

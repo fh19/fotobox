@@ -12,6 +12,8 @@ hardware:
     select: auto                   # auto | Modellname | usb:BUS,DEV
     autofocus: "off"               # "off" (manueller Fokus) | before_capture
     image_quality: JPEG            # gphoto2-Wert von "imagequality"; leer = nicht ändern
+    image_size: ""                 # z.B. 4496x3000 (Nikon M) — halbiert die Wartezeit;
+                                   # gültige Werte stehen beim Start im Log
     capture_target: ""             # gphoto2-Wert von "capturetarget"; leer = nicht ändern
     capture_timeout_seconds: 15
     reconnect_backoff_seconds: [1, 2, 5, 10, 30]

@@ -76,7 +76,7 @@ class _FakeCamera:
         return self
 
     def get_child_by_name(self, name: str):
-        if name not in ("imagequality", "capturetarget", "autofocus"):
+        if name not in ("imagequality", "imagesize", "capturetarget", "autofocus"):
             raise RuntimeError(f"widget {name} missing")
         return _Widget(self, name)
 
@@ -346,3 +346,21 @@ def test_an_open_handle_is_no_proof_the_camera_is_there(monkeypatch, config):
 
     backend._checked_at = 0.0
     assert backend.available() is False
+
+
+def test_the_image_size_is_pushed_to_the_camera(monkeypatch, config):
+    """One step down from L halves transfer and pipeline time, and even the
+    smallest step still out-resolves the postcard print."""
+    config.hardware.camera.image_size = "4496x3000"
+    camera = _FakeCamera("capt0001.jpg", {"capt0001.jpg": _jpeg_bytes()})
+    _backend(monkeypatch, config, camera).capture()
+
+    assert camera.settings["imagesize"] == "4496x3000"
+
+
+def test_an_empty_image_size_leaves_the_camera_alone(monkeypatch, config):
+    config.hardware.camera.image_size = ""
+    camera = _FakeCamera("capt0001.jpg", {"capt0001.jpg": _jpeg_bytes()})
+    _backend(monkeypatch, config, camera).capture()
+
+    assert "imagesize" not in camera.settings

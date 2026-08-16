@@ -113,6 +113,8 @@ class CameraSession:
         camera_config = self._config.hardware.camera
         if camera_config.image_quality:
             self.set_widget(camera, "imagequality", camera_config.image_quality)
+        if camera_config.image_size:
+            self.set_widget(camera, "imagesize", camera_config.image_size)
         if camera_config.capture_target:
             self.set_widget(camera, "capturetarget", camera_config.capture_target)
         if camera_config.autofocus == "off":
@@ -125,10 +127,28 @@ class CameraSession:
             widget = config.get_child_by_name(name)
             widget.set_value(value)
             camera.set_config(config)
+            log.info("Kamera-Einstellung %s=%s gesetzt", name, value)
             return True
-        except Exception as exc:  # widget missing / read-only on this body
-            log.debug("Kamera-Einstellung %s=%s nicht möglich: %s", name, value, exc)
+        except Exception as exc:  # widget missing / value unknown on this body
+            # Not an error: the valid values differ per camera ("JPEG" on a Sony,
+            # "JPEG Fine" on a Nikon). Logged with the choices so the right value
+            # can be put in the config instead of guessed.
+            log.info(
+                "Kamera-Einstellung %s=%s nicht möglich (%s); mögliche Werte: %s",
+                name,
+                value,
+                exc,
+                self._choices(camera, name),
+            )
             return False
+
+    @staticmethod
+    def _choices(camera, name: str) -> list[str]:
+        try:
+            widget = camera.get_config().get_child_by_name(name)
+            return list(widget.get_choices())
+        except Exception:
+            return []
 
 
 def get_session(config: Config, selected: DetectedCamera | None) -> CameraSession:
