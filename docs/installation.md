@@ -213,6 +213,13 @@ unter Vorschau-Backend) holt das Live-Bild aus der DSLR selbst — 1024×768, ~3
 über denselben offenen Kamera-Handle wie der Auslöser. Mit angeschlossener Webcam bleibt
 `auto` bei dieser, so wie Regel 1 es vorsieht.
 
+**Akkuwechsel:** Die Kamera darf im Betrieb aus- und wieder eingeschaltet werden. Sie
+kommt unter einer neuen USB-Gerätenummer zurück; die Box merkt das von selbst und nimmt
+sie wieder als Hauptkamera — nichts im Admin anzuklicken. Wie schnell, bestimmen
+`camera.reconnect_backoff_seconds` (wachsende Abstände) und
+`camera.reconnect_max_seconds` (Deckel von 10 s, sobald einmal eine Kamera da war).
+Dazwischen fotografiert die Vorschaukamera als Ersatz, sichtbar im Admin.
+
 **Auslöseverzögerung:** Die a7 IV braucht ab Auslösebefehl ~650 ms bis zur Belichtung
 (die Fotobox hält die Kamera dafür dauerhaft geöffnet; ohne das wären es 4,2 s, weil
 libgphoto2 nach jedem `init()` 3 s Sony-Startzeit abwartet). Wer den Rest ausgleichen

@@ -15,6 +15,7 @@ hardware:
     capture_target: ""             # gphoto2-Wert von "capturetarget"; leer = nicht ändern
     capture_timeout_seconds: 15
     reconnect_backoff_seconds: [1, 2, 5, 10, 30]
+    reconnect_max_seconds: 10      # Deckel, sobald einmal eine Kamera da war; 0 = aus
     usbreset_after_failures: 3     # 0 = nie
     fallback_to_preview: true      # DSLR weg (z.B. Akku leer) → Foto mit Vorschaukamera
 

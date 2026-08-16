@@ -419,3 +419,44 @@ def test_the_stale_handle_is_dropped_before_looking_again(tmp_path, monkeypatch)
     assert closed == []  # first tick only arms the retry
     manager.rediscover_if_missing(now + timedelta(seconds=5))
     assert closed == [1]
+
+
+def test_the_retry_interval_is_capped_once_a_camera_has_been_seen(tmp_path, monkeypatch):
+    """Waiting 30 s is fine before any camera has shown up; after a battery
+    change it is half a minute of quietly shooting with the webcam."""
+    discovery = _CountingDiscovery([_nikon("usb:001,004")])
+    monkeypatch.setattr(
+        factory, "build_camera", lambda config, selected: _PortAwareCamera(selected, discovery)
+    )
+    config = make_config(tmp_path)
+    config.hardware.camera.reconnect_backoff_seconds = [1.0, 30.0]
+    config.hardware.camera.reconnect_max_seconds = 10.0
+    manager = CameraManager(config)
+    manager._discovery = discovery
+    manager.rebuild()
+
+    now = datetime(2026, 8, 16, 20, 0, 0)
+    manager.rediscover_if_missing(now)  # camera present → remembers it was seen
+    discovery.cameras_list = []
+    manager.rediscover_if_missing(now)  # arms the retry at +1 s
+    manager.rediscover_if_missing(now + timedelta(seconds=2))  # step up: capped to 10, not 30
+
+    discovery.cameras_list = [_nikon("usb:001,009")]
+    # Next attempt is 10 s after the last one (t=12), not 30 s (t=32).
+    assert manager.rediscover_if_missing(now + timedelta(seconds=11)) is False
+    assert manager.rediscover_if_missing(now + timedelta(seconds=13)) is True
+    assert manager.selected_camera.port == "usb:001,009"
+
+
+def test_without_a_camera_ever_seen_the_long_wait_stays(tmp_path, monkeypatch):
+    """Nothing is lost by looking rarely while no camera has ever been attached."""
+    manager = _missing_camera_manager(tmp_path, monkeypatch)
+    manager.config.hardware.camera.reconnect_backoff_seconds = [1.0, 30.0]
+    manager.config.hardware.camera.reconnect_max_seconds = 10.0
+
+    now = datetime(2026, 8, 16, 20, 0, 0)
+    manager.rediscover_if_missing(now)
+    manager.rediscover_if_missing(now + timedelta(seconds=2))  # steps to 30 s
+    manager._discovery.cameras_list = _cams()
+    assert manager.rediscover_if_missing(now + timedelta(seconds=11)) is False
+    assert manager.rediscover_if_missing(now + timedelta(seconds=33)) is True

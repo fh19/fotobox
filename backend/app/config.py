@@ -41,6 +41,9 @@ class CameraConfig(_Model):
     capture_target: str = ""
     capture_timeout_seconds: float = Field(gt=0)
     reconnect_backoff_seconds: list[float]
+    # Obergrenze für die Suchabstände, sobald einmal eine Kamera da war: ein
+    # Akkuwechsel soll nicht so lange unbemerkt bleiben. 0 = keine Deckelung.
+    reconnect_max_seconds: float = Field(default=10.0, ge=0)
     usbreset_after_failures: int = Field(ge=0)
     # If the DSLR is unavailable (e.g. dead battery), take the photo with the
     # preview camera instead of failing — a lower-quality but working backup.

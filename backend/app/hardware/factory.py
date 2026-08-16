@@ -88,6 +88,7 @@ class CameraManager:
         self._retry_at: datetime | None = None
         self._retry_step = 0
         self._failures = 0  # consecutive capture failures, for the automatic USB reset
+        self._camera_was_seen = False  # a camera that was here once comes back fast
         self.rebuild()
 
     def discover(self) -> tuple[list[DetectedCamera], list[DetectedPreview]]:
@@ -139,6 +140,18 @@ class CameraManager:
             self._rebuild_preview(previews)
         self._wrap_camera()
 
+    def _backoff(self) -> list[float]:
+        """Retry intervals, shortened once this box has had a camera at all.
+
+        Waiting 30 s is fine while nothing has ever been attached; after a battery
+        change it is half a minute of the box quietly shooting with the webcam.
+        """
+        backoff = self.config.hardware.camera.reconnect_backoff_seconds
+        if not self._camera_was_seen:
+            return backoff
+        cap = self.config.hardware.camera.reconnect_max_seconds
+        return [min(seconds, cap) for seconds in backoff] if cap > 0 else backoff
+
     def rediscover_if_missing(self, now: datetime) -> bool:
         """Look for the DSLR again while it is missing; True when one was found.
 
@@ -146,15 +159,18 @@ class CameraManager:
         appear on the USB bus in PC-remote mode, long after the service has started
         its discovery. Without this the box would quietly shoot every photo with the
         fallback camera until someone re-selects the DSLR in the admin UI. Retries
-        follow ``camera.reconnect_backoff_seconds`` and then stay at its last value.
+        follow ``camera.reconnect_backoff_seconds``, capped at
+        ``reconnect_max_seconds`` once a camera has been seen — a battery change
+        must not cost half a minute just because the box had been waiting a while.
         Only the capture camera is rebuilt — re-opening the preview device would
         interrupt the live stream every few seconds.
         """
         if self._primary is not None and self._primary.available():
             self._retry_at = None
             self._retry_step = 0
+            self._camera_was_seen = True
             return False
-        backoff = self.config.hardware.camera.reconnect_backoff_seconds
+        backoff = self._backoff()
         if not backoff:
             return False
         if self._retry_at is None:
