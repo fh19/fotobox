@@ -93,3 +93,26 @@ def test_viewport_disables_zoom():
     html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
     assert "user-scalable=no" in html
     assert "maximum-scale=1" in html
+
+
+# --- gallery tile shape -----------------------------------------------------
+#
+# Reported from the box: the gallery showed portrait tiles, so every landscape
+# photo was cropped down its middle. The shape has to follow the photos.
+
+
+def test_client_config_reports_the_photo_aspect(tmp_path):
+    landscape = TestClient(create_app(make_config(tmp_path, printing__orientation="landscape")))
+    assert landscape.get("/api/client-config").json()["photo_aspect"] > 1
+
+    portrait = TestClient(create_app(make_config(tmp_path, printing__orientation="portrait")))
+    assert portrait.get("/api/client-config").json()["photo_aspect"] < 1
+
+
+def test_the_gallery_takes_its_tile_shape_from_the_config(tmp_path):
+    """No hardcoded aspect in the stylesheet — it reads the custom property."""
+    css = (FRONTEND_DIR / "gallery.css").read_text(encoding="utf-8")
+    assert "var(--photo-aspect" in css
+    assert "aspect-ratio: 2 / 3;" not in css  # the old fixed portrait tile
+    js = (FRONTEND_DIR / "gallery.js").read_text(encoding="utf-8")
+    assert "photo_aspect" in js and "--photo-aspect" in js

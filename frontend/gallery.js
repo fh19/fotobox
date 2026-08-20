@@ -44,8 +44,26 @@ async function getJson(url) {
   return res.json();
 }
 
+/* Tile shape follows the photos, not a hardcoded guess: portrait tiles cropped
+ * every landscape photo down its middle. photo_aspect comes from the print
+ * canvas, so it flips with printing.orientation. Landscape tiles also need to be
+ * wider to stay legible at the same height. */
+async function applyPhotoAspect() {
+  try {
+    const cfg = await getJson("/api/client-config");
+    const aspect = Number(cfg.photo_aspect);
+    if (!aspect || !isFinite(aspect) || aspect <= 0) return;
+    const root = document.documentElement.style;
+    root.setProperty("--photo-aspect", String(aspect));
+    root.setProperty("--tile-min", aspect > 1 ? "230px" : "150px");
+  } catch (e) {
+    /* keep the stylesheet default */
+  }
+}
+
 async function init() {
   wireEvents();
+  await applyPhotoAspect();
   try {
     const data = await getJson("/api/events");
     const events = data.events || [];

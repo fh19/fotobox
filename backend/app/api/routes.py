@@ -30,6 +30,14 @@ def _engine(request: Request) -> Engine:
     return request.app.state.engine
 
 
+def _photo_aspect(config) -> float:
+    """Width divided by height of every processed photo (the print canvas)."""
+    from app.pipeline.geometry import canvas_for
+
+    canvas = canvas_for(config.printing)
+    return round(canvas.width / canvas.height, 4)
+
+
 async def _mutate_and_flush(engine: Engine, action) -> JSONResponse:
     action()
     await engine.flush()
@@ -60,6 +68,9 @@ async def get_client_config(request: Request) -> JSONResponse:
             "processing_warn_seconds": config.timeouts.processing_warn_seconds,
             "preview_seconds": config.timeouts.preview_seconds,
             "preview_fps": config.hardware.preview.fps,
+            # Seitenverhältnis der fertigen Fotos, damit Galerie und Kiosk keine
+            # Kachelform hartkodieren (Regel 6) — dreht mit printing.orientation.
+            "photo_aspect": _photo_aspect(config),
             "admin_corner": config.ui.admin_corner,
             "admin_longpress_seconds": config.ui.admin_longpress_seconds,
         }

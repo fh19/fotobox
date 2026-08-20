@@ -105,12 +105,14 @@ main {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  /* Kachelform und -breite folgen dem Format der Fotos (photo_aspect aus
+     client-config), damit Querformat nicht ins Hochkant geschnitten wird. */
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-min, 150px), 1fr));
   gap: 12px;
 }
 .tile {
   position: relative;
-  aspect-ratio: 2 / 3;
+  aspect-ratio: var(--photo-aspect, 2 / 3);
   border: 0;
   padding: 0;
   background: #e6e6ea;
