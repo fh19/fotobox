@@ -132,3 +132,33 @@ def test_the_single_view_can_be_stepped_through_and_printed(tmp_path):
     js = (FRONTEND_DIR / "gallery.js").read_text(encoding="utf-8")
     assert "touchstart" in js and "ArrowRight" in js  # swipe and keyboard
     assert "/print" in js
+
+
+def test_the_gallery_button_does_not_also_take_a_photo(tmp_path):
+    """Reported from the box: tapping "Galerie" opened the gallery *and* started a
+    session that then ran unseen in the background. The whole idle screen is the
+    shutter, so real controls on it have to be excluded."""
+    js = (FRONTEND_DIR / "app.js").read_text(encoding="utf-8")
+    idle = js[js.index('el("screen-idle").addEventListener') :][:400]
+    assert 'closest("a, button")' in idle
+    assert idle.index('closest("a, button")') < idle.index("session/start")
+
+
+def test_the_gallery_shows_screen_sized_images(tmp_path):
+    """processed/ is composed above print resolution for downloads; decoding it
+    made stepping through the photos and the back button feel stuck."""
+    js = (FRONTEND_DIR / "gallery.js").read_text(encoding="utf-8")
+    assert "photo.print_url" in js
+    assert "photo.processed_url" in js  # only as the fallback
+
+
+def test_frontend_assets_are_revalidated(tmp_path):
+    """A cached stylesheet against fresh HTML looks like a broken layout and sends
+    you hunting in the wrong direction. Reported from a PC browser: the new
+    lightbox controls appeared unstyled and in the wrong place."""
+    client = TestClient(create_app(make_config(tmp_path), RealClock()))
+    for path in ("/gallery.css", "/gallery.js", "/app.js", "/style.css"):
+        res = client.get(path)
+        assert res.status_code == 200, path
+        assert res.headers.get("cache-control") == "no-cache", path
+        assert res.headers.get("etag"), path  # revalidation stays cheap

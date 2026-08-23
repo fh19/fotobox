@@ -136,11 +136,17 @@ async function loadNextPage() {
 }
 
 function tileSrc(photo) {
-  return state.variant === "processed" ? photo.thumb_url : photo.original_url;
+  // Always the thumbnail: a grid of 60 full-size originals (8 MB each off the
+  // DSLR) brought the box's browser to its knees.
+  return photo.thumb_url || photo.original_url;
 }
 
 function fullSrc(photo) {
-  return state.variant === "processed" ? photo.processed_url : photo.original_url;
+  // Screen-sized, not the download master: processed/ is composed above print
+  // resolution and its decode made stepping through the photos — and the back
+  // button — feel stuck. prints/ is the same image at the print raster.
+  if (state.variant !== "processed") return photo.original_url;
+  return photo.print_url || photo.processed_url;
 }
 
 function appendTile(photo) {
@@ -193,6 +199,13 @@ function reload() {
 }
 
 function openLightbox(index) {
+  // A photo whose pipeline failed has no print/processed file — fall back once.
+  dom.lightboxImg.onerror = () => {
+    const photo = state.photos[state.index];
+    if (photo && dom.lightboxImg.src.indexOf(photo.original_url) === -1) {
+      dom.lightboxImg.src = photo.original_url;
+    }
+  };
   showPhoto(index);
   dom.lightbox.classList.remove("hidden");
 }
@@ -202,13 +215,20 @@ function showPhoto(index) {
   state.index = index;
   const photo = state.photos[index];
   dom.lightboxImg.src = fullSrc(photo);
+  dom.lightboxImg.decoding = "async";
   dom.lightboxCount.textContent = `${index + 1} von ${state.total || state.photos.length}`;
   dom.lightboxPrev.disabled = index === 0;
   // Only what is loaded can be shown; "Mehr laden" extends the range.
   dom.lightboxNext.disabled = index >= state.photos.length - 1;
   dom.lightboxNote.textContent = "";
-  dom.lightboxPrint.disabled = false;
-  dom.lightboxPrint.textContent = "Dieses Foto drucken";
+  setPrintBusy(false);
+}
+
+function setPrintBusy(busy, note = "") {
+  // The button carries an icon — never overwrite its content with text.
+  dom.lightboxPrint.disabled = busy;
+  dom.lightboxPrint.classList.toggle("is-busy", busy);
+  dom.lightboxNote.textContent = note;
 }
 
 function step(delta) {
@@ -224,17 +244,14 @@ function closeLightbox() {
 async function printCurrent() {
   const photo = state.photos[state.index];
   if (!photo) return;
-  dom.lightboxPrint.disabled = true;
-  dom.lightboxPrint.textContent = "Wird gedruckt …";
+  setPrintBusy(true, "Wird gedruckt …");
   try {
     const res = await fetch(`/api/photos/${photo.id}/print`, { method: "POST" });
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error((data && data.error && data.error.message) || `HTTP ${res.status}`);
-    dom.lightboxNote.textContent = "Der Druck läuft.";
+    setPrintBusy(true, "Der Druck läuft.");
   } catch (err) {
-    dom.lightboxNote.textContent = err.message;
-    dom.lightboxPrint.disabled = false;
-    dom.lightboxPrint.textContent = "Dieses Foto drucken";
+    setPrintBusy(false, err.message);
   }
 }
 

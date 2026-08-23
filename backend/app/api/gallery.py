@@ -49,6 +49,10 @@ def _photo_payload(row) -> dict:
         "pipeline_status": row["pipeline_status"],
         "original_url": f"/api/photos/{photo_id}/original",
         "processed_url": f"/api/photos/{photo_id}/processed",
+        # The print raster (1872x1248) doubles as the on-screen version: the
+        # processed master is composed above print size for downloads and takes
+        # the Pi a moment to decode, which made the gallery feel sluggish.
+        "print_url": f"/api/photos/{photo_id}/print",
         "thumb_url": f"/api/photos/{photo_id}/thumb",
     }
 

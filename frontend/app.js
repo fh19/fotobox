@@ -363,8 +363,11 @@ async function loadUiConfig() {
 // --- wiring -----------------------------------------------------------------
 
 function wireButtons() {
-  // Der gesamte IDLE-Bildschirm ist die Schaltfläche.
-  el("screen-idle").addEventListener("click", () => {
+  // Der gesamte IDLE-Bildschirm ist die Schaltfläche — außer dort, wo ein echtes
+  // Bedienelement liegt. Der Galerie-Button löste sonst zugleich ein Foto aus,
+  // das dann unbemerkt im Hintergrund weiterlief.
+  el("screen-idle").addEventListener("click", (event) => {
+    if (event.target.closest("a, button")) return;
     if (lastStatus && lastStatus.camera && lastStatus.camera.available) {
       postAction("/api/session/start");
     }

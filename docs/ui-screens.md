@@ -45,6 +45,9 @@ Unten rechts, dezent aber dauerhaft sichtbar:
 
 > Galerie
 
+Der Tipp darauf startet **kein** Foto: der übrige Bildschirm bleibt der Auslöser,
+echte Bedienelemente darauf sind ausgenommen.
+
 Öffnet die Galerie **am Touchscreen** (dieselbe Seite, die auch die Handys sehen).
 Ohne diesen Weg kam man an die Bilder nur über das Gäste-WLAN. Der Button erscheint
 nur bei `network.gallery_enabled`.
@@ -284,12 +287,21 @@ ganz oben, groß. Er ist die Antwort auf das häufigste Problem des Abends.
 
 **Einzelansicht.** Ein angetipptes Foto füllt den Bildschirm. Darin:
 
-- Pfeile links und rechts (`‹` `›`), am Handy zusätzlich **Wischen**, am Rechner
-  die Pfeiltasten; `Esc` schließt. Vorher musste jedes Bild einzeln geöffnet und
-  wieder geschlossen werden — der umständlichste Teil des Abends.
-- Zähler `3 von 252`
-- Button `Dieses Foto drucken` → während des Drucks `Wird gedruckt …`, danach
-  `Der Druck läuft.` Geht es nicht, steht dort der Grund (`Kein Papier`,
+Die Bedienelemente liegen **im Bild**, nicht darunter — kleine Knöpfe in einer
+Leiste waren schwer zu treffen und der Druck-Button landete direkt neben dem
+Pfeil. Am Zeigegerät erscheinen sie erst beim Überfahren, auf dem Touchscreen
+(kein Hover) sind sie dauerhaft schwach sichtbar.
+
+- **Pfeilflächen** links und rechts über die ganze Bildhöhe, je 22 % der Breite
+  (mindestens 96 px), mit großem `‹` `›` und dunklem Verlauf. Am Handy
+  zusätzlich **Wischen**, am Rechner die Pfeiltasten; `Esc` schließt. Vorher
+  musste jedes Bild einzeln geöffnet und geschlossen werden — der umständlichste
+  Teil des Abends.
+- **Druck-Button unten rechts im Bild**, rund, halbtransparent, mit Druckersymbol
+  (Inline-SVG, kein Netzwerkzugriff). Beschriftung nur als `title`/`aria-label`:
+  `Dieses Foto drucken`.
+- Zähler `3 von 252` unten links, Meldungen unten mittig: `Wird gedruckt …`,
+  danach `Der Druck läuft.` Geht es nicht, steht dort der Grund (`Kein Papier`,
   `Das Druckkontingent für heute ist aufgebraucht`).
 
 Der Nachdruck steht **allen** offen, auch Handys im Gäste-WLAN. Begrenzt wird er

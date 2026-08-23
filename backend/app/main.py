@@ -84,6 +84,22 @@ async def _lifespan(app: FastAPI):
             await recovery
 
 
+class _RevalidatingStatic(StaticFiles):
+    """Serve the frontend with ``Cache-Control: no-cache``.
+
+    The files are a few kilobytes on a local network, but a cached stylesheet
+    against freshly deployed HTML looks like a broken layout — buttons unstyled
+    and in the wrong place — and sends you hunting in the wrong direction. The
+    browser still revalidates cheaply via ETag; only photos, which are served by
+    the API rather than from here, stay properly cacheable.
+    """
+
+    def file_response(self, *args, **kwargs) -> Response:
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
 def _register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ActionRejected)
     async def _action_rejected(request: Request, exc: ActionRejected) -> JSONResponse:
@@ -197,7 +213,7 @@ def create_app(
         return FileResponse(FRONTEND_DIR / "admin.html", media_type="text/html")
 
     # Mounted last so API and WebSocket routes win; serves index.html at "/".
-    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
+    app.mount("/", _RevalidatingStatic(directory=FRONTEND_DIR, html=True), name="frontend")
     return app
 
 
