@@ -325,6 +325,40 @@ Für die Galerie am Handy der Gäste bringt das Backend einen nmcli-basierten AP
 (Admin-Bereich → Netzwerk). Konfiguration unter `network.access_point` in `config.yaml`.
 Achtung: AP-Betrieb kappt die WLAN-Verbindung ins Heimnetz (dann kein SSH über WLAN).
 
+### Heimnetz: das Funkband festlegen
+
+Sendet der Router dieselbe SSID auf 2,4 **und** 5 GHz, kann sich die Box auf das
+5-GHz-Band setzen und dort hängen bleiben, auch wenn es viel schwächer ist. Das ist
+einmal passiert und war schwer zu erkennen, weil es wie ein Softwareproblem aussieht:
+Bilder in der Galerie bauten sich über Sekunden auf. Gemessen wurden **40 KB/s über
+Funk gegen 0,018 s für dieselbe Datei auf der Box** — die Anwendung war unschuldig.
+
+Prüfen, auf welchem Band die Box hängt und was es sonst gäbe:
+
+```bash
+nmcli -f IN-USE,SSID,CHAN,SIGNAL dev wifi list
+cat /proc/net/wireless      # Signal in dBm und verworfene Retry-Pakete
+```
+
+Ist das gewählte Band deutlich schwächer, auf 2,4 GHz festnageln:
+
+```bash
+nmcli con modify <Verbindungsname> 802-11-wireless.band bg
+nmcli con up <Verbindungsname>
+```
+
+Im konkreten Fall: -73 dBm mit 878 Retries auf Kanal 44 → **-55 dBm, 0 Retries,
+1,08 MB/s** auf Kanal 6. Faktor 100.
+
+Zwei Dinge dazu:
+
+- Die Verbindungsprofile liegen unter `/etc/NetworkManager/system-connections/` und
+  damit **auf dem Overlay** — die Umstellung braucht abgeschaltetes overlayroot
+  (Abschnitt 8), sonst ist sie nach dem Neustart weg.
+- Ein Bandwechsel trennt die Verbindung kurz. Über SSH lohnt sich ein Skript, das
+  nach 15 s das Gateway anpingt und bei Misserfolg selbsttätig zurückstellt —
+  sonst ist die Box weg, wenn das neue Band nicht funktioniert.
+
 ## 10. Abschluss
 
 ```bash
