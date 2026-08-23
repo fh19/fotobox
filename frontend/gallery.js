@@ -246,7 +246,10 @@ async function printCurrent() {
   if (!photo) return;
   setPrintBusy(true, "Wird gedruckt …");
   try {
-    const res = await fetch(`/api/photos/${photo.id}/print`, { method: "POST" });
+    // Print what is on screen: framed or original, whichever the toggle shows.
+    const res = await fetch(`/api/photos/${photo.id}/print?variant=${state.variant}`, {
+      method: "POST",
+    });
     const data = await res.json().catch(() => null);
     if (!res.ok) throw new Error((data && data.error && data.error.message) || `HTTP ${res.status}`);
     setPrintBusy(true, "Der Druck läuft.");

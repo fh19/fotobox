@@ -257,3 +257,26 @@ def test_client_config_carries_the_gallery_settings(tmp_path):
     cfg = client.get("/api/client-config").json()
     assert cfg["gallery_enabled"] is True
     assert cfg["gallery_return_seconds"] > 0
+
+
+def test_the_reprint_follows_the_shown_variant(tmp_path):
+    """Reported from the box: printing while looking at the original produced the
+    framed copy. Whatever is on screen is what should come out."""
+    app, engine, photo_id = _event_with_photo(tmp_path)
+    original = engine.photo_variant_path("originals", photo_id)
+    original.parent.mkdir(parents=True, exist_ok=True)
+    original.write_bytes(b"\xff\xd8\xff" + b"original" * 50)
+
+    submitted: list[str] = []
+    engine.backends.printer.submit = lambda path: submitted.append(path) or 1
+    client = TestClient(app)
+
+    client.post(f"/api/photos/{photo_id}/print?variant=original")
+    assert submitted[-1].endswith(f"originals/{db.photo_filename(photo_id)}")
+
+    client.post(f"/api/photos/{photo_id}/print?variant=processed")
+    assert submitted[-1].endswith(f"prints/{db.photo_filename(photo_id)}")
+
+    # Without a variant the framed copy stays the default.
+    client.post(f"/api/photos/{photo_id}/print")
+    assert submitted[-1].endswith(f"prints/{db.photo_filename(photo_id)}")

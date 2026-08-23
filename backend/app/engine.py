@@ -213,7 +213,7 @@ class Engine:
         self.sm.begin_print()
         self._run_print(session.photo_id)
 
-    def reprint_photo(self, photo_id: int) -> dict:
+    def reprint_photo(self, photo_id: int, variant: str = "processed") -> dict:
         """Print a stored photo again, from the gallery, outside any session.
 
         Wanted after the first event: a guest asks for a copy an hour later and
@@ -223,6 +223,10 @@ class Engine:
         Guarded by the event quota, not by ``max_per_photo``: that limit exists to
         stop one guest tapping "Drucken" five times on the same preview, while a
         reprint is a deliberate second copy.
+
+        ``variant`` follows what the gallery is showing: printing the framed copy
+        while the original is on screen is not what anyone asked for. The original
+        has the same 3:2 aspect as the print raster, so CUPS scales it to the page.
         """
         row = db.get_photo_with_event(self.conn, photo_id)
         if row is None:
@@ -240,7 +244,8 @@ class Engine:
                 "daily_limit_reached", "Das Druckkontingent für heute ist aufgebraucht"
             )
 
-        path = self.config.events_dir / row["event_directory"] / "prints" / row["filename"]
+        folder = "originals" if variant == "original" else "prints"
+        path = self.config.events_dir / row["event_directory"] / folder / row["filename"]
         if not path.exists():
             raise NotFound("no_printable", "Von diesem Foto gibt es keine Druckfassung")
         try:
@@ -256,7 +261,9 @@ class Engine:
             requested_at=self.clock.now(),
             status="queued",
         )
-        self._log("info", "printer", "reprint", f"Foto {photo_id} nachgedruckt", photo_id)
+        self._log(
+            "info", "printer", "reprint", f"Foto {photo_id} nachgedruckt ({folder})", photo_id
+        )
         used = db.count_event_prints(self.conn, row["event_id"])
         return {
             "queued": True,

@@ -198,7 +198,9 @@ der DNS-Umbieger, den der AP-Start schreibt, und Port **80**.
 ### `POST /api/photos/{id}/print`
 
 Druckt ein gespeichertes Foto erneut (Galerie-Nachdruck), unabhängig von einer
-laufenden Sitzung — der Zustandsautomat bleibt unberührt. Antwort:
+laufenden Sitzung — der Zustandsautomat bleibt unberührt. `?variant=processed`
+(Standard) druckt die Fassung mit Rahmen, `?variant=original` das unbearbeitete
+Bild — was die Galerie gerade zeigt, kommt auch aus dem Drucker. Antwort:
 `{"queued": true, "photo_id": 143, "job_id": 17, "quota_used": 111, "quota_total": 219}`.
 
 - `404 unknown_photo` — Foto gibt es nicht (oder gelöscht)
