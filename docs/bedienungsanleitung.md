@@ -262,13 +262,13 @@ Stromtrennung: **„Fotobox neu starten"**.
 |---|---|
 | „Kleine Pause — die Fotobox ist gleich wieder da" | Kamera nicht verfügbar. DSLR einschalten/prüfen; Admin → Kamera erneut übernehmen. |
 | Countdown läuft, aber es kommt „Die Kamera hat nicht reagiert" | Die DSLR hat nicht ausgelöst (meist Autofokus findet keine Schärfe). **Objektiv auf `MF` (manueller Fokus) stellen** und die Schärfe einmal fest einstellen — dann löst sie immer aus. Die Box heilt sich nach wenigen Sekunden von selbst zurück zum Start. |
-| Druck-Knopf fehlt in der Vorschau | Drucker nicht bereit (leer/pausiert). Papier/Kassette prüfen, „Drucker fortsetzen". Fotos sind gespeichert. |
+| Druck-Knopf fehlt in der Vorschau | Drucker nicht bereit (leer/pausiert). Papier/Kassette prüfen, „Drucker fortsetzen". Drucklimit erreicht. Drucklimit im admin-Bereich erhöhen. Fotos sind gespeichert. |
 | Drucker stoppt mitten im Abend | Papier oder Farbband leer → nachlegen → „Drucker fortsetzen". |
 | Ausdruck hat einen weißen Rand | Randlos-Einstellung; im Normalbetrieb bereits korrekt. Falls nicht, Support/Technik. |
 | Bildschirm bleibt schwarz | Monitor/Strom prüfen. Reagiert nichts, Box neu starten (Strom nur als letzte Option trennen). |
 | „Der Speicher ist voll" | Alte Events per USB sichern und Platz schaffen. |
 | Gäste finden das WLAN nicht | Access-Point im Admin eingeschaltet? WLAN heißt „Fotobox". |
-| Live-Bild bleibt schwarz, Webcam „hängt" | Meist die USB-Strecke, nicht die Software. Webcam **direkt an den Pi** stecken, nicht über zwei hintereinander geschaltete Hubs. Im Log steht dann `uvcvideo ... -71` gefolgt von `USB disconnect`. |
+| Live-Bild bleibt schwarz, Webcam „hängt" | Meist die USB-Strecke, nicht die Software. Im Log steht `uvcvideo ... -71` (Protokollfehler beim Abfragen der Regler) gefolgt von `USB disconnect` — die Kamera stirbt dann schon eine Sekunde nach dem Anmelden, bevor ein Bild fließt. Zum Eingrenzen die Webcam **direkt an den Pi** stecken, also ohne den externen Hub. Laufen Touchscreen und Drucker am selben Hub störungsfrei, liegt es eher an Kamera oder Kabel. (Der interne VIA-Hub des Pi 4 ist immer im Spiel — der Root-Hub hat nur einen Port. Das ist normal.) |
 | Galerie lädt quälend langsam | Funkstrecke prüfen: `nmcli -f IN-USE,SSID,CHAN,SIGNAL dev wifi list`. Hängt die Box im 5-GHz-Band derselben SSID, kann der Durchsatz zusammenbrechen — siehe `docs/installation.md`, Abschnitt 9. |
 | Bilder mit Rahmen sind kleiner als die Originale | `pipeline.processed_scale: auto` setzen und die Veranstaltung neu berechnen lassen (Admin → Galerie). |
 
