@@ -1,7 +1,7 @@
 """Hardware protocols and shared value types.
 
-These three protocols are the entire surface the business logic is allowed to
-use. Real (gphoto2/picamera2/cups) and mock implementations both satisfy them.
+These protocols are the entire surface the business logic is allowed to use.
+Real (gphoto2/picamera2/cups) and mock implementations both satisfy them.
 """
 
 from __future__ import annotations
@@ -85,10 +85,30 @@ class PrinterBackend(Protocol):
     def queue_length(self) -> int: ...
 
 
+@runtime_checkable
+class LampBackend(Protocol):
+    """The photo lamp, switched with the box's mood.
+
+    "wenn Bildschirmschoner läuft oder im Galleriemodus => Lampe aus, nur im
+    Fotomodus => Lampe an" (Optimierungen2.md). Whether that is a USB-controlled
+    mains socket, a relay on a GPIO or nothing at all is none of the engine's
+    business — it only ever says on or off.
+    """
+
+    def available(self) -> bool: ...
+
+    def is_on(self) -> bool: ...
+
+    def set(self, on: bool) -> None:
+        """Switch the lamp. May raise; a lamp must never end a session."""
+        ...
+
+
 @dataclass
 class Backends:
-    """The three backends bundled together for wiring."""
+    """The backends bundled together for wiring."""
 
     camera: CameraBackend
     preview: PreviewBackend
     printer: PrinterBackend
+    lamp: LampBackend | None = None

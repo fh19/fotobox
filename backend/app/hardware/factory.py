@@ -16,7 +16,7 @@ from app.hardware.base import Backends
 from app.hardware.discovery import DetectedCamera, DetectedPreview, Discovery, MockDiscovery
 from app.hardware.gphoto2_lock import CAMERA_LOCK
 from app.hardware.gphoto2_session import close_session
-from app.hardware.mock import MockCamera, MockPreview, MockPrinter
+from app.hardware.mock import MockCamera, MockLamp, MockPreview, MockPrinter
 from app.hardware.selection import resolve_camera, resolve_preview
 from app.hardware.usb_reset import reset_usb_device
 
@@ -70,6 +70,18 @@ def build_printer(config: Config):
     return CupsPrinter(config)
 
 
+def build_lamp(config: Config):
+    """The photo lamp. ``none`` yields a lamp that is simply not there.
+
+    Only the mock exists so far — the switching hardware is still being chosen.
+    The engine talks to the protocol, so adding a real one later touches nothing
+    outside this function.
+    """
+    if config.hardware.lamp.backend == "none":
+        return None
+    return MockLamp()
+
+
 class CameraManager:
     """Owns discovery + the current selection, and builds the backends.
 
@@ -81,6 +93,7 @@ class CameraManager:
         self.config = config
         self._discovery = create_discovery(config)
         self._printer = build_printer(config)
+        self._lamp = build_lamp(config)
         self.selected_camera: DetectedCamera | None = None
         self.selected_preview: DetectedPreview | None = None
         self.camera = None
@@ -319,7 +332,9 @@ class CameraManager:
 
     @property
     def backends(self) -> Backends:
-        return Backends(camera=self.camera, preview=self.preview, printer=self._printer)
+        return Backends(
+            camera=self.camera, preview=self.preview, printer=self._printer, lamp=self._lamp
+        )
 
     @property
     def using_fallback(self) -> bool:

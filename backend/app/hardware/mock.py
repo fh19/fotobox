@@ -136,3 +136,32 @@ class MockPrinter:
 
     def queue_length(self) -> int:
         return sum(1 for s in self._job_states.values() if s == "pending")
+
+
+class MockLamp:
+    """The photo lamp, in software only.
+
+    Records what it was told so a test can assert the box turned it off for the
+    slideshow — and so the whole feature can be finished before any relay or
+    switched socket exists.
+    """
+
+    def __init__(self, available: bool = True) -> None:
+        self._available = available
+        self._on = False
+        self.calls: list[bool] = []
+
+    def set_available(self, value: bool) -> None:
+        self._available = value
+
+    def available(self) -> bool:
+        return self._available
+
+    def is_on(self) -> bool:
+        return self._on
+
+    def set(self, on: bool) -> None:
+        if not self._available:
+            raise RuntimeError("Lampe nicht erreichbar")
+        self.calls.append(on)
+        self._on = on

@@ -75,11 +75,25 @@ class PrinterConfig(_Model):
     auto_resume_seconds: float = Field(default=20.0, ge=0)
 
 
+class LampConfig(_Model):
+    """Die Fotolampe, geschaltet nach dem Zustand der Box.
+
+    "wenn Bildschirmschoner läuft oder im Galleriemodus => Lampe aus, nur im
+    Fotomodus => Lampe an" (Optimierungen2.md). ``none`` = keine Lampe
+    angeschlossen, dann passiert schlicht nichts.
+    """
+
+    backend: Literal["none", "mock"] = "none"
+    # Zustände, in denen die Lampe aus bleibt. Alles andere schaltet sie ein.
+    off_states: list[str] = Field(default_factory=lambda: ["SCREENSAVER"])
+
+
 class HardwareConfig(_Model):
     mode: Literal["real", "mock"] = "real"
     camera: CameraConfig
     preview: PreviewConfig
     printer: PrinterConfig
+    lamp: LampConfig = Field(default_factory=LampConfig)
 
 
 class CountdownConfig(_Model):

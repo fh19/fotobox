@@ -40,6 +40,10 @@ hardware:
     status_poll_seconds: 3
     auto_resume_seconds: 20        # gestoppte CUPS-Queue selbst freigeben; 0 = nur von Hand
 
+  lamp:
+    backend: none                  # none | mock — echte Schalthardware steht noch aus
+    off_states: [SCREENSAVER]      # hier bleibt die Lampe aus, sonst an
+
 countdown:
   duration_seconds: 5
   shutter_lead_ms: 0             # so viel früher auslösen (Blitz + Kameralatenz)

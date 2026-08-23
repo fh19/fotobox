@@ -166,6 +166,7 @@ class Engine:
                 self._shuffle_screensaver()
             else:
                 self._screensaver_photos = []
+            self._apply_lamp()
             self._queue("state_changed", self.build_status())
             if self.sm.state == State.ERROR and self.sm.error is not None:
                 self._queue(
@@ -683,6 +684,24 @@ class Engine:
         return {"ok": True}
 
     # --- network / export (M7b) ---------------------------------------------
+
+    # --- photo lamp ---------------------------------------------------------
+
+    def _apply_lamp(self) -> None:
+        """Follow the box's mood with the lamp — off for the slideshow.
+
+        A lamp that refuses is worth a log line and nothing more (rule 8): the
+        guests are mid-session, and a stuck relay must not cost them the photo.
+        """
+        lamp = self.backends.lamp
+        if lamp is None:
+            return
+        wanted = str(self.sm.state) not in self.config.hardware.lamp.off_states
+        try:
+            if lamp.available() and lamp.is_on() != wanted:
+                lamp.set(wanted)
+        except Exception as exc:
+            self._log("error", "system", "lamp_failed", f"Lampe nicht geschaltet: {exc}")
 
     # --- screensaver --------------------------------------------------------
 
