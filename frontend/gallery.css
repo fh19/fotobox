@@ -331,3 +331,19 @@ main {
     opacity: 0.7;
   }
 }
+
+/* Admin mode: event picker in the top bar, delete next to the download. */
+.event-pick {
+  padding: 10px 12px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: 1px solid #3a3f48;
+  background: #1b1e23;
+  color: var(--fg);
+  max-width: 260px;
+}
+.more__btn--danger {
+  background: #c0392b;
+  color: #fff;
+  border-color: #c0392b;
+}

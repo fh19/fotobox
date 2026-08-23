@@ -270,6 +270,9 @@ Falsche PIN: `401`. Nach 5 Fehlversuchen 60 s Sperre.
 | `GET` | `/api/admin/network` | Aktueller Netzwerkzustand (AP ein/aus, IP, SSID) |
 | `POST` | `/api/admin/network/ap` | Access-Point-Modus ein/aus (`{"enabled": true}`) |
 | `POST` | `/api/admin/network/ap-auto` | `{enabled}` — Gäste-AP bei fehlendem Netz von selbst einschalten; nur die Regel, kein Funkwechsel |
+| `POST` | `/api/admin/photos/delete` | `{ids: [12,13]}` — als gelöscht markieren; Dateien bleiben |
+| `GET` | `/api/admin/photos/deleted` | `{count, bytes}` — was ein endgültiges Entfernen freigäbe |
+| `POST` | `/api/admin/photos/purge` | Dateien der markierten Bilder endgültig entfernen |
 | `POST` | `/api/admin/export/usb` | Aktives Event auf USB-Stick kopieren (startet Hintergrund-Kopie) |
 | `GET` | `/api/admin/export/usb` | Fortschritt des laufenden/letzten Exports |
 | `POST` | `/api/admin/shutdown` | Sauberes Herunterfahren |

@@ -1161,6 +1161,60 @@ class Engine:
     def _event_variant_path(self, directory: str, variant: str, filename: str) -> Path:
         return self.config.events_dir / directory / variant / filename
 
+    # Every place a photo leaves a file behind.
+    _PHOTO_VARIANTS = ("originals", "processed", "prints", "thumbs")
+
+    def _photo_files(self, directory: str, filename: str) -> list[Path]:
+        return [self._event_variant_path(directory, v, filename) for v in self._PHOTO_VARIANTS]
+
+    def delete_photos(self, photo_ids: list[int]) -> dict:
+        """Flag photos as deleted — they leave gallery and counters at once.
+
+        The files stay until the explicit purge below (datenmodell.md).
+        """
+        ids = [int(pid) for pid in photo_ids]
+        if not ids:
+            raise ActionRejected("invalid_value", "Keine Fotos ausgewählt")
+        count = db.mark_photos_deleted(self.conn, ids)
+        self._log("warning", "system", "photos_deleted", f"{count} Foto(s) gelöscht")
+        return {"deleted": count, "pending_purge": self.deleted_photo_stats()}
+
+    def deleted_photo_stats(self) -> dict:
+        """How much a final purge would actually free."""
+        total = 0
+        count = 0
+        for row in db.deleted_photos_with_event(self.conn):
+            sizes = [
+                p.stat().st_size
+                for p in self._photo_files(row["event_directory"], row["filename"])
+                if p.exists()
+            ]
+            if sizes:
+                count += 1
+                total += sum(sizes)
+        return {"count": count, "bytes": total}
+
+    def purge_deleted_photos(self) -> dict:
+        """Remove the files of every flagged photo. Irreversible, hence separate.
+
+        The rows stay: photo ids are also filenames and run across all events, so
+        reusing them would be a collision waiting to happen.
+        """
+        removed = 0
+        freed = 0
+        for row in db.deleted_photos_with_event(self.conn):
+            for path in self._photo_files(row["event_directory"], row["filename"]):
+                if not path.exists():
+                    continue
+                try:
+                    freed += path.stat().st_size
+                    path.unlink()
+                    removed += 1
+                except OSError as exc:
+                    self._log("error", "system", "purge_failed", f"{path.name}: {exc}")
+        self._log("warning", "system", "photos_purged", f"{removed} Datei(en) entfernt")
+        return {"purged": removed, "freed_bytes": freed}
+
     def event_files(
         self, event_id: int, variant: str, photo_ids: set[int] | None = None
     ) -> list[tuple[str, Path]]:

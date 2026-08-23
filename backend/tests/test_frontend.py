@@ -206,3 +206,20 @@ def test_the_admin_can_switch_the_automatic_access_point(tmp_path):
     assert "Automatisch, wenn kein Netzwerk da ist" in " ".join(html.split())
     js = (FRONTEND_DIR / "admin.js").read_text(encoding="utf-8")
     assert "/api/admin/network/ap-auto" in js
+
+
+def test_the_admin_gallery_navigates_events_and_deletes(tmp_path):
+    """"Button für Hauptgallerie / von dort aus in die Veranstaltungen
+    navigieren / Bilder auswählen können / Download und Löschen anbieten"."""
+    admin = (FRONTEND_DIR / "admin.html").read_text(encoding="utf-8")
+    assert "/gallery?admin=1" in admin and "Hauptgalerie öffnen" in admin
+
+    js = (FRONTEND_DIR / "gallery.js").read_text(encoding="utf-8")
+    assert 'has("admin")' in js  # the guest gallery must not grow a delete button
+    assert "event-pick" in (FRONTEND_DIR / "gallery.html").read_text(encoding="utf-8")
+    assert "/api/admin/photos/delete" in js
+    # The PIN travels in sessionStorage, never in a shareable URL.
+    assert "fotobox_pin" in js and "pin=" not in js
+
+    admin_js = (FRONTEND_DIR / "admin.js").read_text(encoding="utf-8")
+    assert "/api/admin/photos/purge" in admin_js

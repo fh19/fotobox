@@ -13,6 +13,8 @@
         <p id="event-count" class="muted"></p>
       </div>
       <div class="topbar__actions">
+        <!-- Admin-Modus (?admin=1): Hauptgalerie über alle Veranstaltungen. -->
+        <select id="event-pick" class="event-pick hidden" aria-label="Veranstaltung"></select>
         <a id="back-to-box" class="download hidden" href="/">Zurück zur Fotobox</a>
         <div class="toggle" id="variant-toggle" role="group" aria-label="Ansicht">
           <button type="button" data-variant="processed" class="toggle__btn is-active">
@@ -30,6 +32,9 @@
         <span id="selection-count" class="selbar__count"></span>
         <a id="download-selection" class="download" href="#">Auswahl herunterladen (ZIP)</a>
         <button type="button" id="selection-clear" class="more__btn">Auswahl aufheben</button>
+        <button type="button" id="selection-delete" class="more__btn more__btn--danger hidden">
+          Auswahl löschen
+        </button>
       </div>
       <p id="empty" class="empty hidden">Noch keine Fotos vorhanden.</p>
       <div id="grid" class="grid"></div>

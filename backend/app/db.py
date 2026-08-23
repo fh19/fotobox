@@ -242,6 +242,33 @@ def list_photos(
     ).fetchall()
 
 
+def mark_photos_deleted(conn: sqlite3.Connection, photo_ids: list[int]) -> int:
+    """Flag photos as deleted; the files stay (datenmodell.md: ``deleted`` is a
+    flag, not a DELETE). Returns how many rows changed."""
+    if not photo_ids:
+        return 0
+    marks = ",".join("?" * len(photo_ids))
+    cur = conn.execute(
+        f"UPDATE photos SET deleted = 1 WHERE id IN ({marks}) AND deleted = 0",
+        photo_ids,
+    )
+    conn.commit()
+    return cur.rowcount
+
+
+def deleted_photos_with_event(conn: sqlite3.Connection) -> list[sqlite3.Row]:
+    """Flagged photos plus their event directory — for the final purge."""
+    return conn.execute(
+        """
+        SELECT p.id, p.filename, e.directory AS event_directory
+        FROM photos p
+        JOIN events e ON e.id = p.event_id
+        WHERE p.deleted = 1
+        ORDER BY p.id ASC
+        """
+    ).fetchall()
+
+
 def iter_event_photos(conn: sqlite3.Connection, event_id: int) -> list[sqlite3.Row]:
     return conn.execute(
         "SELECT * FROM photos WHERE event_id = ? AND deleted = 0 ORDER BY id ASC",

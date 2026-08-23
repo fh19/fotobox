@@ -284,6 +284,43 @@ async def post_reboot(
     return JSONResponse(_engine(request).reboot())
 
 
+# --- gallery management -----------------------------------------------------
+#
+# "Anschauen und Löschen aller Veranstaltungsbilder aus dem Konfig-Menü heraus".
+# Viewing happens in the gallery page (opened with ?admin=1); the two steps that
+# change something live here, behind the PIN.
+
+
+class PhotoIds(BaseModel):
+    ids: list[int]
+
+
+@router.post("/photos/delete")
+async def post_photos_delete(
+    request: Request, body: PhotoIds, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    """Flag photos as deleted. The files stay until the purge below."""
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(_engine(request).delete_photos(body.ids))
+
+
+@router.get("/photos/deleted")
+async def get_photos_deleted(
+    request: Request, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(_engine(request).deleted_photo_stats())
+
+
+@router.post("/photos/purge")
+async def post_photos_purge(
+    request: Request, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    """Finally remove the files of every flagged photo — irreversible."""
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(await asyncio.to_thread(_engine(request).purge_deleted_photos))
+
+
 # --- network / export (M7b) -------------------------------------------------
 
 

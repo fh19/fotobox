@@ -56,6 +56,14 @@ async function login() {
   if (!pin) return;
   try {
     await api("POST", "/api/admin/auth");
+    // The gallery page opens in this same tab and needs the PIN to delete.
+    // sessionStorage, not a URL parameter: it dies with the tab and never ends
+    // up in a link somebody shares.
+    try {
+      sessionStorage.setItem("fotobox_pin", pin);
+    } catch (err) {
+      /* private mode — deleting from the gallery then asks again */
+    }
     $("gate").classList.add("hidden");
     $("admin").classList.remove("hidden");
     await loadAll();
@@ -77,6 +85,7 @@ async function loadAll() {
     loadConfig(),
     loadStatus(),
     loadNetwork(),
+    loadDeleted(),
   ]);
 }
 
@@ -724,6 +733,38 @@ async function toggleAPAuto() {
   }
 }
 
+/* Deleting only flags a photo (datenmodell.md); this is the separate, explicit
+   step that actually frees the card. */
+async function loadDeleted() {
+  try {
+    const stats = await api("GET", "/api/admin/photos/deleted");
+    const has = stats.count > 0;
+    $("gal-purge").classList.toggle("hidden", !has);
+    $("gal-deleted").textContent = has
+      ? `${stats.count} gelöschte Bilder belegen noch ${fmtBytes(stats.bytes)}`
+      : "Keine gelöschten Bilder auf der Karte";
+  } catch (e) {
+    $("gal-deleted").textContent = "";
+  }
+}
+
+async function purgeDeleted() {
+  if (
+    !window.confirm("Die Dateien der gelöschten Bilder endgültig entfernen? Nicht umkehrbar.")
+  )
+    return;
+  $("gal-purge").disabled = true;
+  try {
+    const res = await api("POST", "/api/admin/photos/purge");
+    note("gal-deleted", `${res.purged} Dateien entfernt, ${fmtBytes(res.freed_bytes)} frei`);
+  } catch (e) {
+    note("gal-deleted", "Fehler: " + e.message, false);
+  } finally {
+    $("gal-purge").disabled = false;
+    await loadDeleted();
+  }
+}
+
 async function exportUSB() {
   $("export-usb").disabled = true;
   note("export-status", "Starte Export …");
@@ -786,6 +827,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("status-refresh").addEventListener("click", loadStatus);
   $("net-ap").addEventListener("click", toggleAP);
   $("net-ap-auto").addEventListener("change", toggleAPAuto);
+  $("gal-purge").addEventListener("click", purgeDeleted);
   $("export-usb").addEventListener("click", exportUSB);
   $("sys-reboot").addEventListener("click", reboot);
   $("sys-shutdown").addEventListener("click", shutdown);

@@ -349,3 +349,77 @@ def test_nonsense_ids_fall_back_to_the_whole_event(tmp_path):
     app, engine, _ = _event_with_photos(tmp_path, count=2)
     res = TestClient(app).get(f"/api/events/{engine.active_event['id']}/download-info?ids=abc,")
     assert res.json()["file_count"] == 2
+
+
+# --- admin gallery management ------------------------------------------------
+#
+# "Anschauen und Löschen aller Veranstaltungsbilder aus dem Konfig-Menü heraus."
+
+PIN = {"X-Fotobox-Pin": "2606"}
+
+
+def test_deleting_hides_photos_but_keeps_the_files(tmp_path):
+    """datenmodell.md: `deleted` is a flag, not a DELETE."""
+    app, engine, ids = _event_with_photos(tmp_path, count=3)
+    client = TestClient(app)
+    on_disk = engine.photo_variant_path("originals", ids[0])
+
+    res = client.post("/api/admin/photos/delete", json={"ids": [ids[0]]}, headers=PIN)
+    assert res.status_code == 200
+    assert res.json()["deleted"] == 1
+    assert on_disk.exists()
+
+    listed = client.get(f"/api/events/{engine.active_event['id']}/photos").json()
+    assert [p["id"] for p in listed["photos"]] == [ids[2], ids[1]]
+
+
+def test_a_deleted_photo_leaves_the_zip_and_the_count(tmp_path):
+    app, engine, ids = _event_with_photos(tmp_path, count=3)
+    event_id = engine.active_event["id"]
+    client = TestClient(app)
+    client.post("/api/admin/photos/delete", json={"ids": [ids[1]]}, headers=PIN)
+
+    with zipfile.ZipFile(
+        io.BytesIO(client.get(f"/api/events/{event_id}/download.zip").content)
+    ) as z:
+        assert db.photo_filename(ids[1]) not in z.namelist()
+    assert client.get("/api/events").json()["events"][0]["photo_count"] == 2
+
+
+def test_the_purge_is_a_separate_step_that_frees_the_card(tmp_path):
+    app, engine, ids = _event_with_photos(tmp_path, count=2)
+    client = TestClient(app)
+    client.post("/api/admin/photos/delete", json={"ids": [ids[0]]}, headers=PIN)
+
+    stats = client.get("/api/admin/photos/deleted", headers=PIN).json()
+    assert stats["count"] == 1 and stats["bytes"] > 0
+
+    res = client.post("/api/admin/photos/purge", headers=PIN).json()
+    assert res["purged"] == 2  # originals + processed of that one photo
+    assert res["freed_bytes"] == stats["bytes"]
+    assert not engine.photo_variant_path("originals", ids[0]).exists()
+    assert engine.photo_variant_path("originals", ids[1]).exists()  # the kept one
+
+
+def test_the_purge_leaves_photos_that_are_only_shown_alone(tmp_path):
+    """Nothing is removed until something was explicitly marked deleted."""
+    app, engine, ids = _event_with_photos(tmp_path, count=2)
+    client = TestClient(app)
+    assert client.post("/api/admin/photos/purge", headers=PIN).json()["purged"] == 0
+    assert engine.photo_variant_path("originals", ids[0]).exists()
+
+
+def test_deleting_needs_the_pin(tmp_path):
+    """The gallery is reachable from the guest WiFi; deleting must not be."""
+    app, engine, ids = _event_with_photos(tmp_path, count=1)
+    client = TestClient(app)
+    res = client.post("/api/admin/photos/delete", json={"ids": ids})
+    assert res.status_code == 401
+    assert client.post("/api/admin/photos/purge").status_code == 401
+    assert engine.photo_variant_path("originals", ids[0]).exists()
+
+
+def test_deleting_nothing_is_rejected(tmp_path):
+    app, _, _ = _event_with_photos(tmp_path, count=1)
+    res = TestClient(app).post("/api/admin/photos/delete", json={"ids": []}, headers=PIN)
+    assert res.status_code == 409  # ActionRejected, like every other refused action

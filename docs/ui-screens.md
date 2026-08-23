@@ -280,14 +280,21 @@ Kacheln:
    Sektempfang stört es nur, im abendlichen Saal ist es das einzige Licht. Die
    Änderung greift, sobald der Kiosk-Screen wieder geladen wird.
 6. **Kalibrierung** — Live-Bild mit verschiebbarem Rahmen für den DSLR-Ausschnitt
-7. **Netzwerk** — Access-Point ein/aus, aktuelle IP-Adresse, Galerie-URL groß dargestellt.
+7. **Galerie** — `Hauptgalerie öffnen` führt nach `/gallery?admin=1`: dieselbe
+   Galerie wie im Gäste-WLAN, dazu eine Auswahlliste über *alle* Veranstaltungen
+   und `Auswahl löschen`. Gelöschte Bilder verschwinden sofort aus Galerie,
+   Zählern und ZIP, ihre Dateien bleiben aber liegen (`datenmodell.md`). Wie viel
+   sie belegen, steht darunter; `Endgültig entfernen` gibt den Platz frei und ist
+   nicht umkehrbar.
+
+8. **Netzwerk** — Access-Point ein/aus, aktuelle IP-Adresse, Galerie-URL groß dargestellt.
    Darunter `Automatisch, wenn kein Netzwerk da ist`: findet die Box nach
    `auto_grace_seconds` (120 s) kein Netz, macht sie den Gäste-AP von selbst auf —
    an einer fremden Location musste das bisher jemand von Hand tun. Nur ein-, nie
    automatisch ausschalten: im AP-Modus sieht `wlan0` das Heimnetz nicht mehr, und
    ein Rückschalten mitten in der Feier würde alle Gäste trennen.
-8. **Export** — `Auf USB-Stick kopieren` mit Fortschrittsanzeige
-9. **System** — `Fotobox neu starten`, `Herunterfahren`
+9. **Export** — `Auf USB-Stick kopieren` mit Fortschrittsanzeige
+10. **System** — `Fotobox neu starten`, `Herunterfahren`
 
 Der Button `Drucker fortsetzen` ist der wichtigste im ganzen Admin-Bereich und gehört
 ganz oben, groß. Er ist die Antwort auf das häufigste Problem des Abends.

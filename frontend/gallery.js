@@ -1,7 +1,10 @@
 "use strict";
 
 /*
- * Fotobox gallery (post-event). Read-only: no delete, no edit (docs/ui-screens.md).
+ * Fotobox gallery (post-event). Read-only for guests: no delete, no edit
+ * (docs/ui-screens.md). Opened from the admin with ?admin=1 it gains an event
+ * picker across all events and a delete for the selection — "Anschauen und
+ * Löschen aller Veranstaltungsbilder aus dem Konfig-Menü heraus".
  * Loads the most recent event, paginates its photos, toggles between the
  * processed ("Mit Hintergrund") and original variants, and offers a streamed ZIP.
  */
@@ -25,6 +28,8 @@ const state = {
   selecting: false,
   selected: new Set(),
   kiosk: new URLSearchParams(location.search).has("kiosk"),
+  admin: new URLSearchParams(location.search).has("admin"),
+  events: [],
 };
 
 const dom = {
@@ -48,6 +53,8 @@ const dom = {
   selectionBar: el("selection-bar"),
   selectionCount: el("selection-count"),
   selectionClear: el("selection-clear"),
+  selectionDelete: el("selection-delete"),
+  eventPick: el("event-pick"),
   downloadSelection: el("download-selection"),
 };
 
@@ -108,21 +115,85 @@ async function init() {
   await applyClientConfig();
   try {
     const data = await getJson("/api/events");
-    const events = data.events || [];
+    state.events = data.events || [];
+    if (state.admin) setUpAdmin();
+    const events = state.events;
     if (!events.length || events[0].photo_count === 0) {
       showEmpty(events[0]);
       return;
     }
-    const event = events[0];
-    state.eventId = event.id;
-    dom.eventName.textContent = event.name;
-    dom.eventCount.textContent = `${event.photo_count} Fotos`;
-    state.total = event.photo_count;
-    await loadNextPage();
-    await refreshDownload();
+    await showEvent(events[0]);
   } catch (err) {
     showEmpty();
   }
+}
+
+async function showEvent(event) {
+  state.eventId = event.id;
+  state.total = event.photo_count;
+  state.page = 0;
+  state.loaded = 0;
+  state.photos = [];
+  state.selected.clear();
+  dom.grid.innerHTML = "";
+  dom.empty.classList.toggle("hidden", event.photo_count > 0);
+  dom.eventName.textContent = event.name;
+  dom.eventCount.textContent = `${event.photo_count} Fotos`;
+  if (dom.eventPick) dom.eventPick.value = String(event.id);
+  if (event.photo_count > 0) await loadNextPage();
+  await refreshDownload();
+  await refreshSelection();
+}
+
+/* Admin mode: the "Hauptgalerie" — every event in one picker, plus delete. */
+function setUpAdmin() {
+  dom.eventPick.classList.remove("hidden");
+  fillEventPicker();
+  dom.eventPick.addEventListener("change", () => {
+    const event = state.events.find((e) => String(e.id) === dom.eventPick.value);
+    if (event) showEvent(event);
+  });
+  dom.selectionDelete.classList.remove("hidden");
+  dom.selectionDelete.addEventListener("click", deleteSelection);
+  dom.backToBox.textContent = "Zurück zum Admin";
+  dom.backToBox.href = "/admin";
+  dom.backToBox.classList.remove("hidden");
+}
+
+async function deleteSelection() {
+  const ids = [...state.selected];
+  if (!ids.length) return;
+  const what = ids.length === 1 ? "1 Foto" : `${ids.length} Fotos`;
+  if (!window.confirm(`${what} löschen? Sie verschwinden aus der Galerie.`)) return;
+  const pin = sessionStorage.getItem("fotobox_pin") || "";
+  try {
+    const res = await fetch("/api/admin/photos/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Fotobox-Pin": pin },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) throw new Error(res.status === 401 ? "PIN abgelaufen" : `HTTP ${res.status}`);
+    // Reload the event: counts, pages and the grid all shift.
+    const data = await getJson("/api/events");
+    state.events = data.events || [];
+    const event = state.events.find((e) => e.id === state.eventId);
+    fillEventPicker();
+    if (event) await showEvent(event);
+  } catch (err) {
+    window.alert("Löschen fehlgeschlagen: " + err.message);
+  }
+}
+
+function fillEventPicker() {
+  const current = dom.eventPick.value;
+  dom.eventPick.innerHTML = "";
+  for (const event of state.events) {
+    const option = document.createElement("option");
+    option.value = String(event.id);
+    option.textContent = `${event.name} (${event.photo_count})`;
+    dom.eventPick.appendChild(option);
+  }
+  if (current) dom.eventPick.value = current;
 }
 
 function showEmpty(event) {
