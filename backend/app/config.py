@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 
 class _Model(BaseModel):
@@ -145,7 +145,19 @@ class PipelineConfig(_Model):
     # Vielfaches der Druckauflösung, in dem processed/ und thumbs/ entstehen.
     # 1 = wie gedruckt (1872x1248 — für den Download zu wenig), 2 = doppelt.
     # prints/ wird daraus heruntergerechnet, der Druck bleibt unverändert.
-    processed_scale: int = Field(default=2, ge=1, le=4)
+    #
+    # "auto" richtet sich stattdessen nach dem Originalfoto: der Rahmen wird so
+    # weit vergrößert, dass sein durchsichtiges Fenster das Original in voller
+    # Auflösung aufnimmt. Sonst schrumpft ein 4496x3000-Foto auf Postkartenmaß,
+    # und der Download mit Rahmen ist ein Viertel so groß wie der ohne.
+    processed_scale: Literal["auto"] | int = 2
+
+    @field_validator("processed_scale")
+    @classmethod
+    def _scale_in_range(cls, value):
+        if isinstance(value, int) and not 1 <= value <= 8:
+            raise ValueError("processed_scale muss zwischen 1 und 8 liegen oder 'auto' sein")
+        return value
 
 
 class CaptionConfig(_Model):

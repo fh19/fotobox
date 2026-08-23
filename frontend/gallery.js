@@ -216,8 +216,10 @@ async function loadNextPage() {
 }
 
 function tileSrc(photo) {
-  // Always the thumbnail: a grid of 60 full-size originals (8 MB each off the
-  // DSLR) brought the box's browser to its knees.
+  // Always a thumbnail: a grid of 60 full-size originals (8 MB each off the
+  // DSLR) brought the box's browser to its knees. One per view, though — the
+  // stored thumbnail is made from the framed copy.
+  if (state.variant === "original") return photo.thumb_original_url || photo.thumb_url;
   return photo.thumb_url || photo.original_url;
 }
 

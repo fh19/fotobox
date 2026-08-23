@@ -159,6 +159,16 @@ async def session_wake(request: Request) -> JSONResponse:
 
 @router.get("/api/photos/{photo_id}/{variant}")
 async def get_photo(request: Request, photo_id: int, variant: str) -> Response:
+    if variant == "thumb-original":
+        # Not a stored variant: made on first request from the original, because
+        # the events already on the card predate it.
+        thumbnail = _engine(request).original_thumbnail_path(photo_id)
+        if thumbnail is None:
+            return JSONResponse(
+                status_code=404,
+                content={"error": {"code": "not_found", "message": "Bild nicht gefunden"}},
+            )
+        return FileResponse(thumbnail, media_type="image/jpeg")
     directory = _VARIANT_DIRS.get(variant)
     if directory is None:
         return JSONResponse(

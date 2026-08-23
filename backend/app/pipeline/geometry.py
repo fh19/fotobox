@@ -35,7 +35,9 @@ class Canvas:
     # >1 while composing above print resolution: the download deserves more than
     # the 1872x1248 the postcard needs. Everything measured in print pixels
     # (caption size, QR size, padding) has to grow with it — see :meth:`px`.
-    scale: int = 1
+    # Fractional with ``processed_scale: auto``, where the factor follows the
+    # camera's resolution rather than a round number.
+    scale: float = 1
 
     def px(self, print_pixels: int) -> int:
         """A length given in print pixels, expressed in canvas pixels."""
@@ -66,14 +68,20 @@ class Canvas:
         return self.height - 2 * self.margin_y
 
 
-def canvas_for(printing: PrintingConfig, scale: int = 1) -> Canvas:
+def canvas_for(printing: PrintingConfig, scale: float = 1) -> Canvas:
     if printing.orientation == "portrait":
         width, height = printing.canvas_width, printing.canvas_height
         margin_x, margin_y = printing.safe_margin_x, printing.safe_margin_y
     else:  # landscape: canvas and margins are swapped
         width, height = printing.canvas_height, printing.canvas_width
         margin_x, margin_y = printing.safe_margin_y, printing.safe_margin_x
-    return Canvas(width * scale, height * scale, margin_x * scale, margin_y * scale, scale)
+    return Canvas(
+        round(width * scale),
+        round(height * scale),
+        round(margin_x * scale),
+        round(margin_y * scale),
+        scale,
+    )
 
 
 def cover_resize(image: Image.Image, width: int, height: int) -> Image.Image:

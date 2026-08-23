@@ -203,3 +203,123 @@ def test_a_replaced_frame_is_not_served_from_the_old_cache(tmp_path):
 
     x, y, w, h = compose.window_for(source, size)
     assert (w, h) == (100, 75)  # the new window, scaled to the canvas
+
+
+# --- processed_scale: auto ---------------------------------------------------
+#
+# "der Download der Originalbilder ist 2,1 GB gross, der mit Rahmen nur ~500 MB
+# ... die Originalbilder 1:1 übernehmen, den Rahmen hochskalieren."
+
+
+def _run_auto(tmp_path, original_size, *, scale="auto", mode="frame"):
+    config = make_config(tmp_path, pipeline__processed_scale=scale)
+    cw, ch = config.printing.canvas_width, config.printing.canvas_height
+    window = (200, 300, cw - 400, ch - 600)
+    overlay_path = tmp_path / "overlay.png"
+    _overlay_with_window(cw, ch, window).save(overlay_path)
+
+    original_path = tmp_path / "orig.jpg"
+    Image.new("RGB", original_size, (0, 0, 255)).save(original_path)
+
+    background = Background(
+        id="rahmen",
+        name="Rahmen",
+        mode=mode,
+        enabled=True,
+        sort_order=1,
+        overlay_path=overlay_path if mode == "frame" else None,
+        fit="cover",
+        background_color="#ff0000",
+    )
+    outputs = PipelineOutputs(
+        processed=tmp_path / "p.jpg", print=tmp_path / "pr.jpg", thumb=tmp_path / "t.jpg"
+    )
+    run_pipeline(config, background, 1, original_path, outputs)
+    return (
+        Image.open(outputs.processed),
+        Image.open(outputs.print),
+        (cw, ch),
+        window,
+    )
+
+
+def test_auto_grows_the_canvas_until_the_window_holds_the_original(tmp_path):
+    processed, _print, (cw, ch), window = _run_auto(tmp_path, (4496, 3000))
+    _, _, window_w, window_h = window
+    grown = processed.width / cw
+
+    # "cover" scales the photo by the larger of the two ratios and crops the
+    # rest; at the right canvas that factor is 1 — every pixel kept, none added.
+    cover = max(window_w * grown / 4496, window_h * grown / 3000)
+    assert 0.99 <= cover <= 1.01
+    assert processed.width > cw * 2  # clearly beyond the old fixed factor of 2
+
+
+def test_auto_never_falls_below_print_resolution(tmp_path):
+    """The fallback webcam delivers 1280x720 — that must not shrink the master."""
+    processed, printed, (cw, ch), _ = _run_auto(tmp_path, (1280, 720))
+    assert (processed.width, processed.height) == (cw, ch)
+    assert (printed.width, printed.height) == (cw, ch)
+
+
+def test_the_print_stays_the_postcard_raster_whatever_the_scale(tmp_path):
+    """Composing larger is for the download; the printer never sees it."""
+    _processed, printed, (cw, ch), _ = _run_auto(tmp_path, (4496, 3000))
+    assert (printed.width, printed.height) == (cw, ch)
+
+
+def test_a_fixed_scale_still_wins_when_configured(tmp_path):
+    processed, _print, (cw, ch), _ = _run_auto(tmp_path, (4496, 3000), scale=2)
+    assert (processed.width, processed.height) == (cw * 2, ch * 2)
+
+
+def test_auto_also_works_without_a_frame(tmp_path):
+    """Without a window the whole canvas is the target."""
+    processed, _print, (cw, ch), _ = _run_auto(tmp_path, (4496, 3000), mode="none")
+    cover = max(processed.width / 4496, processed.height / 3000)
+    assert 0.99 <= cover <= 1.01
+
+
+def test_auto_is_capped(tmp_path):
+    """A stray huge file must not allocate gigabytes.
+
+    Checked on the scale itself: an image big enough to reach the cap is also
+    big enough for Pillow to refuse it as a decompression bomb.
+    """
+    from app.pipeline.runner import _MAX_AUTO_SCALE, _scale_for
+
+    config = make_config(
+        tmp_path,
+        pipeline__processed_scale="auto",
+        printing__canvas_width=100,  # winzige Leinwand: der Deckel ist erreichbar,
+        printing__canvas_height=150,  # ohne ein Bild zu bauen, das Pillow ablehnt
+    )
+    original_path = tmp_path / "huge.jpg"
+    Image.new("RGB", (2000, 3000), (0, 0, 255)).save(original_path)
+    background = Background(
+        id="ohne", name="Ohne", mode="none", enabled=True, sort_order=1, overlay_path=None
+    )
+    assert _scale_for(config, background, original_path) == _MAX_AUTO_SCALE
+
+
+def test_the_derived_files_keep_the_original_date(tmp_path):
+    """After re-rendering an old event they would all say "today" otherwise —
+    and file managers and ZIP archives sort by exactly this."""
+    import os
+
+    config = make_config(tmp_path, pipeline__processed_scale=1)
+    original_path = tmp_path / "orig.jpg"
+    Image.new("RGB", (600, 400), (0, 0, 255)).save(original_path)
+    long_ago = 1_500_000_000  # 2017
+    os.utime(original_path, (long_ago, long_ago))
+
+    background = Background(
+        id="ohne", name="Ohne", mode="none", enabled=True, sort_order=1, overlay_path=None
+    )
+    outputs = PipelineOutputs(
+        processed=tmp_path / "p.jpg", print=tmp_path / "pr.jpg", thumb=tmp_path / "t.jpg"
+    )
+    run_pipeline(config, background, 1, original_path, outputs)
+
+    for path in (outputs.processed, outputs.print, outputs.thumb):
+        assert int(path.stat().st_mtime) == long_ago, path.name

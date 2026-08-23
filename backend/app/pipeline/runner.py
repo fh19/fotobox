@@ -14,6 +14,7 @@ raises :class:`PipelineError`; the caller never touches the original
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,7 +55,7 @@ def run_pipeline(
     start = time.monotonic()
     try:
         result, exif = _compose(config, background, photo_id, original_path)
-        _write_outputs(config, result, outputs, exif)
+        _write_outputs(config, result, outputs, exif, original_path)
     except PipelineError:
         raise
     except Exception as exc:  # any imaging error → failed, original untouched
@@ -66,7 +67,7 @@ def _compose(
     config: Config, background: Background, photo_id: int, original_path: Path
 ) -> tuple[Image.Image, Image.Exif]:
     """Compose the photo and return it with the EXIF to carry over."""
-    canvas = canvas_for(config.printing, config.pipeline.processed_scale)
+    canvas = canvas_for(config.printing, _scale_for(config, background, original_path))
     # Honour the camera's EXIF orientation so a portrait-mounted DSLR comes out
     # upright (docs/druck-layout.md — the sensor is always landscape).
     source = Image.open(original_path)
@@ -126,6 +127,43 @@ def _cut_out_and_composite(
     return composite(background_image, foreground, Image.fromarray(alpha, "L"))
 
 
+# A camera that would ask for more than this is not one we own; the cap keeps a
+# broken frame or a stray huge file from allocating gigabytes.
+_MAX_AUTO_SCALE = 8.0
+
+
+def _scale_for(config: Config, background: Background, original_path: Path) -> float:
+    """How far above print resolution to compose.
+
+    A fixed number, or with ``auto`` a factor derived from the photo itself: the
+    frame grows until its transparent window holds the original one pixel for
+    one pixel. Squeezing a 4496x3000 photo into a postcard raster is why the
+    framed download was a quarter the size of the plain one.
+    """
+    scale = config.pipeline.processed_scale
+    if scale != "auto":
+        return float(scale)
+
+    base = canvas_for(config.printing)
+    window = None
+    if (
+        background.mode == "frame"
+        and background.overlay_path is not None
+        and background.overlay_path.exists()
+    ):
+        # The configured window is in print pixels and would not survive a
+        # different canvas, so only the detected one drives the scale.
+        window = background.window or window_for(background.overlay_path, (base.width, base.height))
+    _, _, window_w, window_h = window or (0, 0, base.width, base.height)
+
+    with Image.open(original_path) as source:
+        width, height = ImageOps.exif_transpose(source).size
+    # min(): the photo must cover the window without being enlarged. Never below
+    # print resolution — the fallback webcam's 1280x720 would land there.
+    fitted = min(width / max(1, window_w), height / max(1, window_h))
+    return max(1.0, min(fitted, _MAX_AUTO_SCALE))
+
+
 def _place_in_frame(background: Background, original: Image.Image, canvas: Canvas) -> Image.Image:
     """Fit the photo into the overlay's window on a coloured canvas (``frame`` mode)."""
     if background.overlay_path is None or not background.overlay_path.exists():
@@ -150,8 +188,30 @@ def _place_in_frame(background: Background, original: Image.Image, canvas: Canva
     return base
 
 
+def _touch_like(source: Path, *targets: Path) -> None:
+    """Give the derived files the original's modification time.
+
+    Otherwise they carry the moment the pipeline ran — which after re-rendering
+    an old event is today, for every photo of the evening. File managers and ZIP
+    archives sort by exactly this.
+    """
+    try:
+        stamp = source.stat()
+    except OSError:
+        return
+    for path in targets:
+        try:
+            os.utime(path, (stamp.st_atime, stamp.st_mtime))
+        except OSError:
+            pass  # a wrong timestamp must never lose the picture
+
+
 def _write_outputs(
-    config: Config, result: Image.Image, outputs: PipelineOutputs, exif: Image.Exif | None = None
+    config: Config,
+    result: Image.Image,
+    outputs: PipelineOutputs,
+    exif: Image.Exif | None = None,
+    source_path: Path | None = None,
 ) -> None:
     """Write the three variants. ``result`` may be larger than the print canvas.
 
@@ -179,3 +239,6 @@ def _write_outputs(
     thumb_height = max(1, round(result.height * thumb_width / result.width))
     thumb = result.resize((thumb_width, thumb_height), Image.LANCZOS)
     thumb.save(outputs.thumb, format="JPEG", quality=85)
+
+    if source_path is not None:
+        _touch_like(source_path, outputs.processed, outputs.print, outputs.thumb)

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import random
 import shutil
 import sqlite3
@@ -1270,7 +1271,43 @@ class Engine:
         return self.config.events_dir / directory / variant / filename
 
     # Every place a photo leaves a file behind.
-    _PHOTO_VARIANTS = ("originals", "processed", "prints", "thumbs")
+    _PHOTO_VARIANTS = ("originals", "processed", "prints", "thumbs", "thumbs_original")
+
+    def original_thumbnail_path(self, photo_id: int) -> Path | None:
+        """Thumbnail of the untouched original, made on first request.
+
+        The grid used the processed thumbnail for both views, so switching to
+        "Original" still showed the framed copies — the one thing that view is
+        for. Generated lazily and kept: the events already on the card were shot
+        long before this existed.
+        """
+        photo = db.get_photo_with_event(self.conn, photo_id)
+        if photo is None:
+            return None
+        directory = photo["event_directory"]
+        filename = photo["filename"]
+        thumbnail = self._event_variant_path(directory, "thumbs_original", filename)
+        if thumbnail.exists():
+            return thumbnail
+        original = self._event_variant_path(directory, "originals", filename)
+        if not original.exists():
+            return None
+
+        from PIL import Image, ImageOps
+
+        thumbnail.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(original) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            width = self.config.pipeline.thumbnail_width
+            height = max(1, round(image.height * width / image.width))
+            image.resize((width, height), Image.LANCZOS).save(thumbnail, format="JPEG", quality=85)
+        # Same date as the photo, not "made when someone first scrolled past it".
+        try:
+            stamp = original.stat()
+            os.utime(thumbnail, (stamp.st_atime, stamp.st_mtime))
+        except OSError:
+            pass
+        return thumbnail
 
     def _photo_files(self, directory: str, filename: str) -> list[Path]:
         return [self._event_variant_path(directory, v, filename) for v in self._PHOTO_VARIANTS]

@@ -62,6 +62,9 @@ def _photo_payload(row) -> dict:
         # the Pi a moment to decode, which made the gallery feel sluggish.
         "print_url": f"/api/photos/{photo_id}/print",
         "thumb_url": f"/api/photos/{photo_id}/thumb",
+        # The grid needs a thumbnail per view — the stored one is made from the
+        # framed copy, so "Original" used to show the frame anyway.
+        "thumb_original_url": f"/api/photos/{photo_id}/thumb-original",
     }
 
 

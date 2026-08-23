@@ -91,8 +91,12 @@ pipeline:
     max_seconds: 20                   # danach Abbruch, Foto bleibt unbearbeitet
   jpeg_quality: 95
   thumbnail_width: 400
-  processed_scale: 2            # processed/ in doppelter Druckauflösung (Download);
-                               # prints/ wird daraus heruntergerechnet
+  processed_scale: auto         # auto = Rahmen so weit vergrößern, dass sein Fenster
+                                # das Original in voller Auflösung aufnimmt; je Bild
+                                # neu berechnet (Kamerawechsel, Ersatzkamera).
+                                # Alternativ eine feste Zahl 1–8 (2 = doppelte
+                                # Druckauflösung). prints/ wird immer daraus
+                                # heruntergerechnet, der Druck bleibt unverändert.
 
 printing:
   enabled: true

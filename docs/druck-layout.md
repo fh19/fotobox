@@ -121,3 +121,45 @@ Daraus folgt:
   Drucker".
 - Ein Limit von einem Druck pro Foto ist der Standard. 108 Blatt sind bei 120 Gästen
   schneller weg, als man denkt.
+
+
+## Auflösung der Download-Fassung
+
+`prints/` ist immer das Postkartenraster (1872 × 1248) — daran ändert sich nichts,
+der Drucker bekommt exakt dasselbe wie bisher.
+
+`processed/` ist die Fassung zum Herunterladen und darf größer sein. Wie viel
+größer, bestimmt `pipeline.processed_scale`:
+
+- **feste Zahl** (1–8): Vielfaches des Druckrasters. `2` ergibt 3744 × 2496.
+- **`auto`** (Standard): Die Leinwand wächst so weit, dass das durchsichtige
+  Fenster des Rahmens das Originalfoto **eins zu eins** aufnimmt. Der Rahmen wird
+  also um das unveränderte Bild herumgelegt, statt das Bild in den Rahmen zu
+  quetschen.
+
+`auto` wird **für jedes Bild einzeln** berechnet, denn die Auflösung kann sich
+mitten in der Veranstaltung ändern: Kamerawechsel, oder die Ersatzkamera springt
+ein, wenn der DSLR-Akku leer ist.
+
+Der Faktor ist `min(Originalbreite / Fensterbreite, Originalhöhe / Fensterhöhe)`.
+Das `min` sorgt dafür, dass das Foto das Fenster füllt, **ohne vergrößert zu
+werden** — mehr Pixel als die Kamera geliefert hat entstehen nie. Nach unten ist
+bei der Druckauflösung Schluss (die Ersatzwebcam mit 1280 × 720 würde sonst eine
+kleinere Fassung erzeugen als der Druck), nach oben bei Faktor 8.
+
+Beispiel mit dem Hochzeitsrahmen (Fenster 81 % × 75 % der Leinwand):
+
+| Kamera | Original | Faktor | `processed/` |
+|---|---|---|---|
+| Nikon D7200 | 4496 × 3000 | ~2,96 | 5541 × 3694 |
+| Ersatz-Webcam | 1280 × 720 | 1,0 | 1872 × 1248 |
+
+**Hinweis zum Rahmen selbst:** Bei `auto` wird die Rahmengrafik mit vergrößert.
+Ist die PNG-Datei kleiner als die Zielgröße, wird sie hochskaliert und wirkt
+weicher. Für gestochen scharfe Rahmen die PNG in der Zielgröße anlegen — beim
+Hochzeitsrahmen wären das rund 5550 px Breite statt der vorhandenen 3780.
+
+Alle abgeleiteten Dateien übernehmen den **Zeitstempel des Originals**. Sonst
+tragen sie das Datum des Rechenlaufs, was nach einer Neuberechnung bedeutet:
+alle Bilder eines Abends sehen aus, als wären sie heute entstanden. Dateimanager
+und ZIP-Archive sortieren genau danach.

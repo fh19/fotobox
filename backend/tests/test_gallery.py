@@ -485,3 +485,99 @@ def test_rerendering_needs_the_pin(tmp_path):
     app, engine, _ = _event_with_photos(tmp_path, count=1)
     res = TestClient(app).post(f"/api/admin/events/{engine.active_event['id']}/rerender")
     assert res.status_code == 401
+
+
+# --- the grid must show what the toggle says --------------------------------
+
+
+def test_the_grid_has_its_own_thumbnail_for_originals(tmp_path):
+    """The stored thumbnail is made from the framed copy, so "Original" showed
+    the frame anyway — the one thing that view is for."""
+    from PIL import Image
+
+    app, engine, ids = _event_with_photos(tmp_path, count=1)
+    photo_id = ids[0]
+    original = engine.photo_variant_path("originals", photo_id)
+    Image.new("RGB", (4496, 3000), "red").save(original, "JPEG")
+    client = TestClient(app)
+
+    res = client.get(f"/api/photos/{photo_id}/thumb-original")
+    assert res.status_code == 200
+    assert res.headers["content-type"] == "image/jpeg"
+    made = engine.photo_variant_path("thumbs_original", photo_id)
+    assert made.exists()
+    with Image.open(made) as thumb:
+        assert thumb.width == engine.config.pipeline.thumbnail_width
+
+    listed = client.get(f"/api/events/{engine.active_event['id']}/photos").json()
+    assert listed["photos"][0]["thumb_original_url"].endswith("/thumb-original")
+
+
+def test_the_original_thumbnail_is_kept_once_made(tmp_path):
+    from PIL import Image
+
+    app, engine, ids = _event_with_photos(tmp_path, count=1)
+    Image.new("RGB", (800, 600), "blue").save(engine.photo_variant_path("originals", ids[0]))
+    client = TestClient(app)
+
+    client.get(f"/api/photos/{ids[0]}/thumb-original")
+    made = engine.photo_variant_path("thumbs_original", ids[0])
+    stamp = made.stat().st_mtime_ns
+    client.get(f"/api/photos/{ids[0]}/thumb-original")
+    assert made.stat().st_mtime_ns == stamp  # not rebuilt on every request
+
+
+def test_a_missing_original_gives_404_not_a_crash(tmp_path):
+    app, engine, ids = _event_with_photos(tmp_path, count=1)
+    engine.photo_variant_path("originals", ids[0]).unlink()
+    assert TestClient(app).get(f"/api/photos/{ids[0]}/thumb-original").status_code == 404
+
+
+def test_deleting_removes_the_photo_from_both_views(tmp_path):
+    """One flag per photo, not per variant — deleting in one gallery must not
+    leave it standing in the other."""
+    app, engine, ids = _event_with_photos(tmp_path, count=2)
+    client = TestClient(app)
+    client.post("/api/admin/photos/delete", json={"ids": [ids[0]]}, headers=PIN)
+
+    listed = client.get(f"/api/events/{engine.active_event['id']}/photos").json()
+    assert [p["id"] for p in listed["photos"]] == [ids[1]]
+    for variant in ("processed", "original", "both"):
+        with zipfile.ZipFile(
+            io.BytesIO(
+                client.get(
+                    f"/api/events/{engine.active_event['id']}/download.zip?variant={variant}"
+                ).content
+            )
+        ) as archive:
+            assert not any(db.photo_filename(ids[0]) in n for n in archive.namelist()), variant
+
+
+def test_the_purge_also_clears_the_original_thumbnail(tmp_path):
+    from PIL import Image
+
+    app, engine, ids = _event_with_photos(tmp_path, count=1)
+    Image.new("RGB", (800, 600), "green").save(engine.photo_variant_path("originals", ids[0]))
+    client = TestClient(app)
+    client.get(f"/api/photos/{ids[0]}/thumb-original")
+    assert engine.photo_variant_path("thumbs_original", ids[0]).exists()
+
+    client.post("/api/admin/photos/delete", json={"ids": ids}, headers=PIN)
+    client.post("/api/admin/photos/purge", headers=PIN)
+    assert not engine.photo_variant_path("thumbs_original", ids[0]).exists()
+
+
+def test_the_original_thumbnail_keeps_the_photo_date(tmp_path):
+    import os
+
+    from PIL import Image
+
+    app, engine, ids = _event_with_photos(tmp_path, count=1)
+    original = engine.photo_variant_path("originals", ids[0])
+    Image.new("RGB", (800, 600), "blue").save(original)
+    long_ago = 1_500_000_000
+    os.utime(original, (long_ago, long_ago))
+
+    TestClient(app).get(f"/api/photos/{ids[0]}/thumb-original")
+    made = engine.photo_variant_path("thumbs_original", ids[0])
+    assert int(made.stat().st_mtime) == long_ago
