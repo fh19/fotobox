@@ -161,6 +161,38 @@ Zwei Stolpersteine, die Zeit kosten, wenn man sie nicht kennt:
   jedem Neustart automatisch leer — Aufträge, die auf einen ausgeschalteten
   Drucker warten, überleben einen Stromausfall nicht.
 
+#### Auf dem Client einrichten (Linux)
+
+**Nicht** die Warteschlange nehmen, die `cups-browsed` von selbst anlegt
+(`implicitclass://…`). Die rendert das Bild auf dem PC in ein PDF mit **4 mm Rand**
+und rechnet es dabei herunter. Stattdessen treiberlos einbinden — so macht es auch
+AirPrint:
+
+```bash
+lpadmin -p Fotobox_CP1500 -E \
+  -v ipp://fotobox.local:631/printers/Selphy_CP1500 -m everywhere \
+  -D "Fotobox (Selphy CP1500, randlos)"
+lpadmin -p Fotobox_CP1500 -o PageSize=105.66x158.5mm.Borderless
+lpoptions -p Fotobox_CP1500 -o raw
+```
+
+Die letzte Zeile ist der Unterschied zwischen 40 MB und der Dateigröße: ohne sie
+packt `imagetopdf` das JPEG aus und legt es **unkomprimiert** in ein PDF. Apple
+lässt es komprimiert liegen, deshalb sind AirPrint-Aufträge so viel kleiner. Mit
+`raw` geht die Datei unverändert zur Box, und die Box rendert sie mit ihren
+eigenen randlosen Einstellungen — genau wie beim Fotobox-Betrieb.
+
+Gemessen mit demselben Bild:
+
+| Weg | übertragen | Ergebnis |
+|---|---|---|
+| `cups-browsed`-Queue | 2,7 MB | 4 mm Rand, auf 3008×2000 verkleinert |
+| treiberlos | 40,4 MB | randlos, volle Auflösung |
+| treiberlos + `raw` | Dateigröße | randlos, volle Auflösung |
+
+Iphone/iPad und Android brauchen nichts davon — die finden den Drucker über
+AirPrint bzw. Mopria von selbst und drucken auf Anhieb randlos.
+
 ## 5. Hardware-Uhr (RTC)
 
 Offline gibt es kein NTP — ohne RTC ist die Uhr nach jedem Stromausfall falsch (und
