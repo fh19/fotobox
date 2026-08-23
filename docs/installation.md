@@ -133,6 +133,34 @@ bash deploy/cups/setup-printer.sh
 Erster Lauf dauert **~20–30 min** (Kompilieren). Details/Queue-Name in
 `deploy/cups/` und in der Memory-Notiz zum Drucker.
 
+### Optional: die Box als Netzwerkdrucker
+
+CUPS ist bereits ein vollständiger Druckserver — er hört ab Werk nur auf
+`localhost`. Mit einem gesetzten Netz gibt das Skript ihn frei:
+
+```bash
+SHARE_SUBNET=192.168.0.0/24 bash deploy/cups/setup-printer.sh
+```
+
+Danach erscheint die Box im Netz als **Canon SELPHY CP1500** — unter Windows,
+macOS, iOS (AirPrint) und Android (Mopria), ohne Treiberinstallation. Puffern,
+Warteschlange, Abbrechen durch den Client und Fehlermeldungen wie „kein Papier"
+macht CUPS von sich aus.
+
+Bewusst **kein** `Allow @LOCAL`: das schlösse den Gäste-AP (`192.168.4.x`) ein,
+und dann druckt jeder Gast auf deinem Farbband. Nur das angegebene Heimnetz darf.
+
+Zwei Stolpersteine, die Zeit kosten, wenn man sie nicht kennt:
+
+- `Listen localhost:631` und `Listen 0.0.0.0:631` **zugleich** kollidieren
+  (`Address already in use`) — CUPS bleibt dann still auf localhost. Die
+  localhost-Zeile muss ersetzt, nicht ergänzt werden.
+- `/etc/cups` und `/var/spool/cups` liegen auf dem Overlay. Die Freigabe muss also
+  bei **abgeschaltetem overlayroot** eingerichtet werden (Abschnitt 8), sonst ist
+  sie nach dem Neustart weg. Umgekehrt bedeutet das: die Warteschlange ist nach
+  jedem Neustart automatisch leer — Aufträge, die auf einen ausgeschalteten
+  Drucker warten, überleben einen Stromausfall nicht.
+
 ## 5. Hardware-Uhr (RTC)
 
 Offline gibt es kein NTP — ohne RTC ist die Uhr nach jedem Stromausfall falsch (und

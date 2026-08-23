@@ -12,6 +12,8 @@ set -euo pipefail
 
 GUTENPRINT_VERSION="5.3.6"
 QUEUE="${QUEUE:-Selphy_CP1500}"
+# Netz, das drucken darf, z.B. 192.168.0.0/24. Leer = keine Freigabe.
+SHARE_SUBNET="${SHARE_SUBNET:-}"
 SRC_DIR="${SRC_DIR:-/home/pi/gutenprint-src}"
 DRIVER="canon-cp1500"
 
@@ -83,11 +85,39 @@ setup_queue() {
   sudo systemctl restart cups
 }
 
+share_on_lan() {
+  # Druckservice fuer das Heimnetz. CUPS ist bereits ein vollstaendiger
+  # Druckserver — er hoert nur ab Werk allein auf localhost.
+  #
+  # Bewusst NICHT "Allow @LOCAL": das schloesse den Gaeste-AP (192.168.4.x) ein,
+  # und dann druckt jeder Hochzeitsgast auf deinem Farbband.
+  local conf=/etc/cups/cupsd.conf
+  if [ "${SHARE_SUBNET:-}" = "" ]; then
+    log "Freigabe uebersprungen (SHARE_SUBNET nicht gesetzt)"
+    return 0
+  fi
+  log "CUPS im Netz freigeben fuer $SHARE_SUBNET"
+  sudo cp -a "$conf" "$conf.vor-freigabe.$(date +%Y%m%d)"
+  # 0.0.0.0 schliesst localhost ein — beide Listen-Zeilen zugleich kollidieren
+  # ("Address already in use") und CUPS bleibt still auf localhost.
+  sudo sed -i 's/^Listen localhost:631$/Listen 0.0.0.0:631/' "$conf"
+  sudo sed -i 's/^Browsing No$/Browsing On/' "$conf"
+  if ! grep -q "Allow $SHARE_SUBNET" "$conf"; then
+    sudo perl -0pi -e "s{<Location />\n  Order allow,deny\n</Location>}"\
+"{<Location />\n  Order allow,deny\n  Allow $SHARE_SUBNET\n</Location>}" "$conf"
+  fi
+  sudo lpadmin -p "$QUEUE" -o printer-is-shared=true
+  sudo systemctl restart cups
+  sudo systemctl restart avahi-daemon
+  log "Angekuendigt als: $(avahi-browse -t _ipp._tcp 2>/dev/null | grep -c "$QUEUE") Eintraege"
+}
+
 main() {
   apt_deps
   free_usb
   build_gutenprint
   setup_queue
+  share_on_lan
   log "Fertig: $(lpstat -p "$QUEUE" 2>&1 | head -1)"
 }
 
