@@ -71,6 +71,8 @@ async def get_client_config(request: Request) -> JSONResponse:
             # Seitenverhältnis der fertigen Fotos, damit Galerie und Kiosk keine
             # Kachelform hartkodieren (Regel 6) — dreht mit printing.orientation.
             "photo_aspect": _photo_aspect(config),
+            "gallery_enabled": config.network.gallery_enabled,
+            "gallery_return_seconds": config.network.gallery_return_seconds,
             "admin_corner": config.ui.admin_corner,
             "admin_longpress_seconds": config.ui.admin_longpress_seconds,
         }

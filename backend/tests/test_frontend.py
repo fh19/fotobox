@@ -116,3 +116,19 @@ def test_the_gallery_takes_its_tile_shape_from_the_config(tmp_path):
     assert "aspect-ratio: 2 / 3;" not in css  # the old fixed portrait tile
     js = (FRONTEND_DIR / "gallery.js").read_text(encoding="utf-8")
     assert "photo_aspect" in js and "--photo-aspect" in js
+
+
+def test_the_kiosk_offers_a_way_into_the_gallery(tmp_path):
+    """Looking at the photos was only possible over the guest WiFi before."""
+    html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    assert 'href="/gallery?kiosk=1"' in html
+    assert ">Galerie<" in html
+
+
+def test_the_single_view_can_be_stepped_through_and_printed(tmp_path):
+    html = (FRONTEND_DIR / "gallery.html").read_text(encoding="utf-8")
+    for element in ("lightbox-prev", "lightbox-next", "lightbox-print", "back-to-box"):
+        assert element in html, element
+    js = (FRONTEND_DIR / "gallery.js").read_text(encoding="utf-8")
+    assert "touchstart" in js and "ArrowRight" in js  # swipe and keyboard
+    assert "/print" in js

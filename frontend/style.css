@@ -159,6 +159,21 @@ body[data-state="ERROR"] #screen-error {
   opacity: 0.8;
 }
 
+/* "Galerie" at the box: bottom right, present but never competing with the
+   photo flow — the whole screen stays the shutter. */
+.gallery-button {
+  position: absolute;
+  right: 3vh;
+  bottom: 3vh;
+  padding: 18px 34px;
+  font-size: 28px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  text-decoration: none;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+}
+
 /* Why printing stopped — deliberately large. On the first event an empty paper
    tray was only noticeable by prints no longer appearing. */
 .printer-alert {

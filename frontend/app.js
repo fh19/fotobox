@@ -22,6 +22,7 @@ const dom = {
   idleHeading: el("idle-heading"),
   idlePrintNote: el("idle-print-note"),
   idlePrintReason: el("idle-print-reason"),
+  idleGallery: el("idle-gallery"),
   previewPrintReason: el("preview-print-reason"),
   bgTiles: el("bg-tiles"),
   countdownNumber: el("countdown-number"),
@@ -43,6 +44,7 @@ let uiConfig = {
   mirror_preview: true,
   idle_hint_pulse: true,
   flash_enabled: true,
+  gallery_enabled: true,
   processing_warn_seconds: 8,
   preview_seconds: 30,
   preview_fps: 15,
@@ -143,6 +145,9 @@ function renderIdle(status) {
   dom.idlePrintNote.classList.toggle("hidden", printerReady);
   // Say *what* is wrong, in large type. On the first event paper and ribbon ran
   // out unnoticed — the only symptom was that prints stopped coming.
+  // Looking at the photos was only possible over the guest WiFi; at the box
+  // itself there was no way in (Optimierungen.md).
+  dom.idleGallery.classList.toggle("hidden", !uiConfig.gallery_enabled);
   const problem = (status.printer && status.printer.message) || "";
   dom.idlePrintReason.textContent = problem;
   dom.idlePrintReason.classList.toggle("hidden", printerReady || !problem);

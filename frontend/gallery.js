@@ -15,6 +15,12 @@ const state = {
   page: 0,
   total: 0,
   loaded: 0,
+  // Every photo loaded so far, in grid order, plus which one the lightbox shows.
+  // Without this the single view was a dead end: open, look, close, open the
+  // next — the most tiresome part of the evening according to the notes.
+  photos: [],
+  index: -1,
+  kiosk: new URLSearchParams(location.search).has("kiosk"),
 };
 
 const dom = {
@@ -28,6 +34,12 @@ const dom = {
   lightbox: el("lightbox"),
   lightboxImg: el("lightbox-img"),
   lightboxClose: el("lightbox-close"),
+  lightboxPrev: el("lightbox-prev"),
+  lightboxNext: el("lightbox-next"),
+  lightboxPrint: el("lightbox-print"),
+  lightboxCount: el("lightbox-count"),
+  lightboxNote: el("lightbox-note"),
+  backToBox: el("back-to-box"),
 };
 
 function humanSize(bytes) {
@@ -44,26 +56,47 @@ async function getJson(url) {
   return res.json();
 }
 
-/* Tile shape follows the photos, not a hardcoded guess: portrait tiles cropped
- * every landscape photo down its middle. photo_aspect comes from the print
- * canvas, so it flips with printing.orientation. Landscape tiles also need to be
- * wider to stay legible at the same height. */
-async function applyPhotoAspect() {
+async function applyClientConfig() {
+  let cfg = {};
   try {
-    const cfg = await getJson("/api/client-config");
-    const aspect = Number(cfg.photo_aspect);
-    if (!aspect || !isFinite(aspect) || aspect <= 0) return;
+    cfg = await getJson("/api/client-config");
+  } catch (e) {
+    /* keep the stylesheet defaults and, at the box, the plain back button */
+  }
+  // Tile shape follows the photos instead of a hardcoded guess: portrait tiles
+  // cropped every landscape photo down its middle. photo_aspect comes from the
+  // print canvas, so it flips with printing.orientation. Landscape tiles need
+  // more width to stay legible at the same height.
+  const aspect = Number(cfg.photo_aspect);
+  if (aspect && isFinite(aspect) && aspect > 0) {
     const root = document.documentElement.style;
     root.setProperty("--photo-aspect", String(aspect));
     root.setProperty("--tile-min", aspect > 1 ? "230px" : "150px");
-  } catch (e) {
-    /* keep the stylesheet default */
   }
+  if (state.kiosk) wireKioskReturn(Number(cfg.gallery_return_seconds) || 0);
+}
+
+/* At the box the browser has no address bar and nobody is watching: an open
+ * gallery would keep the Fotobox out of its photo flow indefinitely. A back
+ * button plus an idle timeout return to the kiosk. */
+function wireKioskReturn(seconds) {
+  dom.backToBox.classList.remove("hidden");
+  if (!seconds) return;
+  let timer = null;
+  const back = () => location.assign("/");
+  const restart = () => {
+    if (timer) window.clearTimeout(timer);
+    timer = window.setTimeout(back, seconds * 1000);
+  };
+  ["click", "touchstart", "keydown", "scroll"].forEach((event) =>
+    document.addEventListener(event, restart, { passive: true })
+  );
+  restart();
 }
 
 async function init() {
   wireEvents();
-  await applyPhotoAspect();
+  await applyClientConfig();
   try {
     const data = await getJson("/api/events");
     const events = data.events || [];
@@ -131,7 +164,9 @@ function appendTile(photo) {
     tile.appendChild(badge);
   }
 
-  tile.addEventListener("click", () => openLightbox(fullSrc(photo)));
+  const index = state.photos.length;
+  state.photos.push(photo);
+  tile.addEventListener("click", () => openLightbox(index));
   dom.grid.appendChild(tile);
 }
 
@@ -151,24 +186,85 @@ async function refreshDownload() {
 function reload() {
   state.page = 0;
   state.loaded = 0;
+  state.photos = [];
   dom.grid.innerHTML = "";
   loadNextPage();
   refreshDownload();
 }
 
-function openLightbox(src) {
-  dom.lightboxImg.src = src;
+function openLightbox(index) {
+  showPhoto(index);
   dom.lightbox.classList.remove("hidden");
+}
+
+function showPhoto(index) {
+  if (index < 0 || index >= state.photos.length) return;
+  state.index = index;
+  const photo = state.photos[index];
+  dom.lightboxImg.src = fullSrc(photo);
+  dom.lightboxCount.textContent = `${index + 1} von ${state.total || state.photos.length}`;
+  dom.lightboxPrev.disabled = index === 0;
+  // Only what is loaded can be shown; "Mehr laden" extends the range.
+  dom.lightboxNext.disabled = index >= state.photos.length - 1;
+  dom.lightboxNote.textContent = "";
+  dom.lightboxPrint.disabled = false;
+  dom.lightboxPrint.textContent = "Dieses Foto drucken";
+}
+
+function step(delta) {
+  showPhoto(state.index + delta);
 }
 
 function closeLightbox() {
   dom.lightbox.classList.add("hidden");
   dom.lightboxImg.src = "";
+  state.index = -1;
+}
+
+async function printCurrent() {
+  const photo = state.photos[state.index];
+  if (!photo) return;
+  dom.lightboxPrint.disabled = true;
+  dom.lightboxPrint.textContent = "Wird gedruckt …";
+  try {
+    const res = await fetch(`/api/photos/${photo.id}/print`, { method: "POST" });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) throw new Error((data && data.error && data.error.message) || `HTTP ${res.status}`);
+    dom.lightboxNote.textContent = "Der Druck läuft.";
+  } catch (err) {
+    dom.lightboxNote.textContent = err.message;
+    dom.lightboxPrint.disabled = false;
+    dom.lightboxPrint.textContent = "Dieses Foto drucken";
+  }
+}
+
+/* Swipe on the photo itself: on a phone reaching for a small arrow is fiddly. */
+function wireSwipe() {
+  let startX = null;
+  dom.lightboxImg.addEventListener("touchstart", (e) => {
+    startX = e.touches[0].clientX;
+  }, { passive: true });
+  dom.lightboxImg.addEventListener("touchend", (e) => {
+    if (startX === null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    startX = null;
+    if (Math.abs(dx) > 40) step(dx < 0 ? 1 : -1);
+  }, { passive: true });
 }
 
 function wireEvents() {
   dom.loadMore.addEventListener("click", loadNextPage);
   dom.lightboxClose.addEventListener("click", closeLightbox);
+  dom.lightboxPrev.addEventListener("click", () => step(-1));
+  dom.lightboxNext.addEventListener("click", () => step(1));
+  dom.lightboxPrint.addEventListener("click", printCurrent);
+  wireSwipe();
+  document.addEventListener("keydown", (e) => {
+    if (dom.lightbox.classList.contains("hidden")) return;
+    if (e.key === "ArrowRight") step(1);
+    else if (e.key === "ArrowLeft") step(-1);
+    else if (e.key === "Escape") closeLightbox();
+  });
   dom.lightbox.addEventListener("click", (e) => {
     if (e.target === dom.lightbox) closeLightbox();
   });

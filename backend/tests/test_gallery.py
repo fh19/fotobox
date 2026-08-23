@@ -176,3 +176,84 @@ def test_zip_entries_keep_the_file_date(tmp_path):
         # ...and readable by more than just the owner after extraction.
         assert (info.external_attr >> 16) & 0o044
         assert archive.read("Fotos/IMG_0402.jpg") == photo.read_bytes()
+
+
+# --- reprint from the gallery ------------------------------------------------
+#
+# From the first real event: "Bilder lassen sich nachträglich nicht mehr
+# ausdrucken". A guest asking for a copy an hour later was out of luck.
+
+
+def _event_with_photo(tmp_path, **overrides):
+    """An app whose active event holds one printable photo on disk."""
+    config = make_config(tmp_path, **overrides)
+    app = create_app(config, RealClock())
+    engine = app.state.engine
+    photo_id = db.insert_photo(
+        engine.conn,
+        event_id=engine.active_event["id"],
+        captured_at=datetime.now(UTC).astimezone(),
+        background_id=None,
+        background_mode="none",
+        camera_model="Nikon DSC D7200",
+        width=1872,
+        height=1248,
+    )
+    printable = engine.photo_variant_path("prints", photo_id)
+    printable.parent.mkdir(parents=True, exist_ok=True)
+    printable.write_bytes(b"\xff\xd8\xff" + b"print" * 50)
+    return app, engine, photo_id
+
+
+def test_a_stored_photo_can_be_printed_again(tmp_path):
+    app, engine, photo_id = _event_with_photo(tmp_path)
+    client = TestClient(app)
+
+    body = client.post(f"/api/photos/{photo_id}/print").json()
+    assert body["queued"] is True
+    assert body["photo_id"] == photo_id
+    assert engine.conn.execute("SELECT COUNT(*) FROM print_jobs").fetchone()[0] == 1
+
+
+def test_a_reprint_counts_against_the_event_quota(tmp_path):
+    app, engine, photo_id = _event_with_photo(tmp_path, printing__max_per_event=1)
+    client = TestClient(app)
+
+    assert client.post(f"/api/photos/{photo_id}/print").status_code == 200
+    res = client.post(f"/api/photos/{photo_id}/print")
+    assert res.status_code == 409
+    assert res.json()["error"]["code"] == "daily_limit_reached"
+
+
+def test_a_reprint_says_why_the_printer_will_not(tmp_path):
+    app, engine, photo_id = _event_with_photo(tmp_path)
+    engine.backends.printer.set_reason("media_empty")
+
+    res = TestClient(app).post(f"/api/photos/{photo_id}/print")
+    assert res.status_code == 409
+    assert res.json()["error"]["message"] == "Kein Papier"
+
+
+def test_an_unknown_photo_is_404(tmp_path):
+    app, _, _ = _event_with_photo(tmp_path)
+    assert TestClient(app).post("/api/photos/9999/print").status_code == 404
+
+
+def test_a_photo_without_a_print_file_is_404(tmp_path):
+    app, engine, photo_id = _event_with_photo(tmp_path)
+    engine.photo_variant_path("prints", photo_id).unlink()
+    res = TestClient(app).post(f"/api/photos/{photo_id}/print")
+    assert res.status_code == 404
+    assert res.json()["error"]["code"] == "no_printable"
+
+
+def test_reprint_is_off_with_the_gallery(tmp_path):
+    app, _, photo_id = _event_with_photo(tmp_path, network__gallery_enabled=False)
+    assert TestClient(app).post(f"/api/photos/{photo_id}/print").status_code == 404
+
+
+def test_client_config_carries_the_gallery_settings(tmp_path):
+    client = TestClient(create_app(make_config(tmp_path), RealClock()))
+    cfg = client.get("/api/client-config").json()
+    assert cfg["gallery_enabled"] is True
+    assert cfg["gallery_return_seconds"] > 0

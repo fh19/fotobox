@@ -196,6 +196,9 @@ class AccessPointConfig(_Model):
 
 class NetworkConfig(_Model):
     gallery_enabled: bool = True
+    # Wie lange die Galerie am Touchscreen ohne Bedienung offen bleibt, bevor sie
+    # zur Fotobox zurückkehrt. Sonst steht die Box den Abend in der Galerie.
+    gallery_return_seconds: float = Field(default=60.0, ge=0)
     access_point: AccessPointConfig
 
 

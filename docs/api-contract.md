@@ -195,6 +195,21 @@ AP-Subnetzes bleibt ein `404` ein `404` und die Prüf-URLs liefern `204`.
 Schalter: `network.access_point.captive_portal` (Standard an). Voraussetzung ist
 der DNS-Umbieger, den der AP-Start schreibt, und Port **80**.
 
+### `POST /api/photos/{id}/print`
+
+Druckt ein gespeichertes Foto erneut (Galerie-Nachdruck), unabhängig von einer
+laufenden Sitzung — der Zustandsautomat bleibt unberührt. Antwort:
+`{"queued": true, "photo_id": 143, "job_id": 17, "quota_used": 111, "quota_total": 219}`.
+
+- `404 unknown_photo` — Foto gibt es nicht (oder gelöscht)
+- `404 no_printable` — keine Druckfassung vorhanden
+- `409 printer_unavailable` — `message` nennt den Grund (`Kein Papier`, …)
+- `409 daily_limit_reached` — `printing.max_per_event` erreicht
+- `404`, wenn `network.gallery_enabled` false ist
+
+Geprüft wird das Event-Kontingent, **nicht** `max_per_photo`: das begrenzt nur
+mehrfaches Tippen auf derselben Vorschau.
+
 ### `GET /api/photos/{id}/{variant}`
 
 `variant`: `original` | `processed` | `print` | `thumb`. Liefert JPEG.

@@ -41,6 +41,14 @@ Darüber, deutlich größer und orange, der konkrete Grund aus `printer.message`
 (`Kein Papier`, `Farbband verbraucht`, `Papierstau`, `Klappe offen`). Papier- und
 Bandende fielen beim ersten Einsatz nur dadurch auf, dass keine Ausdrucke mehr kamen.
 
+Unten rechts, dezent aber dauerhaft sichtbar:
+
+> Galerie
+
+Öffnet die Galerie **am Touchscreen** (dieselbe Seite, die auch die Handys sehen).
+Ohne diesen Weg kam man an die Bilder nur über das Gäste-WLAN. Der Button erscheint
+nur bei `network.gallery_enabled`.
+
 Ist die Kamera nicht verfügbar:
 
 > **Kleine Pause**
@@ -273,6 +281,25 @@ ganz oben, groß. Er ist die Antwort auf das häufigste Problem des Abends.
 ---
 
 ## Galerie (nach der Veranstaltung)
+
+**Einzelansicht.** Ein angetipptes Foto füllt den Bildschirm. Darin:
+
+- Pfeile links und rechts (`‹` `›`), am Handy zusätzlich **Wischen**, am Rechner
+  die Pfeiltasten; `Esc` schließt. Vorher musste jedes Bild einzeln geöffnet und
+  wieder geschlossen werden — der umständlichste Teil des Abends.
+- Zähler `3 von 252`
+- Button `Dieses Foto drucken` → während des Drucks `Wird gedruckt …`, danach
+  `Der Druck läuft.` Geht es nicht, steht dort der Grund (`Kein Papier`,
+  `Das Druckkontingent für heute ist aufgebraucht`).
+
+Der Nachdruck steht **allen** offen, auch Handys im Gäste-WLAN. Begrenzt wird er
+allein durch `printing.max_per_event` — nicht durch `max_per_photo`, denn das Limit
+soll nur mehrfaches Tippen auf derselben Vorschau verhindern, nicht eine bewusst
+gewünschte zweite Kopie.
+
+**Am Touchscreen** (Aufruf mit `?kiosk=1`) kommen hinzu: `Zurück zur Fotobox` oben
+rechts und eine Rückkehr von selbst nach `network.gallery_return_seconds` ohne
+Bedienung — sonst stünde die Box den restlichen Abend in der Galerie.
 
 Eigene Route `/gallery`, normale Webseite, kein Kiosk. Responsiv, wird meist vom Handy
 oder Laptop aufgerufen.

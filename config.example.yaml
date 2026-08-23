@@ -117,6 +117,7 @@ storage:
 
 network:
   gallery_enabled: true
+  gallery_return_seconds: 60          # Galerie am Bildschirm kehrt von selbst zurück
   access_point:
     enabled: false                    # bewusst aus während der Veranstaltung
     ssid: Fotobox

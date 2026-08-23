@@ -196,6 +196,19 @@ def pending_pipeline_photos_with_event(conn: sqlite3.Connection) -> list[sqlite3
     ).fetchall()
 
 
+def get_photo_with_event(conn: sqlite3.Connection, photo_id: int) -> sqlite3.Row | None:
+    """One photo plus its event's directory — a photo may not be in the active event."""
+    return conn.execute(
+        """
+        SELECT p.*, e.directory AS event_directory
+        FROM photos p
+        JOIN events e ON e.id = p.event_id
+        WHERE p.id = ? AND p.deleted = 0
+        """,
+        (photo_id,),
+    ).fetchone()
+
+
 # --- Gallery ----------------------------------------------------------------
 
 

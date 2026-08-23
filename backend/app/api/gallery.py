@@ -53,6 +53,19 @@ def _photo_payload(row) -> dict:
     }
 
 
+@router.post("/api/photos/{photo_id}/print")
+async def post_photo_print(request: Request, photo_id: int) -> Response:
+    """Print a stored photo again — the gallery's reprint button.
+
+    Read-only everywhere else in this router; this is the one action, and it is
+    guarded by the event's print quota rather than by who is asking.
+    """
+    engine = _engine(request)
+    if not engine.config.network.gallery_enabled:
+        return _disabled()
+    return JSONResponse(engine.reprint_photo(photo_id))
+
+
 @router.get("/api/events")
 async def get_events(request: Request) -> Response:
     engine = _engine(request)

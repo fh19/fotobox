@@ -13,6 +13,7 @@
         <p id="event-count" class="muted"></p>
       </div>
       <div class="topbar__actions">
+        <a id="back-to-box" class="download hidden" href="/">Zurück zur Fotobox</a>
         <div class="toggle" id="variant-toggle" role="group" aria-label="Ansicht">
           <button type="button" data-variant="processed" class="toggle__btn is-active">
             Mit Hintergrund
@@ -33,7 +34,16 @@
 
     <div id="lightbox" class="lightbox hidden">
       <button type="button" id="lightbox-close" class="lightbox__close" aria-label="Schließen">×</button>
+      <button type="button" id="lightbox-prev" class="lightbox__nav lightbox__nav--prev"
+              aria-label="Vorheriges Foto">‹</button>
       <img id="lightbox-img" alt="" />
+      <button type="button" id="lightbox-next" class="lightbox__nav lightbox__nav--next"
+              aria-label="Nächstes Foto">›</button>
+      <div class="lightbox__bar">
+        <span id="lightbox-count" class="lightbox__count"></span>
+        <button type="button" id="lightbox-print" class="lightbox__print">Dieses Foto drucken</button>
+        <span id="lightbox-note" class="lightbox__note"></span>
+      </div>
     </div>
 
     <script src="/gallery.js"></script>
