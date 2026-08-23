@@ -321,6 +321,23 @@ async def post_photos_purge(
     return JSONResponse(await asyncio.to_thread(_engine(request).purge_deleted_photos))
 
 
+@router.post("/events/{event_id}/rerender")
+async def post_event_rerender(
+    request: Request, event_id: int, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    """Run the pipeline again over an old event — new resolution, EXIF kept."""
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(_engine(request).start_rerender(event_id))
+
+
+@router.get("/rerender")
+async def get_rerender(
+    request: Request, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(_engine(request).rerender_status())
+
+
 # --- network / export (M7b) -------------------------------------------------
 
 

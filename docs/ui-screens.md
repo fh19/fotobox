@@ -311,6 +311,12 @@ Kacheln:
    sie belegen, steht darunter; `Endgültig entfernen` gibt den Platz frei und ist
    nicht umkehrbar.
 
+   Darunter `Bilder neu berechnen` mit Auswahl der Veranstaltung: die bearbeiteten
+   Fassungen sind nur so gut wie die Pipeline, die sie erzeugt hat. Nach einer
+   Verbesserung — höhere Auflösung, EXIF-Übernahme — lassen sie sich aus den
+   unangetasteten Originalen neu erzeugen. Läuft im Hintergrund mit Fortschritts-
+   anzeige und dauert bei 250 Bildern etwa zehn Minuten.
+
 8. **Netzwerk** — Access-Point ein/aus, aktuelle IP-Adresse, Galerie-URL groß dargestellt.
    Darunter `Automatisch, wenn kein Netzwerk da ist`: findet die Box nach
    `auto_grace_seconds` (120 s) kein Netz, macht sie den Gäste-AP von selbst auf —

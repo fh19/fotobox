@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import os
+import time
 import tracemalloc
 import zipfile
 from datetime import UTC, datetime
@@ -423,3 +424,64 @@ def test_deleting_nothing_is_rejected(tmp_path):
     app, _, _ = _event_with_photos(tmp_path, count=1)
     res = TestClient(app).post("/api/admin/photos/delete", json={"ids": []}, headers=PIN)
     assert res.status_code == 409  # ActionRejected, like every other refused action
+
+
+# --- re-rendering an old event ----------------------------------------------
+#
+# The processed files are only as good as the pipeline that made them. After an
+# improvement they can be made again from the untouched originals.
+
+
+def test_a_rerender_reports_progress_and_finishes(tmp_path, monkeypatch):
+    app, engine, ids = _event_with_photos(tmp_path, count=3)
+    seen = []
+    monkeypatch.setattr(engine, "_reprocess", lambda conn, photo: seen.append(photo["id"]) or True)
+    client = TestClient(app)
+
+    res = client.post(f"/api/admin/events/{engine.active_event['id']}/rerender", headers=PIN)
+    assert res.status_code == 200
+    assert res.json()["total"] == 3
+
+    for _ in range(200):
+        status = client.get("/api/admin/rerender", headers=PIN).json()
+        if status["finished"]:
+            break
+        time.sleep(0.02)
+    assert status["done"] == 3 and status["failed"] == 0
+    assert sorted(seen) == sorted(ids)
+
+
+def test_a_photo_that_cannot_be_redone_is_counted_not_fatal(tmp_path, monkeypatch):
+    """A missing original must not stop the other 250 photos."""
+    app, engine, ids = _event_with_photos(tmp_path, count=3)
+    monkeypatch.setattr(engine, "_reprocess", lambda conn, photo: photo["id"] != ids[1])
+    client = TestClient(app)
+    client.post(f"/api/admin/events/{engine.active_event['id']}/rerender", headers=PIN)
+
+    for _ in range(200):
+        status = client.get("/api/admin/rerender", headers=PIN).json()
+        if status["finished"]:
+            break
+        time.sleep(0.02)
+    assert status["done"] == 2 and status["failed"] == 1
+
+
+def test_two_rerenders_at_once_are_refused(tmp_path, monkeypatch):
+    app, engine, ids = _event_with_photos(tmp_path, count=2)
+    monkeypatch.setattr(engine, "_reprocess", lambda conn, photo: time.sleep(0.3) or True)
+    client = TestClient(app)
+    event_id = engine.active_event["id"]
+
+    assert client.post(f"/api/admin/events/{event_id}/rerender", headers=PIN).status_code == 200
+    assert client.post(f"/api/admin/events/{event_id}/rerender", headers=PIN).status_code == 409
+
+
+def test_rerendering_an_unknown_event_is_refused(tmp_path):
+    app, _, _ = _event_with_photos(tmp_path, count=1)
+    assert TestClient(app).post("/api/admin/events/999/rerender", headers=PIN).status_code == 409
+
+
+def test_rerendering_needs_the_pin(tmp_path):
+    app, engine, _ = _event_with_photos(tmp_path, count=1)
+    res = TestClient(app).post(f"/api/admin/events/{engine.active_event['id']}/rerender")
+    assert res.status_code == 401

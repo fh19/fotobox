@@ -86,6 +86,19 @@ def _preview_json(preview) -> dict | None:
     }
 
 
+def _idle_rerender() -> dict:
+    """Fresh progress record for re-running the pipeline over an old event."""
+    return {
+        "running": False,
+        "finished": False,
+        "done": 0,
+        "failed": 0,
+        "total": 0,
+        "event": None,
+        "error": None,
+    }
+
+
 def _idle_export() -> dict:
     """Fresh USB-export progress record (M7b)."""
     return {
@@ -137,6 +150,8 @@ class Engine:
         self._offline_since = None
         # Shuffled photo URLs for the slideshow; refilled on entering SCREENSAVER.
         self._screensaver_photos: list[str] = []
+        # Progress of a running re-render, polled via GET /api/admin/rerender.
+        self._rerender = _idle_rerender()
         self._last_avail = None
         self._printer_resume_at = None
 
@@ -776,6 +791,60 @@ class Engine:
             self._log("error", "system", "ap_failed", str(exc))
             raise ActionRejected("ap_failed", f"Netzwerkumschaltung fehlgeschlagen: {exc}") from exc
         return self.network_status()
+
+    # --- re-rendering an old event -----------------------------------------
+
+    def start_rerender(self, event_id: int) -> dict:
+        """Run the pipeline again over every photo of an event, in the background.
+
+        The processed files are only as good as the pipeline that made them: the
+        photos from the first wedding are still 1872x1248 without EXIF, because
+        that is what the pipeline did back then. The originals are untouched, so
+        the framed copies can simply be made again — with today's resolution and
+        with the camera's EXIF carried over.
+        """
+        if self._rerender["running"]:
+            raise ActionRejected("rerender_busy", "Es läuft bereits eine Neuberechnung")
+        event = db.get_event(self.conn, event_id)
+        if event is None:
+            raise ActionRejected("not_found", "Event nicht gefunden")
+        photos = db.iter_event_photos(self.conn, event_id)
+        self._rerender = _idle_rerender()
+        self._rerender.update(running=True, total=len(photos), event=event["name"])
+        threading.Thread(
+            target=self._run_rerender,
+            args=(event_id, event["directory"]),
+            daemon=True,
+        ).start()
+        return {"started": True, "total": len(photos), "event": event["name"]}
+
+    def _run_rerender(self, event_id: int, directory: str) -> None:
+        """Own DB connection: this runs in a thread, next to the live session."""
+        conn = db.connect(self.config.db_path)
+        try:
+            for photo in db.iter_event_photos(conn, event_id):
+                row = dict(photo)
+                row["event_directory"] = directory
+                if self._reprocess(conn, row):
+                    self._rerender["done"] += 1
+                else:
+                    self._rerender["failed"] += 1
+            self._log(
+                "info",
+                "pipeline",
+                "rerender_done",
+                f"{self._rerender['done']} Bilder neu berechnet, "
+                f"{self._rerender['failed']} fehlgeschlagen",
+            )
+        except Exception as exc:  # never let a background thread die silently
+            self._rerender["error"] = str(exc)
+            self._log("error", "pipeline", "rerender_failed", str(exc))
+        finally:
+            self._rerender.update(running=False, finished=True)
+            conn.close()
+
+    def rerender_status(self) -> dict:
+        return dict(self._rerender)
 
     def start_usb_export(self) -> dict:
         """Copy the full active event to a USB stick in the background (M7b)."""

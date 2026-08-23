@@ -86,6 +86,7 @@ async function loadAll() {
     loadStatus(),
     loadNetwork(),
     loadDeleted(),
+    loadEventsForRerender(),
   ]);
 }
 
@@ -771,6 +772,61 @@ async function purgeDeleted() {
   }
 }
 
+/* Die bearbeiteten Bilder sind nur so gut wie die Pipeline, die sie gemacht hat.
+   Nach einer Verbesserung lassen sie sich aus den Originalen neu erzeugen. */
+async function loadEventsForRerender() {
+  try {
+    const data = await api("GET", "/api/events");
+    const select = $("gal-event");
+    select.innerHTML = "";
+    for (const event of data.events || []) {
+      const option = document.createElement("option");
+      option.value = String(event.id);
+      option.textContent = `${event.name} (${event.photo_count})`;
+      select.appendChild(option);
+    }
+  } catch (e) {
+    /* Galerie deaktiviert — dann gibt es hier nichts zu wählen */
+  }
+}
+
+async function startRerender() {
+  const select = $("gal-event");
+  const label = select.options[select.selectedIndex]?.textContent || "";
+  if (!window.confirm(`${label} neu berechnen? Das dauert einige Minuten.`)) return;
+  $("gal-rerender").disabled = true;
+  try {
+    const res = await api("POST", `/api/admin/events/${select.value}/rerender`);
+    note("gal-rerender-status", `Neuberechnung läuft: 0 / ${res.total}`);
+    pollRerender();
+  } catch (e) {
+    note("gal-rerender-status", "Fehler: " + e.message, false);
+    $("gal-rerender").disabled = false;
+  }
+}
+
+async function pollRerender() {
+  let status;
+  try {
+    status = await api("GET", "/api/admin/rerender");
+  } catch (e) {
+    $("gal-rerender").disabled = false;
+    return;
+  }
+  const failed = status.failed ? `, ${status.failed} fehlgeschlagen` : "";
+  if (status.running) {
+    note("gal-rerender-status", `Neuberechnung läuft: ${status.done} / ${status.total}${failed}`);
+    window.setTimeout(pollRerender, 2000);
+    return;
+  }
+  $("gal-rerender").disabled = false;
+  if (status.error) {
+    note("gal-rerender-status", "Fehler: " + status.error, false);
+  } else if (status.finished) {
+    note("gal-rerender-status", `Fertig: ${status.done} Bilder neu berechnet${failed}`);
+  }
+}
+
 async function exportUSB() {
   $("export-usb").disabled = true;
   note("export-status", "Starte Export …");
@@ -834,6 +890,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("net-ap").addEventListener("click", toggleAP);
   $("net-ap-auto").addEventListener("change", toggleAPAuto);
   $("gal-purge").addEventListener("click", purgeDeleted);
+  $("gal-rerender").addEventListener("click", startRerender);
   $("export-usb").addEventListener("click", exportUSB);
   $("sys-reboot").addEventListener("click", reboot);
   $("sys-shutdown").addEventListener("click", shutdown);
