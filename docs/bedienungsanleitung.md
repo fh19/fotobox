@@ -87,6 +87,20 @@ Hinweise:
 - Bei einem Problem erscheint kurz **„Da ist etwas schiefgelaufen"**; die Box kehrt von
   selbst zum Start zurück. **Ein Fehler beendet nie den Betrieb.**
 
+### Wenn gerade niemand fotografiert
+
+Nach **5 Minuten** ohne Bedienung zeigt die Box die Bilder des Abends in zufälliger
+Reihenfolge, formatfüllend. **Der erste Tipp macht kein Foto** — er holt nur den
+Startbildschirm zurück; erst die zweite Berührung löst aus. Sonst würde die Box jeden
+fotografieren, der sie bloß aufwecken wollte.
+
+### Galerie am Bildschirm
+
+Unten rechts auf dem Startbildschirm führt **„Galerie"** zu den bisherigen Fotos —
+dieselbe Ansicht wie am Handy. Durchblättern mit Wischen oder den Pfeilen, und über den
+runden Knopf unten rechts im Bild lässt sich ein Foto **noch einmal drucken**. Nach einer
+Minute ohne Bedienung kehrt die Box von selbst zur Fotobox zurück.
+
 ---
 
 ## 4. Admin-Bereich
@@ -105,12 +119,18 @@ Die Kacheln:
 | **Hintergründe & Rahmen** | Rahmen/Hintergründe hochladen, auflisten, löschen (Abschnitt 6) |
 | **Einstellungen** | Countdown-Dauer, Timeouts, Druck-Limits, Hintergrundauswahl ein/aus |
 | **Event** | Aktives Event, Bildzahl, neues Event anlegen |
-| **Netzwerk** | Access-Point ein/aus, IP-Adresse, Galerie-URL (Abschnitt 7) |
+| **Galerie** | Alle Veranstaltungen durchsehen, Bilder auswählen, herunterladen, löschen; Bilder neu berechnen (Abschnitt 7) |
+| **Netzwerk** | Access-Point ein/aus und automatisch, IP-Adresse, Galerie-URL (Abschnitt 7) |
 | **Export** | Aktives Event auf USB-Stick kopieren (Abschnitt 7) |
 | **System** | Fotobox neu starten, Herunterfahren |
 
 Der wichtigste Knopf des Abends ist **„Drucker fortsetzen"** — er behebt das häufigste
 Problem (Papier/Kassette leer).
+
+**Eingeben ohne Tastatur:** Tippt man am Touchscreen ein Text- oder Zahlenfeld an, fährt
+unten eine Tastatur aus — mit Umlauten, Umschalttaste, Leertaste, Rückschritt und
+**„Fertig"**. Zahlenfelder bekommen nur einen Ziffernblock. Am PC mit echter Tastatur
+erscheint sie nicht.
 
 ### Werden Einstellungen gespeichert?
 
@@ -123,6 +143,11 @@ Zwei Ausnahmen — **bewusst nicht dauerhaft**:
 - Der **Access-Point** ist nach einem Neustart wieder **aus** (Sicherheitsnetz, damit die
   Box immer ins normale Netz zurückkehrt). Nach einem Neustart bei Bedarf erneut
   einschalten.
+  **Ausnahme:** Findet die Box zwei Minuten lang gar kein Netzwerk — der Normalfall an
+  einer fremden Location —, schaltet sie den Access-Point von selbst ein. Sie schaltet ihn
+  nie von selbst wieder aus: im AP-Betrieb sieht sie das Heimnetz gar nicht mehr, und ein
+  Zurückschalten mitten in der Feier würde alle Gäste trennen. Der Schalter dafür steht
+  im Admin unter *Netzwerk*.
 - Die **Druckzähler** überstehen Neustarts. „Gedruckt (Event)" zählt die fertigen Drucke
   des laufenden Events, „Gedruckt (gesamt)" läuft bis zum nächsten Zurücksetzen weiter.
   Eine Restanzeige des Bandvorrats gibt es nicht — der Drucker meldet den Bandstand nicht.
@@ -183,6 +208,43 @@ anzeigen" **aus**, und den Rahmen als Standard setzen.
    **„Alle Fotos herunterladen (ZIP)"**.
 4. Danach den Access-Point wieder ausschalten (oder neu starten).
 
+**Nur einzelne Bilder:** **„Auswählen"** oben schaltet um — ein Tipp auf eine Kachel wählt
+sie aus (blauer Rahmen mit Haken) statt sie zu öffnen. Darunter steht, wie viele Bilder
+gewählt sind und wie groß das Archiv wird: **„Auswahl herunterladen (ZIP)"**.
+
+**Einzelne Bilder ansehen:** Tippen öffnet das Bild groß. Weiter geht es durch Wischen,
+mit den Pfeilen links und rechts oder den Pfeiltasten; der runde Knopf unten rechts
+**druckt das Bild noch einmal** — und zwar in der Fassung, die gerade zu sehen ist.
+
+### Alle Veranstaltungen verwalten (Admin)
+
+Admin → **Galerie** → **„Hauptgalerie öffnen"**. Oben lässt sich zwischen **allen**
+Veranstaltungen umschalten, nicht nur der aktuellen. Der Auswahlmodus bietet hier
+zusätzlich **„Auswahl löschen"**.
+
+Löschen und Platz schaffen sind zwei Schritte:
+
+1. **Löschen** nimmt die Bilder sofort aus Galerie, Zählern und Archiven — die Dateien
+   bleiben aber auf der Karte.
+2. Die Admin-Kachel zeigt, wie viel diese Dateien noch belegen, und bietet
+   **„Endgültig entfernen"**. Das gibt den Platz frei und ist **nicht umkehrbar**.
+
+### Bilder neu berechnen
+
+Die bearbeiteten Fassungen sind nur so gut wie die Pipeline, die sie erzeugt hat. Wird
+etwas verbessert — höhere Auflösung, EXIF-Daten, Zeitstempel —, gilt das zunächst nur für
+neue Fotos. Admin → **Galerie** → Veranstaltung wählen → **„Bilder neu berechnen"** erzeugt
+sie aus den unangetasteten Originalen noch einmal. Läuft im Hintergrund mit Fortschritts-
+anzeige; bei 250 Bildern etwa 20 Minuten. Die Originale werden dabei nie verändert.
+
+### Die Box als Netzwerkdrucker
+
+Im Heimnetz meldet sich die Box als **„Fotodrucker Fotobox"**. iPhone, iPad und Android
+finden sie von selbst (AirPrint bzw. Mopria) — nichts einzurichten. Am PC den Drucker
+**treiberlos** einbinden, sonst kommen Ausdrücke mit Rand und in geringerer Auflösung
+heraus (siehe `docs/installation.md`). Gäste im Fotobox-WLAN können **nicht** drucken;
+das ist Absicht.
+
 ### Fotos auf USB-Stick sichern
 USB-Stick (FAT32/exFAT) einstecken → Admin → **Export** → **„Auf USB-Stick kopieren"**.
 Der Fortschritt wird angezeigt; kopiert wird das **komplette aktive Event**.
@@ -206,6 +268,9 @@ Stromtrennung: **„Fotobox neu starten"**.
 | Bildschirm bleibt schwarz | Monitor/Strom prüfen. Reagiert nichts, Box neu starten (Strom nur als letzte Option trennen). |
 | „Der Speicher ist voll" | Alte Events per USB sichern und Platz schaffen. |
 | Gäste finden das WLAN nicht | Access-Point im Admin eingeschaltet? WLAN heißt „Fotobox". |
+| Live-Bild bleibt schwarz, Webcam „hängt" | Meist die USB-Strecke, nicht die Software. Webcam **direkt an den Pi** stecken, nicht über zwei hintereinander geschaltete Hubs. Im Log steht dann `uvcvideo ... -71` gefolgt von `USB disconnect`. |
+| Galerie lädt quälend langsam | Funkstrecke prüfen: `nmcli -f IN-USE,SSID,CHAN,SIGNAL dev wifi list`. Hängt die Box im 5-GHz-Band derselben SSID, kann der Durchsatz zusammenbrechen — siehe `docs/installation.md`, Abschnitt 9. |
+| Bilder mit Rahmen sind kleiner als die Originale | `pipeline.processed_scale: auto` setzen und die Veranstaltung neu berechnen lassen (Admin → Galerie). |
 
 ---
 
@@ -224,5 +289,9 @@ Stromtrennung: **„Fotobox neu starten"**.
 | WLAN-Name (Access-Point) | Fotobox |
 | Galerie-Adresse (im AP) | http://192.168.4.1/gallery |
 | Admin-PIN | 2606 |
+| Bildschirmschoner | ein, nach 5 min |
+| Auflösung der Download-Fassung | `auto` (Rahmen wächst auf Originalgröße) |
+| Access-Point automatisch | ein, nach 2 min ohne Netzwerk |
+| Name im Netzwerk (Drucker) | Fotodrucker Fotobox |
 
 Diese Werte lassen sich im Admin (Einstellungen / Netzwerk) jederzeit ändern.

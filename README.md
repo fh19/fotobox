@@ -13,8 +13,15 @@ einem Canon Selphy CP1500. **Läuft komplett offline.**
 - Bildpipeline: Chroma-Key (Greenscreen), KI-Freistellung (rembg), Overlay- und
   Rahmen-/Passepartout-Modus mit eigenen PNGs
 - Randloser Postkartendruck (Gutenprint), Druck-Zähler und Warteschlange
-- Admin-Bereich (PIN): Kamera-/Drucker-Status, Hintergründe hochladen, Gäste-WLAN,
-  USB-Export, Neustart/Herunterfahren
+- Galerie: am Bildschirm und im Gäste-WLAN, Einzelansicht mit Wischen, Nachdrucken,
+  Mehrfachauswahl mit ZIP-Download
+- Bildschirmschoner: zeigt nach einigen Minuten die Bilder des Abends; die erste
+  Berührung weckt nur auf, sie löst kein Foto aus
+- Admin-Bereich (PIN): Kamera-/Drucker-Status, Hintergründe hochladen, Gäste-WLAN
+  (auch automatisch, wenn kein Netz da ist), Bildschirmtastatur für den Touchbetrieb,
+  Verwaltung aller Veranstaltungen, USB-Export, Neustart/Herunterfahren
+- Netzwerkdrucker: die Box gibt den Selphy im Heimnetz frei — AirPrint und Mopria
+  ohne Treiberinstallation
 - Robust für den Dauerbetrieb: Zustandsautomat mit Timeouts im Backend,
   read-only Root gegen SD-Korruption, Hardware-RTC für korrekte Zeit ohne Netz
 
