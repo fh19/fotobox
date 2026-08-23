@@ -324,6 +324,7 @@ def test_only_the_selected_photos_are_zipped(tmp_path):
         names = archive.namelist()
     assert names == [db.photo_filename(ids[0]), db.photo_filename(ids[2])]
     assert "auswahl-2" in res.headers["content-disposition"]
+    assert "_rahmen_" in res.headers["content-disposition"]
 
 
 def test_the_whole_event_is_still_the_default(tmp_path):
@@ -581,3 +582,18 @@ def test_the_original_thumbnail_keeps_the_photo_date(tmp_path):
     TestClient(app).get(f"/api/photos/{ids[0]}/thumb-original")
     made = engine.photo_variant_path("thumbs_original", ids[0])
     assert int(made.stat().st_mtime) == long_ago
+
+
+def test_the_archive_name_says_which_version_is_inside(tmp_path):
+    """Downloaded next to each other, the file name is all there is to go by."""
+    app, engine, _ = _event_with_photos(tmp_path, count=2)
+    event_id = engine.active_event["id"]
+    client = TestClient(app)
+
+    for variant, expected in (
+        ("processed", "_rahmen"),
+        ("original", "_original"),
+        ("both", "_beide"),
+    ):
+        res = client.get(f"/api/events/{event_id}/download.zip?variant={variant}")
+        assert expected + ".zip" in res.headers["content-disposition"], variant

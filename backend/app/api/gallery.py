@@ -172,8 +172,11 @@ async def download_zip(
 
     selection = _photo_ids(ids)
     entries = engine.event_files(event_id, variant, selection)
+    # Im Download-Ordner liegen die Archive später nebeneinander — der Name muss
+    # allein verraten, was drin ist.
+    kind = {"processed": "rahmen", "original": "original", "both": "beide"}[variant]
     suffix = f"_auswahl-{len(selection)}" if selection else ""
-    filename = f"{event['directory']}{suffix}.zip"
+    filename = f"{event['directory']}_{kind}{suffix}.zip"
     return StreamingResponse(
         stream_zip(entries),
         media_type="application/zip",

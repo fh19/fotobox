@@ -124,8 +124,9 @@ Die Kacheln:
 | **Export** | Aktives Event auf USB-Stick kopieren (Abschnitt 7) |
 | **System** | Fotobox neu starten, Herunterfahren |
 
-Der wichtigste Knopf des Abends ist **„Drucker fortsetzen"** — er behebt das häufigste
-Problem (Papier/Kassette leer).
+**„Drucker fortsetzen"** ist die Handbremse für das häufigste Problem (Papier oder
+Kassette leer). Meist braucht man ihn nicht: nach dem Nachlegen gibt die Box die
+Warteschlange nach rund 20 Sekunden von selbst wieder frei.
 
 **Eingeben ohne Tastatur:** Tippt man am Touchscreen ein Text- oder Zahlenfeld an, fährt
 unten eine Tastatur aus — mit Umlauten, Umschalttaste, Leertaste, Rückschritt und
@@ -157,9 +158,13 @@ Zwei Ausnahmen — **bewusst nicht dauerhaft**:
 ## 5. Während der Feier — wiederkehrende Handgriffe
 
 ### Papier oder Farbkassette wechseln
-Wenn der Drucker stoppt (leer): neues Papier / neue Kassette einlegen, dann im Admin
-**Drucker → „Drucker fortsetzen"**. Mehr ist nicht nötig — die Druckzähler hängen nicht
-am Papiervorrat.
+Neues Papier oder neue Kassette einlegen — **mehr ist normalerweise nicht nötig**. Die Box
+gibt die Warteschlange nach etwa 20 Sekunden von selbst wieder frei und druckt weiter.
+(CUPS lässt eine gestoppte Warteschlange sonst stehen, bis jemand sie von Hand freigibt;
+deshalb versucht die Box es in kurzen Abständen selbst.)
+
+Bleibt es doch einmal stehen, hilft **Drucker → „Drucker fortsetzen"** im Admin. Die
+Druckzähler hängen nicht am Papiervorrat.
 
 ### Kamera-Akku wechseln
 DSLR ausschalten, Akku tauschen, wieder einschalten. Falls die Box die Kamera danach als
@@ -263,7 +268,7 @@ Stromtrennung: **„Fotobox neu starten"**.
 | „Kleine Pause — die Fotobox ist gleich wieder da" | Kamera nicht verfügbar. DSLR einschalten/prüfen; Admin → Kamera erneut übernehmen. |
 | Countdown läuft, aber es kommt „Die Kamera hat nicht reagiert" | Die DSLR hat nicht ausgelöst (meist Autofokus findet keine Schärfe). **Objektiv auf `MF` (manueller Fokus) stellen** und die Schärfe einmal fest einstellen — dann löst sie immer aus. Die Box heilt sich nach wenigen Sekunden von selbst zurück zum Start. |
 | Druck-Knopf fehlt in der Vorschau | Drucker nicht bereit (leer/pausiert). Papier/Kassette prüfen, „Drucker fortsetzen". Drucklimit erreicht. Drucklimit im admin-Bereich erhöhen. Fotos sind gespeichert. |
-| Drucker stoppt mitten im Abend | Papier oder Farbband leer → nachlegen → „Drucker fortsetzen". |
+| Drucker stoppt mitten im Abend | Papier oder Farbband leer → nachlegen. Die Box läuft nach ~20 s von selbst weiter; falls nicht, „Drucker fortsetzen". |
 | Ausdruck hat einen weißen Rand | Randlos-Einstellung; im Normalbetrieb bereits korrekt. Falls nicht, Support/Technik. |
 | Bildschirm bleibt schwarz | Monitor/Strom prüfen. Reagiert nichts, Box neu starten (Strom nur als letzte Option trennen). |
 | „Der Speicher ist voll" | Alte Events per USB sichern und Platz schaffen. |
@@ -285,7 +290,7 @@ Stromtrennung: **„Fotobox neu starten"**.
 | Hintergrundauswahl | ein |
 | Standard-Hintergrund | Ohne Hintergrund |
 | Drucke pro Foto | 1 |
-| Kontingent pro Event | 108 (eine Farbkassette) |
+| Kontingent pro Event | 500 (im Admin reduzierbar; eine Kassette reicht für 108 Blatt) |
 | WLAN-Name (Access-Point) | Fotobox |
 | Galerie-Adresse (im AP) | http://192.168.4.1/gallery |
 | Admin-PIN | 2606 |

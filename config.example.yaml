@@ -106,7 +106,7 @@ printing:
   safe_margin_x: 25
   safe_margin_y: 37
   max_per_photo: 1
-  max_per_event: 108
+  max_per_event: 500                  # großzügig; im Admin jederzeit reduzierbar
   queue_warn_length: 5
   sheets_per_cartridge: 108
   caption:
