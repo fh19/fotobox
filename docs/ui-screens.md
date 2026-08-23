@@ -256,6 +256,12 @@ Kacheln:
    `Löschen`; Upload per `Name`, `Modus` (Rahmen/Overlay/Greenscreen/KI) und Datei.
    `frame` rahmt das Foto im transparenten Fenster des PNG, `overlay` legt das PNG
    über das Foto
+4b. **Bildschirmtastatur** — Tippt man ein Text- oder Zahlenfeld an, erscheint unten
+   eine Tastatur: Ziffernreihe, deutsches Buchstabenfeld mit `ä ö ü ß`, `ABC` zum
+   Umschalten, `Leer`, `←`, `✕` und `Fertig`. Zahlenfelder bekommen nur einen
+   Ziffernblock. Ohne sie ließ sich am Gerät kaum ein Parameter ändern.
+   `ui.onscreen_keyboard`: `auto` (nur ohne echte Tastatur), `on`, `off`.
+
 5. **Einstellungen** — Countdown-Dauer, `Auslöser-Vorlauf (ms)`, Timeouts, Druck-Limits,
    Hintergrundauswahl ein/aus
 
@@ -308,6 +314,11 @@ Der Nachdruck steht **allen** offen, auch Handys im Gäste-WLAN. Begrenzt wird e
 allein durch `printing.max_per_event` — nicht durch `max_per_photo`, denn das Limit
 soll nur mehrfaches Tippen auf derselben Vorschau verhindern, nicht eine bewusst
 gewünschte zweite Kopie.
+
+**Mehrere Bilder auswählen.** `Auswählen` oben schaltet den Auswahlmodus ein: ein
+Tipp auf eine Kachel wählt sie aus (blauer Rahmen mit Haken) statt sie zu öffnen.
+Darunter steht `3 Fotos ausgewählt`, `Auswahl herunterladen (ZIP, 4,2 MB)` und
+`Auswahl aufheben`. Vorher gab es nur alles oder ein Bild einzeln.
 
 **Am Touchscreen** (Aufruf mit `?kiosk=1`) kommen hinzu: `Zurück zur Fotobox` oben
 rechts und eine Rückkehr von selbst nach `network.gallery_return_seconds` ohne

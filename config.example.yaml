@@ -63,6 +63,7 @@ ui:
   idle_hint_pulse: true
   flash_enabled: true                 # Bildschirm-Blitz als Aufhellung beim Auslösen
   flash_duration_ms: 400              # Weiß-Dauer vor der Auslösung
+  onscreen_keyboard: auto             # auto (nur ohne Tastatur) | on | off
   admin_corner: top_left              # top_left | top_right
   admin_longpress_seconds: 5
   admin_pin: "2606"                   # ändern!

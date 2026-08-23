@@ -20,6 +20,10 @@ const state = {
   // next — the most tiresome part of the evening according to the notes.
   photos: [],
   index: -1,
+  // Selecting: after the first event the only choices were "all 252 photos" or
+  // "one at a time". Tapping a tile selects instead of opening while this is on.
+  selecting: false,
+  selected: new Set(),
   kiosk: new URLSearchParams(location.search).has("kiosk"),
 };
 
@@ -40,6 +44,11 @@ const dom = {
   lightboxCount: el("lightbox-count"),
   lightboxNote: el("lightbox-note"),
   backToBox: el("back-to-box"),
+  selectMode: el("select-mode"),
+  selectionBar: el("selection-bar"),
+  selectionCount: el("selection-count"),
+  selectionClear: el("selection-clear"),
+  downloadSelection: el("download-selection"),
 };
 
 function humanSize(bytes) {
@@ -172,8 +181,53 @@ function appendTile(photo) {
 
   const index = state.photos.length;
   state.photos.push(photo);
-  tile.addEventListener("click", () => openLightbox(index));
+  tile.dataset.photoId = String(photo.id);
+  tile.addEventListener("click", () => {
+    if (state.selecting) toggleSelected(photo.id, tile);
+    else openLightbox(index);
+  });
+  if (state.selected.has(photo.id)) tile.classList.add("is-selected");
   dom.grid.appendChild(tile);
+}
+
+function toggleSelected(photoId, tile) {
+  if (state.selected.has(photoId)) state.selected.delete(photoId);
+  else state.selected.add(photoId);
+  tile.classList.toggle("is-selected", state.selected.has(photoId));
+  refreshSelection();
+}
+
+function setSelecting(on) {
+  state.selecting = on;
+  dom.selectMode.classList.toggle("is-active", on);
+  dom.selectMode.textContent = on ? "Auswahl beenden" : "Auswählen";
+  if (!on) clearSelection();
+  refreshSelection();
+}
+
+function clearSelection() {
+  state.selected.clear();
+  dom.grid.querySelectorAll(".tile.is-selected").forEach((t) => t.classList.remove("is-selected"));
+  refreshSelection();
+}
+
+async function refreshSelection() {
+  const count = state.selected.size;
+  dom.selectionBar.classList.toggle("hidden", !state.selecting);
+  dom.selectionCount.textContent = count === 1 ? "1 Foto ausgewählt" : `${count} Fotos ausgewählt`;
+  dom.downloadSelection.classList.toggle("is-disabled", count === 0);
+  if (!count) return;
+  const ids = [...state.selected].join(",");
+  dom.downloadSelection.href =
+    `/api/events/${state.eventId}/download.zip?variant=${state.variant}&ids=${ids}`;
+  try {
+    const info = await getJson(
+      `/api/events/${state.eventId}/download-info?variant=${state.variant}&ids=${ids}`
+    );
+    dom.downloadSelection.textContent = `Auswahl herunterladen (ZIP, ${humanSize(info.size_bytes)})`;
+  } catch (err) {
+    dom.downloadSelection.textContent = "Auswahl herunterladen (ZIP)";
+  }
 }
 
 async function refreshDownload() {
@@ -288,6 +342,8 @@ function wireEvents() {
   dom.lightbox.addEventListener("click", (e) => {
     if (e.target === dom.lightbox) closeLightbox();
   });
+  dom.selectMode.addEventListener("click", () => setSelecting(!state.selecting));
+  dom.selectionClear.addEventListener("click", clearSelection);
   dom.toggle.querySelectorAll(".toggle__btn").forEach((btn) => {
     btn.addEventListener("click", () => {
       if (btn.dataset.variant === state.variant) return;

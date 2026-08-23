@@ -32,6 +32,14 @@ def _disabled() -> JSONResponse:
     )
 
 
+def _photo_ids(raw: str | None) -> set[int] | None:
+    """``?ids=12,13,14`` → a selection, or None for the whole event."""
+    if not raw:
+        return None
+    ids = {int(part) for part in raw.split(",") if part.strip().isdigit()}
+    return ids or None
+
+
 def _not_found(message: str) -> JSONResponse:
     return JSONResponse(
         status_code=404, content={"error": {"code": "not_found", "message": message}}
@@ -120,7 +128,10 @@ async def get_event_photos(
 
 @router.get("/api/events/{event_id}/download-info")
 async def get_download_info(
-    request: Request, event_id: int, variant: str = Query("processed")
+    request: Request,
+    event_id: int,
+    variant: str = Query("processed"),
+    ids: str | None = Query(None),
 ) -> Response:
     engine = _engine(request)
     if not engine.config.network.gallery_enabled:
@@ -130,14 +141,22 @@ async def get_download_info(
     if db.get_event(engine.conn, event_id) is None:
         return _not_found("Event nicht gefunden")
 
-    files = [(arc, path) for arc, path in engine.event_files(event_id, variant) if path.exists()]
+    selection = _photo_ids(ids)
+    files = [
+        (arc, path)
+        for arc, path in engine.event_files(event_id, variant, selection)
+        if path.exists()
+    ]
     size = sum(path.stat().st_size for _, path in files)
     return JSONResponse({"variant": variant, "file_count": len(files), "size_bytes": size})
 
 
 @router.get("/api/events/{event_id}/download.zip")
 async def download_zip(
-    request: Request, event_id: int, variant: str = Query("processed")
+    request: Request,
+    event_id: int,
+    variant: str = Query("processed"),
+    ids: str | None = Query(None),
 ) -> Response:
     engine = _engine(request)
     if not engine.config.network.gallery_enabled:
@@ -148,8 +167,10 @@ async def download_zip(
     if event is None:
         return _not_found("Event nicht gefunden")
 
-    entries = engine.event_files(event_id, variant)
-    filename = f"{event['directory']}.zip"
+    selection = _photo_ids(ids)
+    entries = engine.event_files(event_id, variant, selection)
+    suffix = f"_auswahl-{len(selection)}" if selection else ""
+    filename = f"{event['directory']}{suffix}.zip"
     return StreamingResponse(
         stream_zip(entries),
         media_type="application/zip",

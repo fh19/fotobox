@@ -162,3 +162,31 @@ def test_frontend_assets_are_revalidated(tmp_path):
         assert res.status_code == 200, path
         assert res.headers.get("cache-control") == "no-cache", path
         assert res.headers.get("etag"), path  # revalidation stays cheap
+
+
+def test_the_admin_has_an_onscreen_keyboard(tmp_path):
+    """ "in der Konfiguration kann man ohne Tastatur nur sehr wenig ändern" — the
+    box has a touchscreen and no keyboard."""
+    html = (FRONTEND_DIR / "admin.html").read_text(encoding="utf-8")
+    assert 'id="osk"' in html
+    js = (FRONTEND_DIR / "admin.js").read_text(encoding="utf-8")
+    assert "onscreen_keyboard" in js
+    # German names need umlauts, and numbers need their own pad.
+    assert "ü" in js and "ö" in js and "ä" in js and "ß" in js
+    assert "OSK_DIGITS" in js
+    # The field must keep focus, or the next key has nowhere to write.
+    assert "pointerdown" in js and "preventDefault" in js
+
+
+def test_the_keyboard_setting_is_configurable(tmp_path):
+    client = TestClient(create_app(make_config(tmp_path), RealClock()))
+    body = client.get("/api/admin/config", headers={"X-Fotobox-Pin": "2606"}).json()
+    assert body["ui"]["onscreen_keyboard"] == "auto"
+
+
+def test_the_gallery_can_select_and_download_a_subset(tmp_path):
+    html = (FRONTEND_DIR / "gallery.html").read_text(encoding="utf-8")
+    for element in ("select-mode", "selection-bar", "download-selection", "selection-clear"):
+        assert element in html, element
+    js = (FRONTEND_DIR / "gallery.js").read_text(encoding="utf-8")
+    assert "&ids=" in js and "state.selected" in js

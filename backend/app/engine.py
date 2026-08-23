@@ -1107,14 +1107,22 @@ class Engine:
     def _event_variant_path(self, directory: str, variant: str, filename: str) -> Path:
         return self.config.events_dir / directory / variant / filename
 
-    def event_files(self, event_id: int, variant: str) -> list[tuple[str, Path]]:
-        """(*arcname*, *path*) pairs for a ZIP export of an event's photos."""
+    def event_files(
+        self, event_id: int, variant: str, photo_ids: set[int] | None = None
+    ) -> list[tuple[str, Path]]:
+        """(*arcname*, *path*) pairs for a ZIP export of an event's photos.
+
+        ``photo_ids`` limits the export to a selection — asked for after the first
+        event, where the only choice was "all 252 photos or one at a time".
+        """
         entries: list[tuple[str, Path]] = []
         event = db.get_event(self.conn, event_id)
         if event is None:
             return entries
         directory = event["directory"]
         for photo in db.iter_event_photos(self.conn, event_id):
+            if photo_ids is not None and photo["id"] not in photo_ids:
+                continue
             filename = photo["filename"]
             if variant in ("original", "both"):
                 arc = f"original/{filename}" if variant == "both" else filename

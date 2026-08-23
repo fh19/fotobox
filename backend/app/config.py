@@ -114,6 +114,9 @@ class UIConfig(_Model):
     # *before* the shutter fires, then stays white through the capture.
     flash_enabled: bool = True
     flash_duration_ms: int = Field(default=400, ge=0)
+    # Bildschirmtastatur im Admin: "auto" = nur ohne echte Tastatur (Touchscreen).
+    # Ohne sie ließ sich am Gerät kaum ein Parameter ändern.
+    onscreen_keyboard: Literal["auto", "on", "off"] = "auto"
     admin_corner: Literal["top_left", "top_right"] = "top_left"
     admin_longpress_seconds: float = Field(gt=0)
     admin_pin: str

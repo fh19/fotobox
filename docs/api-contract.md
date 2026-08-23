@@ -308,7 +308,7 @@ Erreichbar unter `/gallery`, ohne PIN, nur wenn `network.gallery_enabled` true i
 |---|---|---|
 | `GET` | `/api/events` | Liste aller Events mit Bildzahl |
 | `GET` | `/api/events/{id}/photos` | Paginiert, `?page=1&per_page=60` |
-| `GET` | `/api/events/{id}/download.zip` | Streaming-ZIP, `?variant=processed\|original\|both` |
+| `GET` | `/api/events/{id}/download.zip` | Streaming-ZIP, `?variant=processed\|original\|both`, optional `?ids=12,13` für eine Auswahl |
 
 Das ZIP wird gestreamt, nicht zwischengespeichert — bei 1000 Bildern ist die
 Zwischendatei sonst größer als der freie Platz.

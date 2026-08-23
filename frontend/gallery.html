@@ -20,11 +20,17 @@
           </button>
           <button type="button" data-variant="original" class="toggle__btn">Original</button>
         </div>
+        <button type="button" id="select-mode" class="toggle__btn select-mode">Auswählen</button>
         <a id="download-all" class="download" href="#">Alle Fotos herunterladen (ZIP)</a>
       </div>
     </header>
 
     <main>
+      <div id="selection-bar" class="selbar hidden">
+        <span id="selection-count" class="selbar__count"></span>
+        <a id="download-selection" class="download" href="#">Auswahl herunterladen (ZIP)</a>
+        <button type="button" id="selection-clear" class="more__btn">Auswahl aufheben</button>
+      </div>
       <p id="empty" class="empty hidden">Noch keine Fotos vorhanden.</p>
       <div id="grid" class="grid"></div>
       <div class="more">

@@ -137,6 +137,38 @@ main {
   border-radius: 6px;
 }
 
+/* Selection: a checkmark on the tile plus a bar with the running total. */
+.selbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 0 16px;
+}
+.selbar__count {
+  font-size: 15px;
+  color: var(--muted);
+}
+.tile.is-selected {
+  outline: 4px solid var(--accent);
+  outline-offset: -4px;
+}
+.tile.is-selected::after {
+  content: "✓";
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 18px;
+}
+
 .more {
   text-align: center;
   padding: 24px 0;

@@ -80,6 +80,125 @@ async function loadAll() {
   ]);
 }
 
+// --- on-screen keyboard -----------------------------------------------------
+//
+// "in der Konfiguration kann man ohne Tastatur nur sehr wenig ändern" — the box
+// has a touchscreen and no keyboard, so text and number fields were read-only in
+// practice. The PIN pad already proved the idea; this generalises it to every
+// field and appears when one is focused.
+
+const OSK_LETTERS = [
+  "1234567890",
+  "qwertzuiopü",
+  "asdfghjklöä",
+  "yxcvbnmß-.",
+];
+const OSK_DIGITS = ["123", "456", "789", "0.-"];
+
+let oskTarget = null;
+let oskShift = false;
+
+function oskInsert(text) {
+  if (!oskTarget) return;
+  // Number inputs report an empty selection API in some browsers; append is enough
+  // for the short values here and keeps the caret handling simple.
+  oskTarget.value += text;
+  oskTarget.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function oskAction(action) {
+  if (!oskTarget) return;
+  if (action === "back") oskTarget.value = oskTarget.value.slice(0, -1);
+  else if (action === "clear") oskTarget.value = "";
+  else if (action === "shift") {
+    oskShift = !oskShift;
+    buildOsk();
+    return;
+  } else if (action === "done") {
+    hideOsk();
+    return;
+  }
+  oskTarget.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+function oskKey(label, opts = {}) {
+  const key = document.createElement("button");
+  key.type = "button";
+  key.className = "osk__key" + (opts.aux ? " osk__key--aux" : "");
+  key.textContent = label;
+  if (opts.wide) key.classList.add("osk__key--wide");
+  // pointerdown + preventDefault: the field must keep focus, otherwise the next
+  // key press has nowhere to write.
+  key.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    if (opts.action) oskAction(opts.action);
+    else oskInsert(opts.insert ?? label);
+    if (oskShift && !opts.action) {
+      oskShift = false;
+      buildOsk();
+    }
+  });
+  return key;
+}
+
+function buildOsk() {
+  const numeric = oskTarget && oskTarget.type === "number";
+  const rows = numeric ? OSK_DIGITS : OSK_LETTERS;
+  $("osk").innerHTML = "";
+  for (const row of rows) {
+    const line = document.createElement("div");
+    line.className = "osk__row";
+    for (const char of row) {
+      const label = oskShift ? char.toUpperCase() : char;
+      line.appendChild(oskKey(label));
+    }
+    $("osk").appendChild(line);
+  }
+  const last = document.createElement("div");
+  last.className = "osk__row";
+  if (!numeric) {
+    last.appendChild(oskKey(oskShift ? "abc" : "ABC", { action: "shift", aux: true }));
+    last.appendChild(oskKey("Leer", { insert: " ", wide: true }));
+  }
+  last.appendChild(oskKey("←", { action: "back", aux: true }));
+  last.appendChild(oskKey("✕", { action: "clear", aux: true }));
+  last.appendChild(oskKey("Fertig", { action: "done", aux: true, wide: true }));
+  $("osk").appendChild(last);
+}
+
+function showOsk(input) {
+  oskTarget = input;
+  oskShift = false;
+  buildOsk();
+  $("osk").classList.remove("hidden");
+  $("osk").setAttribute("aria-hidden", "false");
+}
+
+function hideOsk() {
+  oskTarget = null;
+  $("osk").classList.add("hidden");
+  $("osk").setAttribute("aria-hidden", "true");
+}
+
+/* "auto" = only where there is no real keyboard (a touchscreen has no hover). */
+let oskWired = false;
+
+function wireOnscreenKeyboard(mode) {
+  if (oskWired || mode === "off") return;
+  if (mode !== "on" && window.matchMedia("(hover: hover)").matches) return;
+  document.querySelectorAll('#admin input[type="text"], #admin input[type="number"]').forEach(
+    (input) => {
+      input.addEventListener("focus", () => showOsk(input));
+    }
+  );
+  document.addEventListener("pointerdown", (event) => {
+    if (!oskTarget) return;
+    if (event.target.closest("#osk") || event.target === oskTarget) return;
+    hideOsk();
+  });
+  oskWired = true;
+}
+
 // --- printer ----------------------------------------------------------------
 
 async function loadPrinter() {
@@ -375,6 +494,7 @@ async function loadConfig() {
   $("cfg-bgselect").checked = cfg.ui.background_select_enabled;
   configuredBackground = cfg.ui.default_background;
   $("cfg-bgdefault").value = configuredBackground;
+  wireOnscreenKeyboard(cfg.ui.onscreen_keyboard || "auto");
 }
 
 async function saveConfig() {

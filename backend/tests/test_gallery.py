@@ -280,3 +280,72 @@ def test_the_reprint_follows_the_shown_variant(tmp_path):
     # Without a variant the framed copy stays the default.
     client.post(f"/api/photos/{photo_id}/print")
     assert submitted[-1].endswith(f"prints/{db.photo_filename(photo_id)}")
+
+
+# --- downloading a selection -------------------------------------------------
+#
+# After the first event the only choices were all 252 photos or one at a time.
+
+
+def _event_with_photos(tmp_path, count=3):
+    config = make_config(tmp_path)
+    app = create_app(config, RealClock())
+    engine = app.state.engine
+    ids = []
+    for _ in range(count):
+        photo_id = db.insert_photo(
+            engine.conn,
+            event_id=engine.active_event["id"],
+            captured_at=datetime.now(UTC).astimezone(),
+            background_id=None,
+            background_mode="none",
+            camera_model="Nikon",
+            width=1872,
+            height=1248,
+        )
+        for variant in ("processed", "originals"):
+            path = engine.photo_variant_path(variant, photo_id)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"\xff\xd8\xff" + bytes([photo_id]) * 400)
+        ids.append(photo_id)
+    return app, engine, ids
+
+
+def test_only_the_selected_photos_are_zipped(tmp_path):
+    app, engine, ids = _event_with_photos(tmp_path, count=3)
+    event_id = engine.active_event["id"]
+    client = TestClient(app)
+    wanted = f"{ids[0]},{ids[2]}"
+
+    res = client.get(f"/api/events/{event_id}/download.zip?ids={wanted}")
+    assert res.status_code == 200
+    with zipfile.ZipFile(io.BytesIO(res.content)) as archive:
+        names = archive.namelist()
+    assert names == [db.photo_filename(ids[0]), db.photo_filename(ids[2])]
+    assert "auswahl-2" in res.headers["content-disposition"]
+
+
+def test_the_whole_event_is_still_the_default(tmp_path):
+    app, engine, ids = _event_with_photos(tmp_path, count=3)
+    res = TestClient(app).get(f"/api/events/{engine.active_event['id']}/download.zip")
+    with zipfile.ZipFile(io.BytesIO(res.content)) as archive:
+        assert len(archive.namelist()) == 3
+    assert "auswahl" not in res.headers["content-disposition"]
+
+
+def test_the_size_of_a_selection_is_reported(tmp_path):
+    app, engine, ids = _event_with_photos(tmp_path, count=3)
+    event_id = engine.active_event["id"]
+    client = TestClient(app)
+
+    whole = client.get(f"/api/events/{event_id}/download-info").json()
+    part = client.get(f"/api/events/{event_id}/download-info?ids={ids[0]}").json()
+    assert whole["file_count"] == 3
+    assert part["file_count"] == 1
+    assert part["size_bytes"] < whole["size_bytes"]
+
+
+def test_nonsense_ids_fall_back_to_the_whole_event(tmp_path):
+    app, engine, _ = _event_with_photos(tmp_path, count=2)
+    res = TestClient(app).get(f"/api/events/{engine.active_event['id']}/download-info?ids=abc,")
+    assert res.json()["file_count"] == 2
