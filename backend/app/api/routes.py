@@ -147,6 +147,13 @@ async def session_finish(request: Request) -> JSONResponse:
     return await _mutate_and_flush(engine, engine.finish)
 
 
+@router.post("/api/session/wake")
+async def session_wake(request: Request) -> JSONResponse:
+    """Leave the slideshow. Does not start a session — that takes a second touch."""
+    engine = _engine(request)
+    return await _mutate_and_flush(engine, engine.wake_from_screensaver)
+
+
 # --- media ------------------------------------------------------------------
 
 

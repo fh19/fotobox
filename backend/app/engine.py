@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import random
 import shutil
 import sqlite3
 import threading
@@ -134,6 +135,8 @@ class Engine:
         # First moment the box was seen without a network; the guest AP opens on
         # its own once this is older than access_point.auto_grace_seconds.
         self._offline_since = None
+        # Shuffled photo URLs for the slideshow; refilled on entering SCREENSAVER.
+        self._screensaver_photos: list[str] = []
         self._last_avail = None
         self._printer_resume_at = None
 
@@ -143,6 +146,10 @@ class Engine:
         if event_type == "state_changed":
             if self.sm.state == State.CAPTURE:
                 self._capture_ready_at = None  # start a fresh flash phase
+            if self.sm.state == State.SCREENSAVER:
+                self._shuffle_screensaver()
+            else:
+                self._screensaver_photos = []
             self._queue("state_changed", self.build_status())
             if self.sm.state == State.ERROR and self.sm.error is not None:
                 self._queue(
@@ -501,7 +508,7 @@ class Engine:
     # --- config / event / system (admin) ------------------------------------
 
     # Only these sections may be edited at runtime (api-contract).
-    _EDITABLE_SECTIONS = ("ui", "countdown", "timeouts", "printing")
+    _EDITABLE_SECTIONS = ("ui", "countdown", "timeouts", "printing", "screensaver")
 
     def editable_config(self) -> dict:
         return {
@@ -660,6 +667,31 @@ class Engine:
         return {"ok": True}
 
     # --- network / export (M7b) ---------------------------------------------
+
+    # --- screensaver --------------------------------------------------------
+
+    def _shuffle_screensaver(self) -> None:
+        """Pick the photos for the slideshow, in random order.
+
+        The order is a decision, so it is made here and not in the browser
+        (CLAUDE.md rule 5). Only photos whose file actually exists: a failed
+        pipeline or a purged photo must not leave a hole in the show.
+        """
+        settings = self.config.screensaver
+        variant = "processed" if settings.variant == "processed" else "originals"
+        directory = self.active_event["directory"]
+        urls = []
+        for photo in db.iter_event_photos(self.conn, self.active_event["id"]):
+            path = self._event_variant_path(directory, variant, photo["filename"])
+            if path.exists():
+                urls.append(f"/api/photos/{photo['id']}/{settings.variant}")
+        random.shuffle(urls)
+        self._screensaver_photos = urls[: settings.max_photos]
+
+    def wake_from_screensaver(self) -> dict:
+        """First touch on the slideshow — back to the start screen, no photo yet."""
+        self.sm.wake()
+        return self.build_status()
 
     def network_status(self) -> dict:
         from app import system
@@ -1071,6 +1103,13 @@ class Engine:
             },
             "storage": self._storage_status(),
         }
+        if sm.state == State.SCREENSAVER:
+            settings = self.config.screensaver
+            status["screensaver"] = {
+                "photos": self._screensaver_photos,
+                "interval_ms": int(settings.interval_seconds * 1000),
+                "fade_ms": settings.fade_ms,
+            }
         if sm.state == State.ERROR and sm.error is not None:
             status["error"] = {"code": sm.error.code, "message": sm.error.message}
         return status

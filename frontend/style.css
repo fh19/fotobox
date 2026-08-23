@@ -94,6 +94,7 @@ body[data-state="PRINTING"] #result-layer {
 }
 
 /* Genau ein Screen je Zustand. CAPTURE zeigt bereits PROCESSING. */
+body[data-state="SCREENSAVER"] #screen-screensaver,
 body[data-state="IDLE"] #screen-idle,
 body[data-state="BACKGROUND_SELECT"] #screen-background,
 body[data-state="COUNTDOWN"] #screen-countdown,
@@ -103,6 +104,31 @@ body[data-state="PREVIEW"] #screen-preview,
 body[data-state="PRINTING"] #screen-preview,
 body[data-state="ERROR"] #screen-error {
   display: flex;
+}
+
+/* --- Bildschirmschoner ---------------------------------------------------- */
+/* Zwei Ebenen: die neue wird eingeblendet, während die alte noch steht — so
+   gibt es zwischen zwei Bildern nie einen schwarzen Moment. */
+.saver {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity var(--saver-fade, 800ms) ease-in-out;
+}
+.saver.is-visible {
+  opacity: 1;
+}
+.saver__hint {
+  position: absolute;
+  bottom: 4vh;
+  margin: 0;
+  padding: 0.6em 1.4em;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0.75;
 }
 
 /* --- Typo ----------------------------------------------------------------- */

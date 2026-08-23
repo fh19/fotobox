@@ -68,6 +68,14 @@ ui:
   admin_longpress_seconds: 5
   admin_pin: "2606"                   # ändern!
 
+screensaver:
+  enabled: true
+  after_seconds: 300            # so lange unbenutzt, dann Diaschau
+  interval_seconds: 6           # Bildwechsel
+  fade_ms: 800                  # Überblendung
+  max_photos: 200               # so viele Bilder in der Zufallsliste
+  variant: processed            # processed (mit Rahmen) | original
+
 pipeline:
   # Reihenfolge der versuchten Verfahren, wenn ein Hintergrund "auto" gesetzt hat
   chroma_defaults:

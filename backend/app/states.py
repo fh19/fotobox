@@ -18,6 +18,7 @@ class State(str, Enum):
     PROCESSING = "PROCESSING"
     PREVIEW = "PREVIEW"
     PRINTING = "PRINTING"
+    SCREENSAVER = "SCREENSAVER"
     ERROR = "ERROR"
 
     def __str__(self) -> str:  # so f-strings render "IDLE", not "State.IDLE"
@@ -43,6 +44,11 @@ ALLOWED_TRANSITIONS: frozenset[tuple[State, State]] = frozenset(
         (State.PRINTING, State.PREVIEW),
         (State.PRINTING, State.ERROR),
         (State.ERROR, State.IDLE),
+        # A resting state like IDLE, not a step in a session: after a few quiet
+        # minutes the box shows the evening's photos, and the first touch only
+        # brings the start screen back — it must not already take a picture.
+        (State.IDLE, State.SCREENSAVER),
+        (State.SCREENSAVER, State.IDLE),
     }
 )
 

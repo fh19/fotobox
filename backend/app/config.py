@@ -206,6 +206,19 @@ class AccessPointConfig(_Model):
     auto_grace_seconds: int = Field(default=120, ge=10)
 
 
+class ScreensaverConfig(_Model):
+    """Slideshow of the evening's photos while nobody is using the box."""
+
+    enabled: bool = True
+    after_seconds: int = Field(default=300, ge=30)
+    interval_seconds: float = Field(default=6, gt=0)
+    fade_ms: int = Field(default=800, ge=0)
+    # How many photos go into the shuffled list. The whole list travels in the
+    # state payload, so it stays a list, not the entire event.
+    max_photos: int = Field(default=200, ge=1)
+    variant: Literal["processed", "original"] = "processed"
+
+
 class NetworkConfig(_Model):
     gallery_enabled: bool = True
     # Wie lange die Galerie am Touchscreen ohne Bedienung offen bleibt, bevor sie
@@ -233,6 +246,7 @@ class Config(_Model):
     countdown: CountdownConfig
     timeouts: TimeoutsConfig
     ui: UIConfig
+    screensaver: ScreensaverConfig = Field(default_factory=ScreensaverConfig)
     pipeline: PipelineConfig
     printing: PrintingConfig
     storage: StorageConfig

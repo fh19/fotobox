@@ -40,6 +40,11 @@ Canon Selphy CP1500. Läuft offline.
    Pipeline darf nie zum Verlust des Bildes führen.
 4. **Jeder Zustand außer `IDLE` und `ERROR` braucht einen Timeout**, der nach `IDLE`
    zurückführt. Timeout-Werte kommen aus der Config, nie hartkodiert.
+   *Ausnahme seit 2026-08-23:* `SCREENSAVER` hat keinen Timeout. Er ist ein
+   Ruhezustand wie `IDLE` — nichts ist halb fertig, niemand wartet, verlassen wird
+   er durch eine Berührung (`POST /api/session/wake`). Ein Timeout könnte ihn nur
+   auf einen Bildschirm zurückwerfen, von dem die Box gerade festgestellt hat,
+   dass niemand hinsieht.
 5. **Der Zustandsautomat lebt im Backend.** Das Frontend hält keinen eigenen Zustand und
    trifft keine Entscheidungen; es rendert, was per WebSocket kommt.
 6. **Keine Konstanten im Code.** Alle Zahlen (Countdown, Timeouts, Limits, Pfade, Pixelmaße)

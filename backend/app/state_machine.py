@@ -5,9 +5,13 @@ database, no sleeping. Time is read through an injected :class:`Clock`; side
 effects (capturing, the pipeline, printing) are driven by the :mod:`engine`,
 which calls the transition methods here.
 
-Every state except ``IDLE`` and ``ERROR`` has a timeout that leads back towards
-``IDLE`` (CLAUDE.md rule 4); the timeout values come from the config, never
-hard-coded (rule 6).
+Every state except ``IDLE``, ``SCREENSAVER`` and ``ERROR`` has a timeout that
+leads back towards ``IDLE`` (CLAUDE.md rule 4); the timeout values come from the
+config, never hard-coded (rule 6). ``SCREENSAVER`` is the one addition to that
+rule and for the same reason ``IDLE`` is exempt: it is a resting state, not a
+step in a session. Nothing is half-finished there, nobody is waiting, and it is
+left by a touch — a timeout could only send it back to a screen the box already
+decided nobody is looking at.
 """
 
 from __future__ import annotations
@@ -66,6 +70,7 @@ class StateMachine:
         self._session: Session | None = None
         self._deadline: datetime | None = None
         self._error: ErrorInfo | None = None
+        self._arm(State.IDLE)  # a box that boots and is left alone dims too
 
     # --- read-only accessors ------------------------------------------------
 
@@ -112,7 +117,11 @@ class StateMachine:
         now = self._clock.now()
         timeouts = self._config.timeouts
         self._deadline = None
-        if target == State.BACKGROUND_SELECT:
+        if target == State.IDLE:
+            screensaver = self._config.screensaver
+            if screensaver.enabled:
+                self._deadline = _plus(now, screensaver.after_seconds)
+        elif target == State.BACKGROUND_SELECT:
             self._deadline = _plus(now, timeouts.background_select_seconds)
         elif target == State.COUNTDOWN:
             assert self._session is not None
@@ -156,6 +165,13 @@ class StateMachine:
         self._session.background_id = None if background_id == "none" else background_id
         self._session.background_mode = background_mode
         self._set_state(State.COUNTDOWN)
+
+    def wake(self) -> None:
+        """Leave the slideshow. Deliberately does *not* start a session: the first
+        touch brings the start screen back, only the next one takes a photo."""
+        if self._state != State.SCREENSAVER:
+            raise ActionRejected("invalid_state", "Kein Bildschirmschoner aktiv")
+        self._set_state(State.IDLE)
 
     def cancel(self) -> None:
         if self._state == State.BACKGROUND_SELECT:
@@ -234,7 +250,9 @@ class StateMachine:
             self._set_state(State.CAPTURE)
 
     def _fire_timeout(self) -> None:
-        if self._state == State.BACKGROUND_SELECT:
+        if self._state == State.IDLE:
+            self._set_state(State.SCREENSAVER)
+        elif self._state == State.BACKGROUND_SELECT:
             self._set_state(State.IDLE)
         elif self._state == State.PREVIEW:
             self._set_state(State.IDLE)

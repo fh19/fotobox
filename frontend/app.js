@@ -125,9 +125,13 @@ function render(status) {
     }
   } else if (state === "PREVIEW" || state === "PRINTING") {
     renderPreview(status, entering);
+  } else if (state === "SCREENSAVER") {
+    if (entering) startScreensaver(status.screensaver);
   } else if (state === "ERROR") {
     dom.errorMessage.textContent = (status.error && status.error.message) || "";
   }
+
+  if (state !== "SCREENSAVER") stopScreensaver();
 
   if (state !== "PREVIEW" && state !== "PRINTING") clearPrintingLabel();
   if (state !== "CAPTURE" && state !== "PROCESSING") clearProcessingWarn();
@@ -360,6 +364,56 @@ async function loadUiConfig() {
   }
 }
 
+// --- screensaver ------------------------------------------------------------
+//
+// "wenn die Box für zB 5min nicht benutzt wurde, sollen die bisherigen Bilder in
+// zufälliger Reihenfolge auf dem Schirm angezeigt werden". The order and the
+// list come from the backend (rule 5); this only cross-fades through them.
+
+let saverTimer = null;
+let saverIndex = 0;
+let saverFront = null;
+
+function startScreensaver(settings) {
+  stopScreensaver();
+  const photos = (settings && settings.photos) || [];
+  if (!photos.length) return; // nothing shot yet — a black screen is fine
+  document.documentElement.style.setProperty("--saver-fade", `${settings.fade_ms}ms`);
+  saverIndex = 0;
+  saverFront = el("saver-b");
+  showSaverPhoto(photos);
+  saverTimer = window.setInterval(() => showSaverPhoto(photos), settings.interval_ms);
+}
+
+function showSaverPhoto(photos) {
+  const back = saverFront === el("saver-a") ? el("saver-b") : el("saver-a");
+  const url = photos[saverIndex % photos.length];
+  saverIndex += 1;
+  // Decode before swapping, otherwise the fade starts on an empty element and
+  // the picture pops in halfway through.
+  const image = new Image();
+  image.onload = () => {
+    back.src = url;
+    back.classList.add("is-visible");
+    if (saverFront) saverFront.classList.remove("is-visible");
+    saverFront = back;
+  };
+  image.src = url;
+}
+
+function stopScreensaver() {
+  if (saverTimer !== null) {
+    window.clearInterval(saverTimer);
+    saverTimer = null;
+  }
+  ["saver-a", "saver-b"].forEach((id) => {
+    const image = el(id);
+    image.classList.remove("is-visible");
+    image.removeAttribute("src");
+  });
+  saverFront = null;
+}
+
 // --- wiring -----------------------------------------------------------------
 
 function wireButtons() {
@@ -372,6 +426,9 @@ function wireButtons() {
       postAction("/api/session/start");
     }
   });
+  // Der erste Tipp holt nur den Startbildschirm zurück — er löst bewusst noch
+  // kein Foto aus, sonst fotografiert die Box jeden, der bloß aufwecken wollte.
+  el("screen-screensaver").addEventListener("click", () => postAction("/api/session/wake"));
   el("btn-cancel-bg").addEventListener("click", () => postAction("/api/session/cancel"));
   el("btn-cancel-countdown").addEventListener("click", () => postAction("/api/session/cancel"));
   dom.btnFinish.addEventListener("click", () => postAction("/api/session/finish"));
@@ -401,6 +458,12 @@ function startPreview() {
 
   const tick = async () => {
     let delay = interval;
+    // No live picture behind the slideshow: nobody sees it, and the JPEG encoding
+    // is the box's biggest constant CPU load.
+    if (body.dataset.state === "SCREENSAVER") {
+      window.setTimeout(tick, 1000);
+      return;
+    }
     try {
       const res = await fetch(`/preview/frame?ts=${Date.now()}`, { cache: "no-store" });
       if (res.ok) {

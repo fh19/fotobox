@@ -108,3 +108,80 @@ def _dummy_session(machine):
 
     machine._session = Session()
     return machine._session
+
+
+# --- screensaver -------------------------------------------------------------
+#
+# "wenn die Box für zB 5min nicht benutzt wurde, sollen die bisherigen Bilder in
+# zufälliger Reihenfolge auf dem Schirm angezeigt werden."
+
+
+def test_idle_turns_into_the_slideshow_after_the_quiet_time(sm):
+    machine, clock, recorder, config = sm
+    clock.advance(config.screensaver.after_seconds - 1)
+    machine.poll()
+    assert machine.state == State.IDLE
+
+    clock.advance(2)
+    machine.poll()
+    assert machine.state == State.SCREENSAVER
+    assert recorder.states() == ["SCREENSAVER"]
+
+
+def test_the_first_touch_only_brings_the_start_screen_back(sm):
+    """It must not already take a picture — somebody just wanted to wake it."""
+    machine, clock, _recorder, config = sm
+    clock.advance(config.screensaver.after_seconds + 1)
+    machine.poll()
+
+    machine.wake()
+    assert machine.state == State.IDLE
+    assert machine.session is None  # nothing started
+
+
+def test_the_quiet_time_restarts_after_a_session(sm):
+    machine, clock, _recorder, config = sm
+    clock.advance(config.screensaver.after_seconds + 1)
+    machine.poll()
+    machine.wake()
+
+    clock.advance(config.screensaver.after_seconds - 1)
+    machine.poll()
+    assert machine.state == State.IDLE  # the clock started over on waking
+
+
+def test_the_slideshow_never_times_out(sm):
+    """A resting state like IDLE: a timeout could only send it back to a screen
+    the box already decided nobody is looking at."""
+    machine, clock, _recorder, config = sm
+    clock.advance(config.screensaver.after_seconds + 1)
+    machine.poll()
+
+    clock.advance(24 * 3600)
+    machine.poll()
+    assert machine.state == State.SCREENSAVER
+
+
+def test_the_slideshow_can_be_switched_off(tmp_path):
+    from tests.conftest import make_config
+
+    config = make_config(tmp_path, screensaver__enabled=False)
+    machine = StateMachine(config, clock := FakeClock(), Recorder())
+    clock.advance(10 * 3600)
+    machine.poll()
+    assert machine.state == State.IDLE
+
+
+def test_waking_outside_the_slideshow_is_rejected(sm):
+    machine, *_ = sm
+    with pytest.raises(ActionRejected):
+        machine.wake()
+
+
+def test_a_session_cannot_start_from_the_slideshow(sm):
+    """The touch that wakes the box must not run through to a countdown."""
+    machine, clock, _recorder, config = sm
+    clock.advance(config.screensaver.after_seconds + 1)
+    machine.poll()
+    with pytest.raises(ActionRejected):
+        machine.start()

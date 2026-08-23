@@ -524,6 +524,8 @@ async function loadConfig() {
   $("cfg-bgselect").checked = cfg.ui.background_select_enabled;
   configuredBackground = cfg.ui.default_background;
   $("cfg-bgdefault").value = configuredBackground;
+  $("cfg-saver").checked = cfg.screensaver.enabled;
+  $("cfg-saverafter").value = cfg.screensaver.after_seconds;
   wireOnscreenKeyboard(cfg.ui.onscreen_keyboard || "auto");
 }
 
@@ -546,6 +548,10 @@ async function saveConfig() {
       default_background: $("cfg-bgdefault").value || "auto",
       flash_enabled: $("cfg-flash").checked,
       flash_duration_ms: Number($("cfg-flashms").value),
+    },
+    screensaver: {
+      enabled: $("cfg-saver").checked,
+      after_seconds: Number($("cfg-saverafter").value),
     },
   };
   try {

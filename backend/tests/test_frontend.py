@@ -209,7 +209,7 @@ def test_the_admin_can_switch_the_automatic_access_point(tmp_path):
 
 
 def test_the_admin_gallery_navigates_events_and_deletes(tmp_path):
-    """"Button für Hauptgallerie / von dort aus in die Veranstaltungen
+    """ "Button für Hauptgallerie / von dort aus in die Veranstaltungen
     navigieren / Bilder auswählen können / Download und Löschen anbieten"."""
     admin = (FRONTEND_DIR / "admin.html").read_text(encoding="utf-8")
     assert "/gallery?admin=1" in admin and "Hauptgalerie öffnen" in admin
@@ -223,3 +223,22 @@ def test_the_admin_gallery_navigates_events_and_deletes(tmp_path):
 
     admin_js = (FRONTEND_DIR / "admin.js").read_text(encoding="utf-8")
     assert "/api/admin/photos/purge" in admin_js
+
+
+def test_the_kiosk_shows_a_slideshow_and_wakes_without_shooting(tmp_path):
+    html = (FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    assert 'id="screen-screensaver"' in html
+    assert 'id="saver-a"' in html and 'id="saver-b"' in html  # cross-fade needs two
+
+    css = (FRONTEND_DIR / "style.css").read_text(encoding="utf-8")
+    assert 'body[data-state="SCREENSAVER"] #screen-screensaver' in css
+
+    js = (FRONTEND_DIR / "app.js").read_text(encoding="utf-8")
+    assert "/api/session/wake" in js
+    # The wake tap must not fall through to a capture.
+    assert (
+        'el("screen-screensaver").addEventListener("click", () => postAction("/api/session/wake"))'
+        in js
+    )
+    # No live preview behind a slideshow nobody watches.
+    assert 'body.dataset.state === "SCREENSAVER"' in js

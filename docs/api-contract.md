@@ -17,7 +17,8 @@ nichts still abweichen lassen.
 Genau diese Literale, `SCREAMING_SNAKE_CASE`:
 
 ```
-IDLE  BACKGROUND_SELECT  COUNTDOWN  CAPTURE  PROCESSING  PREVIEW  PRINTING  ERROR
+IDLE  SCREENSAVER  BACKGROUND_SELECT  COUNTDOWN  CAPTURE  PROCESSING  PREVIEW
+PRINTING  ERROR
 ```
 
 Erlaubte Übergänge:
@@ -38,8 +39,20 @@ Erlaubte Übergänge:
 | `PRINTING` | `PREVIEW` | Job an CUPS übergeben |
 | `PRINTING` | `ERROR` | Übergabe fehlgeschlagen |
 | `ERROR` | `IDLE` | nach `timeouts.error_seconds` |
+| `IDLE` | `SCREENSAVER` | nach `screensaver.after_seconds` ohne Bedienung |
+| `SCREENSAVER` | `IDLE` | `POST /api/session/wake` (Berührung) |
 
 Jeder andere Übergang ist ein Programmfehler und wirft `InvalidTransition`.
+
+`SCREENSAVER` hat als einziger Zustand neben `IDLE` und `ERROR` **keinen Timeout**
+(Abweichung von CLAUDE.md Regel 4, bewusst): Er ist ein Ruhezustand, kein Schritt
+in einer Sitzung. Nichts ist halb fertig, niemand wartet, und verlassen wird er
+durch eine Berührung. Ein Timeout könnte ihn nur auf einen Bildschirm
+zurückwerfen, von dem die Box gerade festgestellt hat, dass niemand hinsieht.
+
+Der Statusblock enthält in `SCREENSAVER` zusätzlich
+`screensaver: {photos: [...], interval_ms, fade_ms}` — die Reihenfolge ist
+gemischt und wird im Backend gewürfelt (Regel 5).
 
 `BACKGROUND_SELECT` ist standardmäßig deaktiviert (`ui.background_select_enabled: false`):
 `IDLE` geht direkt nach `COUNTDOWN` mit dem Hintergrund aus `ui.default_background`.
@@ -170,6 +183,12 @@ Kein Body. `PREVIEW` → `PRINTING` → `PREVIEW`.
 ### `POST /api/session/finish`
 
 Kein Body. `PREVIEW` → `IDLE`.
+
+### `POST /api/session/wake`
+
+Kein Body. `SCREENSAVER` → `IDLE`. Beendet nur die Diaschau und startet
+**keine** Sitzung: Der erste Tipp holt den Startbildschirm zurück, erst der
+zweite löst ein Foto aus. Außerhalb von `SCREENSAVER` → `409 invalid_state`.
 
 ### `GET /preview/stream`
 

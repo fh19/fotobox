@@ -46,7 +46,7 @@ def test_every_admin_endpoint_needs_pin(tmp_path):
 def test_config_get_returns_editable_sections(tmp_path):
     client = TestClient(_app(tmp_path))
     body = client.get("/api/admin/config", headers=PIN).json()
-    assert set(body) == {"ui", "countdown", "timeouts", "printing"}
+    assert set(body) == {"ui", "countdown", "timeouts", "printing", "screensaver"}
 
 
 def test_config_put_changes_countdown_live(tmp_path):

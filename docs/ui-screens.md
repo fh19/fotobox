@@ -61,6 +61,28 @@ Kein Start möglich, der Bildschirm reagiert nicht auf Berührung.
 
 ---
 
+## `SCREENSAVER`
+
+Nach `screensaver.after_seconds` (Standard 300 s) ohne Bedienung zeigt die Box die
+Bilder des Abends in zufälliger Reihenfolge, formatfüllend auf schwarzem Grund.
+Der Wechsel geschieht alle `interval_seconds` mit einer Überblendung von
+`fade_ms` — nie ein schwarzer Moment dazwischen, weil zwei Bildebenen einander
+ablösen.
+
+Unten mittig, zurückhaltend auf dunklem Grund, derselbe Satz wie im Startbildschirm:
+
+> Tippe auf den Bildschirm
+
+**Der erste Tipp löst kein Foto aus.** Er holt nur `IDLE` zurück; erst die zweite
+Berührung startet eine Aufnahme. Sonst würde die Box jeden fotografieren, der sie
+bloß aufwecken wollte.
+
+Sind noch keine Bilder da, bleibt der Bildschirm schwarz — das ist der Fall am
+Anfang des Abends und kein Fehler. Das Live-Bild ruht währenddessen; niemand sieht
+es, und seine JPEG-Kodierung ist die größte Dauerlast der Box.
+
+---
+
 ## `BACKGROUND_SELECT`
 
 **Standardmäßig übersprungen.** Gibt es genau einen Rahmen, ist die Frage „mit oder
@@ -264,6 +286,8 @@ Kacheln:
 
 5. **Einstellungen** — Countdown-Dauer, `Auslöser-Vorlauf (ms)`, Timeouts, Druck-Limits,
    Hintergrundauswahl ein/aus
+   Dazu `Bildschirmschoner (Diaschau)` und `Diaschau startet nach (s)` —
+   `screensaver.enabled` und `screensaver.after_seconds`.
 
    Der Vorlauf löst so viel früher aus, als der Countdown bei „0" ankommt, und gleicht
    damit Blitzdauer und Kameralatenz aus. Die letzte Sekunde des Countdowns bleibt
