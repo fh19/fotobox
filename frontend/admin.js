@@ -182,14 +182,35 @@ function hideOsk() {
 
 /* "auto" = only where there is no real keyboard (a touchscreen has no hover). */
 let oskWired = false;
+let oskMode = "auto";
+let oskTouchSeen = false;
+
+/* "auto" must not ask the hover media query: the box's touchscreen registers a
+   mouse device as well (usb-wch.cn_TouchScreen...-if02-event-mouse), so the
+   browser reports a hovering pointer and the keyboard never appeared. A real
+   touch device, or an actual touch, is the honest signal. */
+function oskAllowed() {
+  if (oskMode === "off") return false;
+  if (oskMode === "on") return true;
+  return oskTouchSeen || navigator.maxTouchPoints > 0;
+}
 
 function wireOnscreenKeyboard(mode) {
+  oskMode = mode;
   if (oskWired || mode === "off") return;
-  if (mode !== "on" && window.matchMedia("(hover: hover)").matches) return;
   document.querySelectorAll('#admin input[type="text"], #admin input[type="number"]').forEach(
     (input) => {
-      input.addEventListener("focus", () => showOsk(input));
+      input.addEventListener("focus", () => {
+        if (oskAllowed()) showOsk(input);
+      });
     }
+  );
+  document.addEventListener(
+    "pointerdown",
+    (event) => {
+      if (event.pointerType === "touch") oskTouchSeen = true;
+    },
+    true
   );
   document.addEventListener("pointerdown", (event) => {
     if (!oskTarget) return;
@@ -665,6 +686,7 @@ async function loadNetwork() {
   $("net-status").textContent = apEnabled
     ? `Access-Point „${n.ssid}" aktiv · IP ${n.ip ?? "?"}`
     : `Access-Point aus · IP ${n.ip ?? "?"}`;
+  $("net-ap-auto").checked = !!n.ap_auto;
   const url = galleryUrl(n.ip);
   const link = $("net-gallery");
   link.textContent = url || "—";
@@ -683,6 +705,22 @@ async function toggleAP() {
     await loadNetwork();
   } catch (e) {
     note("net-status", "Fehler: " + e.message, false);
+  }
+}
+
+async function toggleAPAuto() {
+  const enabled = $("net-ap-auto").checked;
+  try {
+    await api("POST", "/api/admin/network/ap-auto", { enabled });
+    note(
+      "net-status",
+      enabled
+        ? "Access-Point geht bei fehlendem Netzwerk von selbst an"
+        : "Access-Point nur noch von Hand"
+    );
+  } catch (e) {
+    note("net-status", "Fehler: " + e.message, false);
+    await loadNetwork();
   }
 }
 
@@ -747,6 +785,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("event-create").addEventListener("click", createEvent);
   $("status-refresh").addEventListener("click", loadStatus);
   $("net-ap").addEventListener("click", toggleAP);
+  $("net-ap-auto").addEventListener("change", toggleAPAuto);
   $("export-usb").addEventListener("click", exportUSB);
   $("sys-reboot").addEventListener("click", reboot);
   $("sys-shutdown").addEventListener("click", shutdown);

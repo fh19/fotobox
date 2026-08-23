@@ -32,7 +32,12 @@ def test_network_status_reports_client_ip(tmp_path, monkeypatch):
     monkeypatch.setattr(system, "primary_ip", lambda: "192.168.0.134")
     client = _client(tmp_path)
     body = client.get("/api/admin/network", headers=PIN).json()
-    assert body == {"ap_enabled": False, "ssid": "Fotobox", "ip": "192.168.0.134"}
+    assert body == {
+        "ap_enabled": False,
+        "ap_auto": True,
+        "ssid": "Fotobox",
+        "ip": "192.168.0.134",
+    }
 
 
 def test_ap_toggle_on_and_off(tmp_path, monkeypatch):
@@ -48,7 +53,7 @@ def test_ap_toggle_on_and_off(tmp_path, monkeypatch):
 
     client = _client(tmp_path)
     on = client.post("/api/admin/network/ap", json={"enabled": True}, headers=PIN).json()
-    assert on == {"ap_enabled": True, "ssid": "Fotobox", "ip": "192.168.4.1"}
+    assert on == {"ap_enabled": True, "ap_auto": True, "ssid": "Fotobox", "ip": "192.168.4.1"}
     assert calls["ssid"] == "Fotobox" and calls["address"] == "192.168.4.1"
     assert calls["captive"] is True  # guests land in the gallery on connecting
 
@@ -128,3 +133,99 @@ def test_export_busy_is_rejected(tmp_path, monkeypatch):
     res = client.post("/api/admin/export/usb", headers=PIN)
     assert res.status_code == 409
     assert res.json()["error"]["code"] == "export_busy"
+
+
+# --- the access point comes up on its own ------------------------------------
+#
+# "AP automatisch einschalten, wenn keine Verbindung zum Heimnetzwerk": at a
+# venue there is no home WiFi, and somebody had to notice and flip the switch.
+
+
+def _offline_engine(tmp_path, monkeypatch, *, connected=False, ap_on=False, **overrides):
+    from app.clock import FakeClock
+
+    clock = FakeClock()
+    app = create_app(make_config(tmp_path, **overrides), clock)
+    monkeypatch.setattr(system, "network_connected", lambda: connected)
+    monkeypatch.setattr(system, "ap_active", lambda: ap_on)
+    switched = []
+    monkeypatch.setattr(
+        app.state.engine, "network_ap", lambda enabled: switched.append(enabled) or {}
+    )
+    return app.state.engine, clock, switched
+
+
+def test_a_short_outage_does_not_open_the_access_point(tmp_path, monkeypatch):
+    """A router reboot must not throw the box into AP mode."""
+    engine, clock, switched = _offline_engine(tmp_path, monkeypatch)
+
+    assert engine.consider_offline_ap() is False  # first look: only remembers
+    clock.advance(60)  # grace is 120 s
+    assert engine.consider_offline_ap() is False
+    assert switched == []
+
+
+def test_a_lasting_outage_opens_the_access_point(tmp_path, monkeypatch):
+    engine, clock, switched = _offline_engine(tmp_path, monkeypatch)
+
+    engine.consider_offline_ap()
+    clock.advance(121)
+    assert engine.consider_offline_ap() is True
+    assert switched == [True]
+
+
+def test_the_timer_restarts_when_the_network_returns(tmp_path, monkeypatch):
+    engine, clock, switched = _offline_engine(tmp_path, monkeypatch)
+    engine.consider_offline_ap()
+    clock.advance(119)
+
+    monkeypatch.setattr(system, "network_connected", lambda: True)
+    engine.consider_offline_ap()  # back → forget how long we were away
+    monkeypatch.setattr(system, "network_connected", lambda: False)
+    engine.consider_offline_ap()
+    clock.advance(60)
+
+    assert engine.consider_offline_ap() is False
+    assert switched == []
+
+
+def test_a_running_access_point_is_left_alone(tmp_path, monkeypatch):
+    engine, clock, switched = _offline_engine(tmp_path, monkeypatch, ap_on=True)
+    engine.consider_offline_ap()
+    clock.advance(300)
+    assert engine.consider_offline_ap() is False
+    assert switched == []
+
+
+def test_the_automatic_can_be_switched_off(tmp_path, monkeypatch):
+    engine, clock, switched = _offline_engine(tmp_path, monkeypatch)
+    engine.set_ap_auto(False)
+
+    engine.consider_offline_ap()
+    clock.advance(600)
+
+    assert engine.consider_offline_ap() is False
+    assert switched == []
+
+
+def test_the_switch_survives_a_restart(tmp_path, monkeypatch):
+    """Persisted, or every reboot would re-arm what the operator turned off."""
+    from app.config import load_config, save_config
+
+    path = tmp_path / "config.yaml"
+    save_config(make_config(tmp_path), path)
+    with TestClient(create_app(config_path=path)) as client:
+        res = client.post("/api/admin/network/ap-auto", json={"enabled": False}, headers=PIN)
+    assert res.status_code == 200
+    assert res.json()["ap_auto"] is False
+    assert load_config(path).network.access_point.auto_when_offline is False
+
+
+def test_an_unclear_answer_counts_as_connected(tmp_path, monkeypatch):
+    """`ip` failing is not proof of an outage — never open the AP on a hiccup."""
+
+    def boom(*args, **kwargs):
+        raise OSError("no ip command")
+
+    monkeypatch.setattr(system.subprocess, "run", boom)
+    assert system.network_connected() is True

@@ -77,6 +77,32 @@ def primary_ip() -> str | None:
         return None
 
 
+def network_connected() -> bool:
+    """True if the box is on a network — a default route with a global address.
+
+    Deliberately no ping: a router that drops ICMP would look like "no network"
+    and send the box into AP mode in the middle of a working home WiFi. What
+    matters here is whether we are *joined* to something, which is exactly what
+    a default route plus an address says.
+    """
+    try:
+        route = subprocess.run(
+            ["ip", "-4", "route", "show", "default"], capture_output=True, text=True, timeout=5
+        )
+        if not route.stdout.strip():
+            return False
+        addr = subprocess.run(
+            ["ip", "-4", "-o", "addr", "show", "scope", "global"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return bool(addr.stdout.strip())
+    except Exception:
+        # Unclear is not the same as offline; never open the AP on a hiccup.
+        return True
+
+
 def ap_active() -> bool:
     """True if the Fotobox access-point profile is currently active."""
     try:

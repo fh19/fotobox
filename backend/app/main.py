@@ -59,6 +59,19 @@ async def _print_status_loop(engine: Engine, interval: float) -> None:
             log.exception("Druckauftragsstatus konnte nicht abgeglichen werden")
 
 
+async def _ap_watch_loop(engine: Engine, interval: float) -> None:
+    """Open the guest access point when there is no network to join.
+
+    nmcli blocks for seconds, so the check runs off the event loop.
+    """
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            await asyncio.to_thread(engine.consider_offline_ap)
+        except Exception:
+            log.exception("Netzwerkprüfung fehlgeschlagen")
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     engine: Engine = app.state.engine
@@ -69,6 +82,9 @@ async def _lifespan(app: FastAPI):
     )
     # Catch up on any pipelines a crash/restart left pending, off the event loop.
     recovery = asyncio.create_task(asyncio.to_thread(engine.recover_pending_pipelines))
+    ap_watch = asyncio.create_task(
+        _ap_watch_loop(engine, app.state.config.network.access_point.auto_check_seconds)
+    )
     log.info("Fotobox bereit (Hardware=%s).", app.state.config.hardware.mode)
     try:
         yield
@@ -76,12 +92,15 @@ async def _lifespan(app: FastAPI):
         task.cancel()
         prints.cancel()
         recovery.cancel()
+        ap_watch.cancel()
         with suppress(asyncio.CancelledError):
             await task
         with suppress(asyncio.CancelledError):
             await prints
         with suppress(asyncio.CancelledError, Exception):
             await recovery
+        with suppress(asyncio.CancelledError):
+            await ap_watch
 
 
 class _RevalidatingStatic(StaticFiles):

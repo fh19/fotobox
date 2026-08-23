@@ -190,3 +190,19 @@ def test_the_gallery_can_select_and_download_a_subset(tmp_path):
         assert element in html, element
     js = (FRONTEND_DIR / "gallery.js").read_text(encoding="utf-8")
     assert "&ids=" in js and "state.selected" in js
+
+
+def test_the_keyboard_does_not_trust_the_hover_query(tmp_path):
+    """The box's touchscreen registers a mouse device too, so the browser claims
+    a hovering pointer and the keyboard never appeared."""
+    js = (FRONTEND_DIR / "admin.js").read_text(encoding="utf-8")
+    assert "matchMedia" not in js
+    assert "maxTouchPoints" in js and 'pointerType === "touch"' in js
+
+
+def test_the_admin_can_switch_the_automatic_access_point(tmp_path):
+    html = (FRONTEND_DIR / "admin.html").read_text(encoding="utf-8")
+    assert "net-ap-auto" in html
+    assert "Automatisch, wenn kein Netzwerk da ist" in " ".join(html.split())
+    js = (FRONTEND_DIR / "admin.js").read_text(encoding="utf-8")
+    assert "/api/admin/network/ap-auto" in js

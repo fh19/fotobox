@@ -195,6 +195,15 @@ class AccessPointConfig(_Model):
     # Beim Verbinden mit dem Gäste-WLAN öffnet sich die Galerie von selbst
     # (DNS-Umleitung + Antwort auf die Verbindungsprüfung der Handys).
     captive_portal: bool = True
+    # Ohne Heimnetz (fremde Location) soll die Box den Gäste-AP von selbst
+    # aufmachen. Nur einschalten, nie automatisch wieder aus: im AP-Modus sieht
+    # wlan0 das Heimnetz nicht mehr, und ein Rückschalten mitten in der Feier
+    # würde allen Gästen die Verbindung abschneiden.
+    auto_when_offline: bool = True
+    auto_check_seconds: int = Field(default=30, ge=5)
+    # Erst nach dieser Zeit ohne Netz; überbrückt Router-Neustarts und den
+    # Moment nach dem Booten, in dem WLAN noch nicht verbunden ist.
+    auto_grace_seconds: int = Field(default=120, ge=10)
 
 
 class NetworkConfig(_Model):

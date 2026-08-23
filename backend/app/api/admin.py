@@ -299,6 +299,15 @@ async def get_network(
     return JSONResponse(_engine(request).network_status())
 
 
+@router.post("/network/ap-auto")
+async def post_network_ap_auto(
+    request: Request, body: NetworkAP, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    """Turn the automatic access point on/off (no radio change, just the rule)."""
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(_engine(request).set_ap_auto(body.enabled))
+
+
 @router.post("/network/ap")
 async def post_network_ap(
     request: Request, body: NetworkAP, x_fotobox_pin: str | None = Header(default=None)

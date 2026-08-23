@@ -126,6 +126,9 @@ network:
     channel: 6
     address: 192.168.4.1
     captive_portal: true              # Verbinden öffnet die Galerie automatisch
+    auto_when_offline: true           # ohne Heimnetz (fremde Location) selbst aufmachen
+    auto_check_seconds: 30
+    auto_grace_seconds: 120           # erst nach so langer Funkstille; nie automatisch aus
 
 logging:
   level: INFO

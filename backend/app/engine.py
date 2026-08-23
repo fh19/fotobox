@@ -131,6 +131,9 @@ class Engine:
         self._capture_ready_at = None
         # Throttled availability watch → push status when camera/printer come or go.
         self._avail_check_at = None
+        # First moment the box was seen without a network; the guest AP opens on
+        # its own once this is older than access_point.auto_grace_seconds.
+        self._offline_since = None
         self._last_avail = None
         self._printer_resume_at = None
 
@@ -668,9 +671,60 @@ class Engine:
         # its own port) — we only supply the host.
         return {
             "ap_enabled": active,
+            "ap_auto": ap.auto_when_offline,
             "ssid": ap.ssid,
             "ip": ap.address if active else system.primary_ip(),
         }
+
+    def set_ap_auto(self, enabled: bool) -> dict:
+        """Switch the automatic access point on/off and persist it."""
+        self.config.network.access_point.auto_when_offline = enabled
+        if self.config_path is not None:
+            save_config(self.config, self.config_path)
+        self._offline_since = None
+        return self.network_status()
+
+    def consider_offline_ap(self) -> bool:
+        """Open the guest AP when the box has been without a network for a while.
+
+        At a venue there is no home WiFi to join, and until now somebody had to
+        notice that and switch the AP on by hand in the admin. Blocking (nmcli) —
+        call off the event loop. Returns True if the AP was switched on.
+
+        Only ever switches *on*. In AP mode wlan0 no longer sees the home
+        network, so "is it back?" cannot be answered without dropping every
+        guest — that decision stays with the operator.
+        """
+        from app import system
+
+        ap = self.config.network.access_point
+        if not ap.auto_when_offline:
+            self._offline_since = None
+            return False
+        if system.network_connected() or system.ap_active():
+            self._offline_since = None
+            return False
+
+        now = self.clock.now()
+        if self._offline_since is None:
+            self._offline_since = now
+            return False
+        waited = (now - self._offline_since).total_seconds()
+        if waited < ap.auto_grace_seconds:
+            return False
+
+        self._log(
+            "warning",
+            "system",
+            "ap_auto",
+            f"Kein Netzwerk seit {int(waited)}s — Access-Point '{ap.ssid}' wird eingeschaltet",
+        )
+        self._offline_since = None
+        try:
+            self.network_ap(True)
+        except ActionRejected:
+            return False  # already logged; try again on the next round
+        return True
 
     def network_ap(self, enabled: bool) -> dict:
         """Switch the guest access point on/off (M7b). Blocking — call off-thread."""
