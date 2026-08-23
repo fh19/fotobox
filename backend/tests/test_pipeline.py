@@ -20,7 +20,10 @@ GOOD = FIXTURES_DIR / "greenscreen" / "good_single.jpg"
 
 @pytest.fixture
 def config(tmp_path) -> Config:
-    return make_config(tmp_path)
+    # These tests are about placement and colour, not resolution: at the print
+    # scale the expected pixel positions are the canvas positions. The scaled
+    # output has its own tests below.
+    return make_config(tmp_path, pipeline__processed_scale=1)
 
 
 def _outputs(tmp_path) -> PipelineOutputs:
@@ -47,14 +50,14 @@ def test_output_is_canvas_sized(config, mode, tmp_path):
     assert ms >= 0
     with Image.open(outputs.processed) as img:
         assert img.size == (1248, 1872)
-    # prints == processed (docs/druck-layout.md)
-    assert outputs.print.read_bytes() == outputs.processed.read_bytes()
+    with Image.open(outputs.print) as img:
+        assert img.size == (1248, 1872)  # the print raster, whatever the scale
     with Image.open(outputs.thumb) as thumb:
         assert thumb.width == config.pipeline.thumbnail_width
 
 
 def test_landscape_swaps_canvas(tmp_path):
-    config = make_config(tmp_path, printing__orientation="landscape")
+    config = make_config(tmp_path, printing__orientation="landscape", pipeline__processed_scale=1)
     assert canvas_for(config.printing).width == 1872
     outputs, _ = _run(config, "none", tmp_path)
     with Image.open(outputs.processed) as img:
@@ -112,6 +115,7 @@ def test_caption_stays_in_safe_area_with_shadow(tmp_path):
         printing__caption__enabled=True,
         printing__caption__text="Anna & Ben",
         printing__caption__color="#ffffff",
+        pipeline__processed_scale=1,  # positions below are print pixels
     )
     outputs, _ = _run(config, "none", tmp_path, original=GOOD)
     arr = np.asarray(Image.open(outputs.processed))
@@ -133,7 +137,10 @@ def test_caption_stays_in_safe_area_with_shadow(tmp_path):
 
 def test_qr_is_rendered_in_safe_area(tmp_path):
     config = make_config(
-        tmp_path, printing__qr__enabled=True, printing__qr__position="bottom_right"
+        tmp_path,
+        printing__qr__enabled=True,
+        printing__qr__position="bottom_right",
+        pipeline__processed_scale=1,  # positions below are print pixels
     )
     outputs, _ = _run(config, "none", tmp_path)
     arr = np.asarray(Image.open(outputs.processed))
@@ -224,5 +231,69 @@ def test_regression_matches_reference(config, mode, tmp_path):
     EXPECTED_DIR.mkdir(parents=True, exist_ok=True)
     golden = EXPECTED_DIR / f"{mode}.jpg"
     if not golden.exists():
-        shutil.copy(outputs.processed, golden)  # bootstrap the committed reference
-    assert _mae(outputs.processed, golden) <= 3.0
+        shutil.copy(outputs.print, golden)  # bootstrap the committed reference
+    # The *print* is the guarded output: it must look the same no matter what
+    # resolution the download copy is composed at.
+    assert _mae(outputs.print, golden) <= 3.0
+
+
+# --- download resolution and EXIF -------------------------------------------
+#
+# From the first real event: the framed photos guests took home were 1872x1248
+# (the postcard raster) and carried no EXIF at all, while the originals had the
+# full shot data. Both were losses nobody chose.
+
+
+def _exif_original(path, when="2026:08:22 05:14:34"):
+    """A JPEG with camera EXIF, like the ones coming off the DSLR."""
+    image = Image.new("RGB", (2400, 1600), (90, 140, 60))
+    exif = image.getexif()
+    exif[271] = "NIKON CORPORATION"  # Make
+    exif[272] = "NIKON D7200"  # Model
+    exif[306] = when  # DateTime
+    exif[274] = 6  # Orientation: rotate — must not survive twice
+    image.save(path, format="JPEG", quality=90, exif=exif)
+    return path
+
+
+def test_processed_is_larger_than_the_print(tmp_path):
+    config = make_config(tmp_path, pipeline__processed_scale=2)
+    outputs, _ = _run(config, "none", tmp_path)
+
+    with Image.open(outputs.processed) as processed:
+        assert processed.size == (2496, 3744)  # twice the portrait canvas
+    with Image.open(outputs.print) as printable:
+        assert printable.size == (1248, 1872)  # the printer sees no change
+
+
+def test_scale_one_keeps_print_and_download_identical(tmp_path):
+    config = make_config(tmp_path, pipeline__processed_scale=1)
+    outputs, _ = _run(config, "none", tmp_path)
+    with Image.open(outputs.processed) as a, Image.open(outputs.print) as b:
+        assert a.size == b.size == (1248, 1872)
+
+
+def test_the_camera_exif_rides_along(tmp_path):
+    config = make_config(tmp_path, pipeline__processed_scale=1)
+    original = _exif_original(tmp_path / "dslr.jpg")
+    outputs, _ = _run(config, "none", tmp_path, original=original)
+
+    for path in (outputs.processed, outputs.print):
+        exif = Image.open(path).getexif()
+        assert exif.get(271) == "NIKON CORPORATION", path
+        assert exif.get(272) == "NIKON D7200", path
+        assert exif.get(306) == "2026:08:22 05:14:34", path
+        # The rotation is baked into the pixels; asking for it again would tip
+        # every photo on its side in the viewer.
+        assert exif.get(274) == 1, path
+
+
+def test_caption_and_qr_grow_with_the_canvas(tmp_path):
+    """Sizes are given in print pixels — on a 2x canvas they must double, or the
+    caption would end up half as large relative to the photo."""
+    from app.pipeline.geometry import canvas_for
+
+    printing = make_config(tmp_path).printing
+    assert canvas_for(printing, 1).px(44) == 44
+    assert canvas_for(printing, 2).px(44) == 88
+    assert canvas_for(printing, 2).width == 2 * canvas_for(printing, 1).width

@@ -80,11 +80,17 @@ Vollständiger Zustand. Beim Laden der Seite einmal abrufen, danach reicht der W
   "countdown_remaining": 3,
   "processed_url": "/api/photos/143/processed",
   "print_count": 0,
-  "print_allowed": true
+  "print_allowed": true,
+  "print_hint": null
 }
 ```
 
 `printer.state`: `idle` | `printing` | `error` | `offline`
+
+`print_hint` nennt auf Deutsch den Grund, warum `print_allowed` false ist
+(aufgebrauchtes Kontingent, Foto schon gedruckt, Drucken abgeschaltet, oder der
+Druckergrund) — sonst `null`. `GET /api/admin/printer` liefert zusätzlich
+`quota_used`/`quota_total`.
 
 `printer.message` nennt auf Deutsch den Grund, warum nicht gedruckt werden kann
 (`Kein Papier`, `Farbband verbraucht`, `Papierstau`, `Klappe offen`,

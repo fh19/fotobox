@@ -36,7 +36,8 @@ def draw_caption(image: Image.Image, caption: CaptionConfig, canvas: Canvas) -> 
     if not text:
         return
 
-    font = _load_font(caption.font, caption.size_px)
+    # Sizes are given in print pixels; on a scaled canvas they grow with it.
+    font = _load_font(caption.font, canvas.px(caption.size_px))
     draw = ImageDraw.Draw(image)
 
     bbox = draw.textbbox((0, 0), text, font=font)
@@ -44,14 +45,14 @@ def draw_caption(image: Image.Image, caption: CaptionConfig, canvas: Canvas) -> 
     text_h = bbox[3] - bbox[1]
 
     if caption.position == "bottom_right":
-        x = canvas.safe_right - text_w - _PAD
-        y = canvas.safe_bottom - text_h - _PAD
+        x = canvas.safe_right - text_w - canvas.px(_PAD)
+        y = canvas.safe_bottom - text_h - canvas.px(_PAD)
     elif caption.position == "top_center":
         x = canvas.safe_left + (canvas.safe_width - text_w) // 2
-        y = canvas.safe_top + _PAD
+        y = canvas.safe_top + canvas.px(_PAD)
     else:  # bottom_center (default)
         x = canvas.safe_left + (canvas.safe_width - text_w) // 2
-        y = canvas.safe_bottom - text_h - _PAD
+        y = canvas.safe_bottom - text_h - canvas.px(_PAD)
 
     # textbbox may report a non-zero origin offset; correct for it.
     x -= bbox[0]

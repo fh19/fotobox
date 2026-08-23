@@ -43,7 +43,8 @@ def test_detect_window_none_when_opaque():
 
 
 def _run_frame(tmp_path, fit):
-    config = make_config(tmp_path)
+    # Window coordinates below are print pixels — compose at print scale.
+    config = make_config(tmp_path, pipeline__processed_scale=1)
     cw, ch = config.printing.canvas_width, config.printing.canvas_height
     window = (200, 300, cw - 400, ch - 600)
 

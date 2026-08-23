@@ -139,6 +139,10 @@ class PipelineConfig(_Model):
     ai: AIConfig
     jpeg_quality: int = Field(ge=1, le=100)
     thumbnail_width: int = Field(gt=0)
+    # Vielfaches der Druckauflösung, in dem processed/ und thumbs/ entstehen.
+    # 1 = wie gedruckt (1872x1248 — für den Download zu wenig), 2 = doppelt.
+    # prints/ wird daraus heruntergerechnet, der Druck bleibt unverändert.
+    processed_scale: int = Field(default=2, ge=1, le=4)
 
 
 class CaptionConfig(_Model):

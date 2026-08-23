@@ -373,6 +373,9 @@ class Engine:
             "state": str(printer.state()),
             "paused": printer.paused(),
             "message": _printer_message(printer),
+            # The quota: reaching it silently withdrew the print button mid-party.
+            "quota_used": db.count_event_prints(self.conn, self.active_event["id"]),
+            "quota_total": self.config.printing.max_per_event,
             "prints_done_event": db.count_event_prints_done(self.conn, self.active_event["id"]),
             "prints_total": db.get_counter(self.conn, PRINTS_TOTAL),
             "queue_length": printer.queue_length(),
@@ -925,6 +928,7 @@ class Engine:
                 "processed_url": processed_url,
                 "print_count": session.print_count,
                 "print_allowed": self._print_allowed(session.print_count),
+                "print_hint": self._print_block(session.print_count),
             }
 
         status = {
@@ -958,12 +962,25 @@ class Engine:
         return status
 
     def _print_allowed(self, print_count: int) -> bool:
+        return self._print_block(print_count) is None
+
+    def _print_block(self, print_count: int) -> str | None:
+        """Why printing is not offered — or None when it is. German, for the guests.
+
+        The button used to just disappear. When the event quota ran out mid-party
+        that looked like a broken box and cost a long search; now it says so.
+        """
         printing = self.config.printing
-        if not printing.enabled or not self.backends.printer.available():
-            return False
+        if not printing.enabled:
+            return "Drucken ist ausgeschaltet"
+        printer_problem = _printer_message(self.backends.printer)
+        if not self.backends.printer.available():
+            return printer_problem or "Der Drucker ist gerade nicht bereit"
         if print_count >= printing.max_per_photo:
-            return False
-        return db.count_event_prints(self.conn, self.active_event["id"]) < printing.max_per_event
+            return "Dieses Foto wurde schon gedruckt"
+        if db.count_event_prints(self.conn, self.active_event["id"]) >= printing.max_per_event:
+            return "Das Druckkontingent für heute ist aufgebraucht"
+        return None
 
     def _storage_status(self) -> dict:
         usage = shutil.disk_usage(self.config.data_dir)

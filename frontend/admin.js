@@ -84,14 +84,20 @@ async function loadAll() {
 
 async function loadPrinter() {
   const p = await api("GET", "/api/admin/printer");
+  const used = p.quota_used ?? 0;
+  const total = p.quota_total ?? 0;
   $("printer-status").textContent =
     `Status: ${PRINTER_STATE[p.state] || p.state} · pausiert: ${p.paused ? "ja" : "nein"} · ` +
     `Warteschlange: ${p.queue_length} · ` +
-    `gedruckt: ${p.prints_done_event ?? "?"} (Event), ${p.prints_total ?? "?"} (gesamt)`;
-  // The reason, prominently: "nicht verfügbar" alone made everyone guess.
+    `gedruckt: ${p.prints_done_event ?? "?"} (Event), ${p.prints_total ?? "?"} (gesamt)` +
+    (total ? ` · Kontingent: ${used}/${total}` : "");
+  // The reason, prominently: "nicht verfügbar" alone made everyone guess, and a
+  // used-up quota withdrew the print button without a word.
   const problem = $("printer-problem");
-  problem.textContent = p.message || "";
-  problem.classList.toggle("hidden", !p.message);
+  const exhausted = total > 0 && used >= total;
+  problem.textContent =
+    p.message || (exhausted ? "Druckkontingent aufgebraucht — Drucken wird nicht angeboten" : "");
+  problem.classList.toggle("hidden", !problem.textContent);
 }
 
 async function printerAction(path, confirmMsg) {

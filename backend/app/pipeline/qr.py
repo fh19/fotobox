@@ -22,17 +22,17 @@ def draw_qr(image: Image.Image, qr_config: QRConfig, photo_id: int, canvas: Canv
     code.add_data(data)
     code.make(fit=True)
     tile = code.make_image(fill_color="black", back_color="white").convert("RGB")
-    tile = tile.resize((qr_config.size_px, qr_config.size_px), Image.NEAREST)
+    size = canvas.px(qr_config.size_px)  # print pixels → canvas pixels
+    tile = tile.resize((size, size), Image.NEAREST)
 
-    size = qr_config.size_px
     if qr_config.position == "bottom_left":
-        x = canvas.safe_left + _PAD
-        y = canvas.safe_bottom - size - _PAD
+        x = canvas.safe_left + canvas.px(_PAD)
+        y = canvas.safe_bottom - size - canvas.px(_PAD)
     elif qr_config.position == "bottom_center":
         x = canvas.safe_left + (canvas.safe_width - size) // 2
-        y = canvas.safe_bottom - size - _PAD
+        y = canvas.safe_bottom - size - canvas.px(_PAD)
     else:  # bottom_right (default)
-        x = canvas.safe_right - size - _PAD
-        y = canvas.safe_bottom - size - _PAD
+        x = canvas.safe_right - size - canvas.px(_PAD)
+        y = canvas.safe_bottom - size - canvas.px(_PAD)
 
     image.paste(tile, (x, y))

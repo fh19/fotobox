@@ -159,6 +159,19 @@ body[data-state="ERROR"] #screen-error {
   opacity: 0.8;
 }
 
+/* Why printing stopped — deliberately large. On the first event an empty paper
+   tray was only noticeable by prints no longer appearing. */
+.printer-alert {
+  position: absolute;
+  bottom: 8vh;
+  left: 0;
+  right: 0;
+  font-size: 34px;
+  font-weight: 600;
+  color: #ffb74d;
+  text-align: center;
+}
+
 /* --- BACKGROUND_SELECT ---------------------------------------------------- */
 
 #screen-background {

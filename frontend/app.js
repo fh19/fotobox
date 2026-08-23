@@ -21,6 +21,8 @@ const dom = {
   idlePause: el("idle-pause"),
   idleHeading: el("idle-heading"),
   idlePrintNote: el("idle-print-note"),
+  idlePrintReason: el("idle-print-reason"),
+  previewPrintReason: el("preview-print-reason"),
   bgTiles: el("bg-tiles"),
   countdownNumber: el("countdown-number"),
   countdownRing: el("countdown-ring"),
@@ -139,6 +141,11 @@ function renderIdle(status) {
 
   const printerReady = status.printer && status.printer.available;
   dom.idlePrintNote.classList.toggle("hidden", printerReady);
+  // Say *what* is wrong, in large type. On the first event paper and ribbon ran
+  // out unnoticed — the only symptom was that prints stopped coming.
+  const problem = (status.printer && status.printer.message) || "";
+  dom.idlePrintReason.textContent = problem;
+  dom.idlePrintReason.classList.toggle("hidden", printerReady || !problem);
 }
 
 async function loadBackgrounds() {
@@ -222,6 +229,10 @@ function renderPreview(status, entering) {
 
   const printAllowed = !!session.print_allowed;
   dom.previewActions.classList.toggle("no-print", !printAllowed);
+  // A button that simply vanished looked like a fault; the reason comes along.
+  const hint = printAllowed ? "" : session.print_hint || "";
+  dom.previewPrintReason.textContent = hint;
+  dom.previewPrintReason.classList.toggle("hidden", !hint);
 
   if (printingLabelTimer) {
     dom.btnPrint.textContent = "Wird gedruckt …";

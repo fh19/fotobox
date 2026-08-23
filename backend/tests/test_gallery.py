@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import os
 import tracemalloc
 import zipfile
 from datetime import UTC, datetime
@@ -157,3 +158,21 @@ def test_zip_stream_memory_is_flat(tmp_path):
 
     assert total > 300 * 50_000 * 0.9  # everything was actually streamed (~15 MB)
     assert peak < 2_000_000  # but peak memory stays near one file, not the whole archive
+
+
+def test_zip_entries_keep_the_file_date(tmp_path):
+    """From the first real event: every extracted photo was dated 1980-01-01, so
+    the guests' downloads looked like the box had no clock. It had one — the ZIP
+    was written with a bare arcname, which is zipfile's epoch default."""
+    photo = tmp_path / "IMG_0402.jpg"
+    photo.write_bytes(b"\xff\xd8\xff" + b"jpeg" * 100)
+    taken = datetime(2026, 8, 22, 5, 6, 31)
+    os.utime(photo, (taken.timestamp(), taken.timestamp()))
+
+    data = b"".join(stream_zip([("Fotos/IMG_0402.jpg", photo)]))
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        info = archive.getinfo("Fotos/IMG_0402.jpg")
+        assert info.date_time[:5] == (2026, 8, 22, 5, 6)
+        # ...and readable by more than just the owner after extraction.
+        assert (info.external_attr >> 16) & 0o044
+        assert archive.read("Fotos/IMG_0402.jpg") == photo.read_bytes()

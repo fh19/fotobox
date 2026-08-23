@@ -183,3 +183,51 @@ def test_a_lead_longer_than_the_countdown_keeps_the_last_second(make_engine, clo
     clock.advance(0.4)
     engine.tick()
     assert engine.sm.state == State.PREVIEW
+
+
+# --- why printing is not offered --------------------------------------------
+#
+# From the first real event: the print button simply vanished when the event
+# quota ran out. No message anywhere, and the search for the cause took a while.
+
+
+def _to_preview(engine, clock, duration=1):
+    engine.start()
+    engine.select_background("none")
+    _run_countdown(engine, clock, duration=duration)
+    assert engine.sm.state == State.PREVIEW
+
+
+def test_the_exhausted_quota_says_so(make_engine, clock):
+    engine = make_engine(countdown__duration_seconds=1, printing__max_per_event=0)
+    _to_preview(engine, clock)
+
+    session = engine.build_status()["session"]
+    assert session["print_allowed"] is False
+    assert session["print_hint"] == "Das Druckkontingent für heute ist aufgebraucht"
+
+
+def test_an_unavailable_printer_names_its_problem(make_engine, clock):
+    engine = make_engine(countdown__duration_seconds=1)
+    engine.backends.printer.set_reason("media_empty")
+    _to_preview(engine, clock)
+
+    session = engine.build_status()["session"]
+    assert session["print_allowed"] is False
+    assert session["print_hint"] == "Kein Papier"
+
+
+def test_nothing_is_said_while_printing_works(make_engine, clock):
+    engine = make_engine(countdown__duration_seconds=1)
+    _to_preview(engine, clock)
+
+    session = engine.build_status()["session"]
+    assert session["print_allowed"] is True
+    assert session["print_hint"] is None
+
+
+def test_the_admin_sees_the_quota_before_it_runs_out(make_engine, clock):
+    engine = make_engine(countdown__duration_seconds=1, printing__max_per_event=50)
+    status = engine.printer_status()
+    assert status["quota_total"] == 50
+    assert status["quota_used"] == 0

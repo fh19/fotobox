@@ -37,6 +37,10 @@ Ist Drucken nicht verfügbar, erscheint unten klein und unaufdringlich:
 
 > Drucken ist gerade nicht möglich — Fotos werden gespeichert
 
+Darüber, deutlich größer und orange, der konkrete Grund aus `printer.message`
+(`Kein Papier`, `Farbband verbraucht`, `Papierstau`, `Klappe offen`). Papier- und
+Bandende fielen beim ersten Einsatz nur dadurch auf, dass keine Ausdrucke mehr kamen.
+
 Ist die Kamera nicht verfügbar:
 
 > **Kleine Pause**
@@ -135,6 +139,17 @@ ein ausgegrauter Button provoziert wiederholtes Tippen. Stattdessen zentriert:
 
 > **Fertig**
 
+Darüber steht groß und orange der **Grund**, warum nicht gedruckt wird. Ohne ihn wirkt
+der verschwundene Button wie ein Defekt — beim ersten Einsatz kostete das eine lange
+Fehlersuche. Wortlaut:
+
+| Ursache | Text |
+|---|---|
+| Kontingent des Events erreicht | Das Druckkontingent für heute ist aufgebraucht |
+| Dieses Foto schon gedruckt | Dieses Foto wurde schon gedruckt |
+| Drucken abgeschaltet | Drucken ist ausgeschaltet |
+| Drucker nicht bereit | der Druckergrund (`Kein Papier`, `Farbband verbraucht`, …) |
+
 Rechts oben ein Zähler des Timeouts als dünner Ring. Timeout
 `timeouts.preview_seconds` (Standard 30 s) → `IDLE`. Jede Berührung des Bildschirms setzt
 den Timeout zurück.
@@ -199,6 +214,9 @@ Kacheln:
 
 2. **Drucker** — großer Button `Drucker fortsetzen` (nach Papier-/Bandwechsel),
    `Warteschlange leeren`, `Testdruck`, `Druckzähler zurücksetzen`
+
+   Der Status nennt zusätzlich das **Kontingent** (`Kontingent: 132/219`), damit
+   sichtbar ist, wie viele Drucke noch übrig sind, bevor die Box sie verweigert.
 
    Kann nicht gedruckt werden, steht der Grund orange über dem Status — sonst
    bleibt nur Raten. Wortlaut: `Kein Papier`, `Farbband verbraucht`, `Papierstau`,

@@ -41,7 +41,13 @@ def stream_zip(entries: Iterable[tuple[str, Path]]) -> Iterator[bytes]:
         for arcname, path in entries:
             if not path.exists():
                 continue
-            with archive.open(arcname, "w") as target, open(path, "rb") as source:
+            # ZipInfo.from_file carries the file's mtime and mode into the archive.
+            # Writing a bare arcname instead left every extracted photo dated
+            # 1980-01-01 (zipfile's default) and readable only by its owner — the
+            # timestamps looked like a broken clock on the box, but the box was fine.
+            info = zipfile.ZipInfo.from_file(path, arcname)
+            info.compress_type = zipfile.ZIP_STORED
+            with archive.open(info, "w") as target, open(path, "rb") as source:
                 while True:
                     block = source.read(_CHUNK)
                     if not block:

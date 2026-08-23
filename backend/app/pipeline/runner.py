@@ -4,9 +4,10 @@ Chain (docs/druck-layout.md):
   original → cut out (chroma | ai) or unchanged (overlay | none)
           → composite over background (chroma | ai)
           → overlay.png → caption → QR
-          → processed/ (== prints/) and a thumbnail
+          → processed/ (pipeline.processed_scale x print size) and a thumbnail
+          → prints/ (scaled down to the print raster)
 
-The output is always exactly the canvas size, JPEG, sRGB. A failure anywhere
+The composed image carries the camera's EXIF over. A failure anywhere
 raises :class:`PipelineError`; the caller never touches the original
 (CLAUDE.md rule 3), so the photo is never lost.
 """
@@ -29,6 +30,8 @@ from app.pipeline.errors import PipelineError
 from app.pipeline.geometry import Canvas, canvas_for, contain_resize, cover_resize
 from app.pipeline.qr import draw_qr
 
+_ORIENTATION = 274  # EXIF tag
+
 
 @dataclass(frozen=True)
 class PipelineOutputs:
@@ -50,8 +53,8 @@ def run_pipeline(
     """
     start = time.monotonic()
     try:
-        result = _compose(config, background, photo_id, original_path)
-        _write_outputs(config, result, outputs)
+        result, exif = _compose(config, background, photo_id, original_path)
+        _write_outputs(config, result, outputs, exif)
     except PipelineError:
         raise
     except Exception as exc:  # any imaging error → failed, original untouched
@@ -61,11 +64,16 @@ def run_pipeline(
 
 def _compose(
     config: Config, background: Background, photo_id: int, original_path: Path
-) -> Image.Image:
-    canvas = canvas_for(config.printing)
+) -> tuple[Image.Image, Image.Exif]:
+    """Compose the photo and return it with the EXIF to carry over."""
+    canvas = canvas_for(config.printing, config.pipeline.processed_scale)
     # Honour the camera's EXIF orientation so a portrait-mounted DSLR comes out
     # upright (docs/druck-layout.md — the sensor is always landscape).
-    original = ImageOps.exif_transpose(Image.open(original_path)).convert("RGB")
+    source = Image.open(original_path)
+    exif = source.getexif()
+    # The rotation is baked in below, so the tag must not ask for it again.
+    exif[_ORIENTATION] = 1
+    original = ImageOps.exif_transpose(source).convert("RGB")
 
     if background.mode == "frame":
         # The photo is fitted into the overlay's transparent window, not the whole
@@ -95,7 +103,7 @@ def _compose(
     if config.printing.qr.enabled:
         draw_qr(result, config.printing.qr, photo_id, canvas)
 
-    return result
+    return result, exif
 
 
 def _cut_out_and_composite(
@@ -142,13 +150,30 @@ def _place_in_frame(background: Background, original: Image.Image, canvas: Canva
     return base
 
 
-def _write_outputs(config: Config, result: Image.Image, outputs: PipelineOutputs) -> None:
+def _write_outputs(
+    config: Config, result: Image.Image, outputs: PipelineOutputs, exif: Image.Exif | None = None
+) -> None:
+    """Write the three variants. ``result`` may be larger than the print canvas.
+
+    The camera's EXIF (time, model, aperture, ISO) rides along: guests who take
+    their photos home should get the shot data, and the composed file used to
+    carry none of it.
+    """
     quality = config.pipeline.jpeg_quality
     for path in (outputs.processed, outputs.print, outputs.thumb):
         path.parent.mkdir(parents=True, exist_ok=True)
+    save_args = {"format": "JPEG", "quality": quality, "subsampling": 0}
+    if exif is not None:
+        save_args["exif"] = exif
 
-    result.save(outputs.processed, format="JPEG", quality=quality, subsampling=0)
-    result.save(outputs.print, format="JPEG", quality=quality, subsampling=0)
+    result.save(outputs.processed, **save_args)
+    # The printer only ever needs the postcard raster; composing above it is for
+    # the download. Scaling down here keeps the print job exactly as it was.
+    print_canvas = canvas_for(config.printing)
+    printable = result
+    if result.size != (print_canvas.width, print_canvas.height):
+        printable = result.resize((print_canvas.width, print_canvas.height), Image.LANCZOS)
+    printable.save(outputs.print, **save_args)
 
     thumb_width = config.pipeline.thumbnail_width
     thumb_height = max(1, round(result.height * thumb_width / result.width))
