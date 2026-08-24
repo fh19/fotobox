@@ -786,7 +786,15 @@ class Engine:
             self._mode_path().write_text(mode + "\n", encoding="utf-8")
         except OSError as exc:
             raise ActionRejected("write_failed", f"Betriebsart nicht gespeichert: {exc}") from exc
-        self._log("warning", "system", "mode_changed", f"Betriebsart ab dem Neustart: {mode}")
+        if mode == "fotobox" and self._booted_mode == "printserver":
+            # This direction needs no restart: the kiosk script watches the same
+            # file and starts the browser within seconds (measured: under five).
+            # The other way round does — Chromium is already running by then.
+            self._booted_mode = "fotobox"
+            self._mode_watching = False
+            self._log("warning", "system", "mode_changed", "Betriebsart: Fotobox")
+        else:
+            self._log("warning", "system", "mode_changed", f"Betriebsart ab dem Neustart: {mode}")
         return self.mode_status()
 
     # --- photo lamp ---------------------------------------------------------

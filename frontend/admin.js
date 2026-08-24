@@ -872,7 +872,12 @@ async function switchMode() {
     return;
   }
   try {
-    await api("POST", "/api/admin/mode", { mode });
+    const res = await api("POST", "/api/admin/mode", { mode });
+    if (!res.reboot_required) {
+      // Zurück zur Fotobox geht live — der Kiosk merkt es an der Datei.
+      note("sys-mode-status", `Betriebsart ${label} — der Kiosk startet gleich.`);
+      return;
+    }
     note("sys-mode-status", `Betriebsart ${label} — Box startet neu …`);
     await api("POST", "/api/admin/reboot");
   } catch (e) {

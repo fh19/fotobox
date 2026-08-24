@@ -249,3 +249,21 @@ def test_the_kiosk_picks_the_change_up_without_a_reboot(tmp_path):
     )
     assert 'while [ "$MODE" = "printserver" ]' in script
     assert "exec sleep infinity" not in script  # would never notice the change
+
+
+def test_going_back_to_the_photobooth_needs_no_restart(tmp_path):
+    """The kiosk script watches the same file and starts the browser within
+    seconds; only the other direction needs a reboot, because Chromium is
+    already running by then."""
+    engine, clock = _printserver(tmp_path)
+
+    res = engine.set_kiosk_mode("fotobox")
+    assert res == {"mode": "fotobox", "running": "fotobox", "reboot_required": False}
+    assert engine.mode_watch_finished is True
+
+
+def test_going_to_print_server_still_needs_one(tmp_path):
+    client, engine = _client(tmp_path)  # boots as fotobox
+    res = client.post("/api/admin/mode", json={"mode": "printserver"}, headers=PIN).json()
+    assert res["reboot_required"] is True
+    assert res["running"] == "fotobox"
