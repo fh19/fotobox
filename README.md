@@ -57,6 +57,10 @@ Lüfter oben aufgeschraubt und verschraubter Deckel, oder Lüfter innen mit
 Klipsdeckel. Beide mit Anschraublaschen und Füßen für die Montage auf einer
 Platte.
 
+Dazu eine **Schaltbox** (`hardware/schaltbox/`): Einbaugehäuse für das
+Halbleiterrelais der Fotolampe, Feinsicherung, drei Euro-Steckdosen und die
+Kabeleinführung — innen durch einen Steg in Netz- und Steuerseite geteilt.
+
 ## Entwicklung
 
 ```bash
