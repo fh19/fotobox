@@ -88,7 +88,12 @@ class LampConfig(_Model):
     angeschlossen, dann passiert schlicht nichts.
     """
 
-    backend: Literal["none", "mock"] = "none"
+    backend: Literal["none", "mock", "gpio"] = "none"
+    # Der Eingang des SSR hat seinen Vorwiderstand eingebaut (AQ2A2-ZP3:
+    # 3–28 V, ~1,6 kΩ), ein Pin treibt ihn direkt. Pin ab GPIO 9 wählen: die
+    # darunter haben beim Booten einen Pull-up, die Lampe ginge kurz an.
+    pin: int = Field(default=17, ge=0, le=27)
+    active_high: bool = True
     # Zustände, in denen die Lampe aus bleibt. Alles andere schaltet sie ein.
     off_states: list[str] = Field(default_factory=lambda: ["SCREENSAVER"])
 

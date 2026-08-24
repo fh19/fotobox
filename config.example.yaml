@@ -42,7 +42,10 @@ hardware:
     auto_resume_seconds: 20        # gestoppte CUPS-Queue selbst freigeben; 0 = nur von Hand
 
   lamp:
-    backend: none                  # none | mock — echte Schalthardware steht noch aus
+    backend: none                  # none | mock | gpio
+    pin: 17                        # GPIO-Nummer (BCM). Ab 9 wählen: darunter liegt
+                                   # beim Booten ein Pull-up an, die Lampe ginge kurz an
+    active_high: true              # true = Pin hoch schaltet die Lampe ein
     off_states: [SCREENSAVER]      # hier bleibt die Lampe aus, sonst an
 
 countdown:

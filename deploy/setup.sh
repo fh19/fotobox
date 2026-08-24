@@ -59,6 +59,16 @@ camera_deps() {
   "$PY" -m pip install --quiet gphoto2
 }
 
+lamp_deps() {
+  # Die Fotolampe hängt an einem GPIO. lgpio spricht /dev/gpiochip0 über das
+  # Character-Device und braucht dafür kein root — die Gruppe "gpio" genügt.
+  # Es wird aus der Quelle gebaut, deshalb swig.
+  log "GPIO-Bibliothek für die Fotolampe"
+  sudo apt-get install -y --no-install-recommends swig python3-dev
+  "$APP_DIR/.venv/bin/pip" install --quiet lgpio
+  id -nG "$USER" | tr " " "\n" | grep -qx gpio || sudo usermod -aG gpio "$USER"
+}
+
 printer_deps() {
   # Drucken via CUPS/pycups. Der CP1500 kann NICHT driverless über USB (IPP-over-USB
   # ist am Gerät funktionslos) — die vollständige Einrichtung (Gutenprint 5.3.6 aus
@@ -182,6 +192,7 @@ main() {
   python_env
   camera_deps
   printer_deps
+  lamp_deps
   data_dir
   if [ "$HEADLESS" != "1" ]; then
     set_hostname

@@ -77,9 +77,14 @@ def build_lamp(config: Config):
     The engine talks to the protocol, so adding a real one later touches nothing
     outside this function.
     """
-    if config.hardware.lamp.backend == "none":
+    lamp = config.hardware.lamp
+    if lamp.backend == "none":
         return None
-    return MockLamp()
+    if lamp.backend == "mock" or _use_mock(config, lamp.backend):
+        return MockLamp()
+    from app.hardware.gpio_lamp import GpioLamp
+
+    return GpioLamp(lamp.pin, lamp.active_high)
 
 
 class CameraManager:

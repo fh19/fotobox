@@ -325,6 +325,46 @@ Verhalten wieder her.
 `docs/bedienungsanleitung.md`). Die dort gezeigte Hinweisseite ist statisch und
 taucht in der Prozessliste nach dem Zeichnen nicht mehr auf.
 
+## 7b. Optional: Fotolampe über ein Halbleiterrelais
+
+Die Lampe hängt an einem GPIO, der ein SSR ansteuert. `hardware.lamp.backend: gpio`,
+dazu `pin` und `active_high`. Geschaltet wird nach dem Zustand der Box —
+`off_states: [SCREENSAVER]` heißt: im Bildschirmschoner aus, sonst an.
+
+**Verwendetes Bauteil:** Panasonic/Matsushita **AQ2A2-ZP3** (2 A, 75–250 V AC,
+Nulldurchgang). Sein Eingang ist spannungsgesteuert von **3 bis 28 V** mit
+**eingebautem Vorwiderstand** (~1,6 kΩ) — bei 3,3 V fließen rund 2 mA, weit
+unterhalb dessen, was ein Pi-Pin liefern darf.
+
+```
+GPIO 17  ──────────────►  SSR Pin 3 (+)
+GND      ──────────────►  SSR Pin 4 (−)
+                          SSR Pin 1/2  →  Lampe, 230 V
+```
+
+- **Kein Längswiderstand.** Der Vorwiderstand steckt im Bauteil; ein zusätzlicher
+  senkt nur den LED-Strom.
+- **Optional 100 nF** direkt über die Eingangspins. Das Datenblatt bietet unter
+  „Cautions for Use" einen „C or R noise absorber" gegen eingekoppelte Störungen
+  an — in einem Gehäuse, in dem die Steuerleitung neben 230 V liegt, ist das
+  billige Versicherung. Verzögert um ~160 µs, für eine Lampe belanglos.
+- **Pin ab GPIO 9 wählen.** GPIO 0–8 haben beim Booten einen Pull-up; der Pin
+  läge kurz hoch. Ab 9 ist es ein Pull-down. Wer es ganz sicher will, schreibt
+  zusätzlich `gpio=17=op,dl` in `config.txt` — dann ist der Pin schon von der
+  Firmware als Ausgang auf Low gesetzt.
+- **Kein root nötig.** `lgpio` spricht `/dev/gpiochip0` über das Character-Device;
+  die Gruppe `gpio` genügt, und `deploy/setup.sh` trägt den Benutzer dort ein.
+
+Zwei Dinge, die bei einem **gebrauchten** SSR zu prüfen sind, bevor es einzieht:
+Ohne Eingangsspannung muss der Ausgang hochohmig sein (niederohmig = durchlegiert,
+die Lampe ginge nie mehr aus), und es muss bei 3,3 V zuverlässig schalten — die
+Leuchtdiode im Optokoppler altert, und 3,3 V liegen dicht an der Untergrenze.
+
+Der **Reststrom** von bis zu 5 mA im gesperrten Zustand kann LED-Leuchten schwach
+glimmen oder zucken lassen; das hängt allein an ihrem Vorschaltgerät. Falls es
+auftritt, hilft ein Ableitwiderstand parallel zur Lampe (~47 kΩ, 2 W) — oder ein
+mechanisches Relais statt des SSR.
+
 ## 8. Read-only Root (overlayroot) — als Letztes
 
 Schützt die SD gegen Korruption bei Stromausfall. Auf diesem System bereits eingerichtet;
