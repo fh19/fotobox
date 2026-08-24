@@ -87,8 +87,10 @@ async function loadAll() {
     loadNetwork(),
     loadDeleted(),
     loadEventsForRerender(),
-    loadMode(),
   ]);
+  // Erst danach: die Modus-Zeile nennt die Adresse der Box, und die kommt aus
+  // loadNetwork().
+  await loadMode();
 }
 
 // --- on-screen keyboard -----------------------------------------------------
@@ -689,6 +691,7 @@ async function reboot() {
 // --- network / export -------------------------------------------------------
 
 let apEnabled = false;
+let boxAddress = null; // IP der Box, für den Rückweg aus dem Druckserver-Modus
 
 function galleryUrl(ip) {
   if (!ip) return "";
@@ -699,6 +702,7 @@ function galleryUrl(ip) {
 async function loadNetwork() {
   const n = await api("GET", "/api/admin/network");
   apEnabled = n.ap_enabled;
+  boxAddress = n.ip || null;
   $("net-ap").textContent = apEnabled ? "Access-Point ausschalten" : "Access-Point einschalten";
   $("net-status").textContent = apEnabled
     ? `Access-Point „${n.ssid}" aktiv · IP ${n.ip ?? "?"}`
@@ -840,17 +844,30 @@ async function loadMode() {
           res.running === "printserver" ? "Druckserver" : "Fotobox"
         }.`
       : res.mode === "printserver"
-        ? "Läuft als Druckserver — kein Kiosk, kein Live-Bild."
+        ? `Läuft als Druckserver — kein Kiosk, kein Live-Bild. Umschalten über ${adminUrls()}`
         : "Läuft als Fotobox.";
   } catch (e) {
     $("sys-mode-status").textContent = "";
   }
 }
 
+function adminUrls() {
+  const hosts = ["fotobox.local"];
+  if (boxAddress) hosts.push(boxAddress);
+  return hosts.map((h) => `http://${h}/admin`).join("  oder  ");
+}
+
 async function switchMode() {
   const mode = $("sys-mode").value;
   const label = mode === "printserver" ? "Druckserver" : "Fotobox";
-  if (!window.confirm(`Als ${label} starten? Die Box startet dazu neu.`)) {
+  // Im Druckserver-Modus gibt es keinen Kiosk mehr — der Rückweg gehört genau
+  // hierhin, nicht in eine Dokumentation, die man dann nicht mehr aufrufen kann.
+  const warning =
+    mode === "printserver"
+      ? `\n\nDanach bleibt der Bildschirm dunkel. Zurückschalten von einem anderen ` +
+        `Gerät im Netz:\n${adminUrls()}`
+      : "";
+  if (!window.confirm(`Als ${label} starten? Die Box startet dazu neu.${warning}`)) {
     await loadMode();
     return;
   }

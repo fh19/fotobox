@@ -269,6 +269,23 @@ steht nicht verlässlich fest, welche USB-Geräte schon angemeldet sind — eine
 Webcam, die drei Sekunden später kommt, würde sonst darüber entscheiden, ob auf
 der Hochzeit eine Fotobox hochfährt. Der Fehler wäre lautlos und vollständig.
 
+#### Zurück in den Fotobox-Modus
+
+Im Druckserver-Modus läuft **kein Kiosk** — der Bildschirm bleibt dunkel, und auf
+der Box selbst kommt man nicht mehr in den Admin. Der Rückweg führt über das Netz;
+das Backend läuft ja weiter:
+
+1. **Von einem anderen Gerät im Netz:** `http://fotobox.local/admin` (oder die
+   IP-Adresse der Box). Dort *System → Betriebsart → Fotobox*. Diese Adresse steht
+   auch in der Rückfrage, wenn du auf Druckserver umschaltest — sie ist der Grund,
+   warum sie dort steht.
+2. **Ohne Netzwerk:** Die Box macht nach zwei Minuten von selbst ihren
+   Access-Point auf. Handy mit dem WLAN „Fotobox" verbinden, dann
+   `http://192.168.4.1/admin`.
+3. **Wenn gar nichts geht:** SD-Karte in einen anderen Rechner, auf der
+   Datenpartition die Datei `mode` öffnen und `fotobox` hineinschreiben. Die Karte
+   zurück in die Box, fertig.
+
 ### Ausschalten
 **Immer** über Admin → **System → „Herunterfahren"** — erst danach den Strom trennen.
 **Nie einfach den Stecker ziehen** (schützt die SD-Karte). Zum Weiterarbeiten ohne
