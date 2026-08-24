@@ -242,3 +242,27 @@ def test_the_kiosk_shows_a_slideshow_and_wakes_without_shooting(tmp_path):
     )
     # No live preview behind a slideshow nobody watches.
     assert 'body.dataset.state === "SCREENSAVER"' in js
+
+
+def test_the_print_mode_screen_says_both_ways_back(tmp_path):
+    """A dark screen looks like a fault. This one names the physical route and
+    the network one, because the admin is not reachable on the box itself."""
+    page = FRONTEND_DIR / "printserver.html"
+    text = page.read_text(encoding="utf-8")
+    assert "Druckermodus" in text
+    assert "Kamera anstecken" in text
+    assert "fotobox.local/admin" in text
+    # Static on purpose: no polling behind a screen nobody may be watching.
+    assert "<script" not in text
+    assert "fetch(" not in text
+
+
+def test_the_kiosk_shows_that_screen_and_replaces_it(tmp_path):
+    from pathlib import Path
+
+    script = (Path(__file__).resolve().parents[2] / "deploy" / "kiosk.sh").read_text(
+        encoding="utf-8"
+    )
+    assert "printserver.html" in script
+    # It has to go away again when a camera brings the photobooth back.
+    assert 'kill "$NOTICE"' in script

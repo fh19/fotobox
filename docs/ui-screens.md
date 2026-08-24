@@ -83,6 +83,25 @@ es, und seine JPEG-Kodierung ist die größte Dauerlast der Box.
 
 ---
 
+## Druckermodus (kein Zustand des Automaten)
+
+Läuft die Box als Druckserver, startet der Kiosk keine Fotobox-Oberfläche. Statt
+eines schwarzen Bildschirms zeigt sie eine feste Seite — sonst sieht ein
+angeschlossener Monitor aus wie ein Defekt:
+
+> **Druckermodus**
+> Diese Box arbeitet gerade als Netzwerkdrucker.
+> Sie macht gerade keine Fotos.
+>
+> Zurück zur Fotobox: **Kamera anstecken**
+> oder im Browser `http://fotobox.local/admin`
+
+Die Seite ist bewusst statisch: kein Live-Bild, kein Abfragen im Hintergrund. Sie
+nennt beide Rückwege — den körperlichen und den über das Netz —, weil auf der Box
+selbst kein Admin-Bereich erreichbar ist.
+
+---
+
 ## `BACKGROUND_SELECT`
 
 **Standardmäßig übersprungen.** Gibt es genau einen Rahmen, ist die Frage „mit oder
