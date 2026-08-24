@@ -64,6 +64,11 @@ class PreviewConfig(_Model):
     height: int = Field(gt=0)
     fps: int = Field(gt=0)
     jpeg_quality: int = Field(ge=1, le=100)
+    # Ruft niemand ein Bild ab (Bildschirmschoner, Galerie, Druckserver-Modus),
+    # werden die Bilder nach dieser Zeit nur noch geholt, aber nicht mehr
+    # dekodiert und kodiert. Der Strom bleibt an, das Bild ist beim nächsten
+    # Abruf sofort da — es kostet nur nichts mehr. 0 = immer voll rechnen.
+    idle_after_seconds: float = Field(default=5.0, ge=0)
 
 
 class PrinterConfig(_Model):

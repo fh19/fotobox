@@ -4,6 +4,12 @@ A background thread grabs frames continuously and keeps the latest JPEG, so the
 MJPEG endpoint's ``frame()`` call never blocks the event loop and the camera's
 frame rate is decoupled from the number of clients. MJPG is requested from the
 device (USB webcams deliver it natively; YUYV would be far heavier to decode).
+
+While nobody asks for frames the thread still *grabs* them — that keeps the
+stream flowing and the picture instant when someone looks again — but skips the
+decode and the JPEG encode, which is where the work actually is. Without that
+the box spent two thirds of a core drawing a picture nobody was watching: during
+the screensaver, in the gallery, and all day in print-server mode.
 """
 
 from __future__ import annotations
@@ -31,7 +37,15 @@ def placeholder_frame() -> bytes:
 
 
 class V4l2Preview:
-    def __init__(self, device: str, width: int, height: int, fps: int, jpeg_quality: int) -> None:
+    def __init__(
+        self,
+        device: str,
+        width: int,
+        height: int,
+        fps: int,
+        jpeg_quality: int,
+        idle_after_seconds: float = 5.0,
+    ) -> None:
         import cv2
 
         self._cv2 = cv2
@@ -40,6 +54,8 @@ class V4l2Preview:
         self._height = height
         self._fps = fps
         self._quality = jpeg_quality
+        self._idle_after = idle_after_seconds
+        self._last_request = time.monotonic()
         self._latest: bytes | None = None
         self._lock = threading.Lock()
         self._stop = threading.Event()
@@ -62,11 +78,22 @@ class V4l2Preview:
         cap.set(cv2.CAP_PROP_FPS, self._fps)
         return cap
 
+    def _idle(self) -> bool:
+        """True while nobody has asked for a frame for a while."""
+        if self._idle_after <= 0:
+            return False
+        return (time.monotonic() - self._last_request) > self._idle_after
+
     def _run(self) -> None:
         cv2 = self._cv2
         fails = 0
         while not self._stop.is_set():
-            ok, frame = self._cap.read()
+            # grab() fetches without decoding — the cheap half. retrieve() and
+            # the JPEG encode only happen when somebody is actually looking.
+            ok = self._cap.grab()
+            frame = None
+            if ok and not self._idle():
+                ok, frame = self._cap.retrieve()
             if not ok:
                 fails += 1
                 if fails > 30:
@@ -91,6 +118,8 @@ class V4l2Preview:
                 continue
             fails = 0
             self._opened = True  # recovered after a previous glitch
+            if frame is None:
+                continue  # idle: grabbed and dropped, nothing to encode
             ok, buffer = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, self._quality])
             if ok:
                 with self._lock:
@@ -100,6 +129,8 @@ class V4l2Preview:
         return self._opened and self._latest is not None
 
     def frame(self) -> bytes:
+        # Somebody is looking — the grab loop starts encoding again.
+        self._last_request = time.monotonic()
         # Only while the device is actually delivering. Handing out the last frame
         # of an unplugged camera freezes the kiosk on a picture that looks live —
         # far more confusing than an obviously blank one (api-contract).

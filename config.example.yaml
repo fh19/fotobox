@@ -33,6 +33,7 @@ hardware:
     height: 720
     fps: 25
     jpeg_quality: 80
+    idle_after_seconds: 5          # ohne Abruf nur noch holen, nicht mehr kodieren
 
   printer:
     backend: cups

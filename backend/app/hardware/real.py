@@ -99,7 +99,14 @@ def build_real_preview(config: Config, selected: DetectedPreview, camera: Detect
 
         preview = config.hardware.preview
         device = selected.device if selected is not None else preview.device
-        return V4l2Preview(device, preview.width, preview.height, preview.fps, preview.jpeg_quality)
+        return V4l2Preview(
+            device,
+            preview.width,
+            preview.height,
+            preview.fps,
+            preview.jpeg_quality,
+            preview.idle_after_seconds,
+        )
     if backend == "gphoto2":
         # Shares the open camera handle with the shutter — see gphoto2_session.
         from app.hardware.gphoto2_preview import Gphoto2Preview
