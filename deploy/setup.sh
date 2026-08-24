@@ -64,7 +64,8 @@ lamp_deps() {
   # Character-Device und braucht dafür kein root — die Gruppe "gpio" genügt.
   # Es wird aus der Quelle gebaut, deshalb swig.
   log "GPIO-Bibliothek für die Fotolampe"
-  sudo apt-get install -y --no-install-recommends swig python3-dev
+  # liblgpio-dev liefert die Kopfdateien, ohne die der Bau an "-llgpio" scheitert.
+  sudo apt-get install -y --no-install-recommends swig python3-dev liblgpio-dev
   "$APP_DIR/.venv/bin/pip" install --quiet lgpio
   id -nG "$USER" | tr " " "\n" | grep -qx gpio || sudo usermod -aG gpio "$USER"
 }
