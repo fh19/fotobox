@@ -113,14 +113,12 @@ def test_the_admin_names_the_way_back(tmp_path):
     the moment of switching — not in a document the box can no longer show."""
     from pathlib import Path
 
-    js = (Path(__file__).resolve().parents[2] / "frontend" / "admin.js").read_text(
-        encoding="utf-8"
-    )
+    js = (Path(__file__).resolve().parents[2] / "frontend" / "admin.js").read_text(encoding="utf-8")
     assert "fotobox.local" in js
     assert "Zurückschalten von einem anderen" in js
 
-    manual = (
-        Path(__file__).resolve().parents[2] / "docs" / "bedienungsanleitung.md"
-    ).read_text(encoding="utf-8")
+    manual = (Path(__file__).resolve().parents[2] / "docs" / "bedienungsanleitung.md").read_text(
+        encoding="utf-8"
+    )
     assert "Zurück in den Fotobox-Modus" in manual
     assert "192.168.4.1/admin" in manual  # der Weg ohne Netzwerk
