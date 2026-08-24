@@ -286,6 +286,21 @@ das Backend läuft ja weiter:
    Datenpartition die Datei `mode` öffnen und `fotobox` hineinschreiben. Die Karte
    zurück in die Box, fertig.
 
+**Am bequemsten aber:** einfach die Kamera anstecken. Erkennt die Box im
+Druckserver-Betrieb eine Kamera, wird sie von selbst wieder zur Fotobox — ohne
+Neustart, der Kiosk startet innerhalb weniger Sekunden.
+
+Damit das den Wechsel *in* den Druckserver-Modus nicht sofort rückgängig macht,
+wird der Auslöser erst scharf, **nachdem einmal keine Kamera da war**. Umschalten
+mit noch angesteckter Kamera bleibt also bestehen; ausgelöst wird auf das
+Anstecken, nicht auf das bloße Vorhandensein. Abschaltbar über
+`mode.return_on_camera`.
+
+Die Richtung gilt nur so: Aus einer Fotobox wird nie von selbst ein Druckserver.
+Eine erkannte Kamera ist ein eindeutiges Signal — eine fehlende nicht, denn beim
+Booten steht nicht fest, ob ein Gerät weg ist oder sich nur noch nicht angemeldet
+hat.
+
 ### Ausschalten
 **Immer** über Admin → **System → „Herunterfahren"** — erst danach den Strom trennen.
 **Nie einfach den Stecker ziehen** (schützt die SD-Karte). Zum Weiterarbeiten ohne

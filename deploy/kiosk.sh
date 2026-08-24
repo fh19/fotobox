@@ -14,10 +14,19 @@ MODE="fotobox"
 
 if [ "$MODE" = "printserver" ]; then
   # NICHT beenden: lwrespawn startet dieses Skript sonst im Sekundentakt neu
-  # (while-Schleife mit "sleep 1", siehe /usr/bin/lwrespawn). Blockieren lässt
-  # den Bildschirm dunkel und kostet nichts.
-  echo "Druckserver-Modus — kein Kiosk."
-  exec sleep infinity
+  # (while-Schleife mit "sleep 1", siehe /usr/bin/lwrespawn). Warten lässt den
+  # Bildschirm dunkel und kostet nichts.
+  #
+  # Gewartet wird auf die Datei, nicht auf ein Signal: Erkennt das Backend eine
+  # Kamera, schreibt es "fotobox" hinein, und der Kiosk startet von hier aus
+  # weiter — ohne Neustart, der beim Druckserver die Warteschlange kosten würde.
+  echo "Druckserver-Modus — kein Kiosk. Warte auf einen Moduswechsel."
+  while [ "$MODE" = "printserver" ]; do
+    sleep 5
+    MODE="fotobox"
+    [ -r "$MODE_FILE" ] && MODE="$(tr -d "[:space:]" < "$MODE_FILE")"
+  done
+  echo "Betriebsart ist jetzt '$MODE' — Kiosk startet."
 fi
 
 # Wait until the backend answers, so the kiosk never shows a connection error.

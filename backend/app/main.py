@@ -72,6 +72,24 @@ async def _ap_watch_loop(engine: Engine, interval: float) -> None:
             log.exception("Netzwerkprüfung fehlgeschlagen")
 
 
+async def _mode_watch_loop(engine: Engine, interval: float) -> None:
+    """Watch for a camera while the box is a print server, then step aside.
+
+    Ends by itself once the window has passed — there is nothing to watch after
+    that, and a print server should not grow a browser at three in the morning
+    because somebody plugged a webcam in.
+    """
+    while True:
+        await asyncio.sleep(interval)
+        try:
+            if await asyncio.to_thread(engine.consider_camera_return):
+                return
+            if engine.mode_watch_finished:
+                return
+        except Exception:
+            log.exception("Kameraprüfung für die Betriebsart fehlgeschlagen")
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     engine: Engine = app.state.engine
@@ -85,6 +103,9 @@ async def _lifespan(app: FastAPI):
     ap_watch = asyncio.create_task(
         _ap_watch_loop(engine, app.state.config.network.access_point.auto_check_seconds)
     )
+    mode_watch = asyncio.create_task(
+        _mode_watch_loop(engine, app.state.config.mode.return_poll_seconds)
+    )
     log.info("Fotobox bereit (Hardware=%s).", app.state.config.hardware.mode)
     try:
         yield
@@ -93,6 +114,7 @@ async def _lifespan(app: FastAPI):
         prints.cancel()
         recovery.cancel()
         ap_watch.cancel()
+        mode_watch.cancel()
         with suppress(asyncio.CancelledError):
             await task
         with suppress(asyncio.CancelledError):
@@ -101,6 +123,8 @@ async def _lifespan(app: FastAPI):
             await recovery
         with suppress(asyncio.CancelledError):
             await ap_watch
+        with suppress(asyncio.CancelledError):
+            await mode_watch
 
 
 class _RevalidatingStatic(StaticFiles):

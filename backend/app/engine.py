@@ -156,6 +156,17 @@ class Engine:
         # What the box actually booted with. The file may already name a
         # different mode for the next start; these two are not the same thing.
         self._booted_mode = self.kiosk_mode()
+        # A camera turning up ends print-server mode. Armed only once a camera
+        # has been *missing*, so switching to print server with the camera still
+        # plugged in is not undone on the spot.
+        self._mode_watching = self._booted_mode == "printserver"
+        self._mode_return_until = (
+            clock.now() + timedelta(seconds=config.mode.return_grace_seconds)
+            if self._mode_watching and config.mode.return_grace_seconds
+            else None
+        )
+        self._camera_was_missing = False
+        self._camera_seen_once = False
         self._last_avail = None
         self._printer_resume_at = None
 
@@ -706,6 +717,57 @@ class Engine:
         except OSError:
             return "fotobox"
         return value if value in self._MODES else "fotobox"
+
+    def consider_camera_return(self) -> bool:
+        """Leave print-server mode when a camera shows up. Blocking — off-thread.
+
+        Only this direction. A detected camera says something definite; a missing
+        one does not, because at boot there is no telling whether a device is
+        absent or merely late. So a camera makes a photobooth out of a print
+        server, and nothing ever makes a print server out of a photobooth.
+
+        No reboot: the kiosk script watches the same file and starts the browser
+        within seconds. Rebooting a print server would throw away its queue.
+        """
+        settings = self.config.mode
+        if not settings.return_on_camera or not self._mode_watching:
+            return False
+        if self._mode_return_until is not None and self.clock.now() > self._mode_return_until:
+            self._mode_watching = False
+            self._log(
+                "info",
+                "system",
+                "mode_return_expired",
+                "Keine Kamera aufgetaucht — bleibt Druckserver",
+            )
+            return False
+
+        if not (self.backends.camera.available() or self.backends.preview.available()):
+            # This is what arms the trigger. Without it, switching to print
+            # server while the camera is still plugged in would be undone by the
+            # very next check — the mode would be unreachable.
+            self._camera_was_missing = True
+            self._camera_seen_once = False
+            return False
+        if not self._camera_was_missing:
+            return False
+        if not self._camera_seen_once:
+            # One sighting is not a camera: the webcam once enumerated and
+            # dropped off the bus a second later (uvcvideo -71).
+            self._camera_seen_once = True
+            return False
+
+        model = self.backends.camera.model() or "Vorschaukamera"
+        self.set_kiosk_mode("fotobox")
+        self._booted_mode = "fotobox"
+        self._mode_watching = False
+        self._log("warning", "system", "mode_returned", f"Kamera erkannt ({model}) — Fotobox")
+        return True
+
+    @property
+    def mode_watch_finished(self) -> bool:
+        """True once there is nothing left to watch for."""
+        return not self._mode_watching
 
     def mode_status(self) -> dict:
         """The chosen mode, plus whether it is the one currently running."""

@@ -72,7 +72,8 @@ def test_the_kiosk_script_blocks_instead_of_exiting(tmp_path):
     script = Path(__file__).resolve().parents[2] / "deploy" / "kiosk.sh"
     text = script.read_text(encoding="utf-8")
     assert "printserver" in text
-    assert "exec sleep infinity" in text
+    # Warten statt beenden — und warten heißt hier: die Datei im Auge behalten.
+    assert 'while [ "$MODE" = "printserver" ]' in text
     # The mode file is passed in, not hard-coded into the script's logic.
     assert 'MODE_FILE="${2:-/data/mode}"' in text
 
@@ -122,3 +123,129 @@ def test_the_admin_names_the_way_back(tmp_path):
     )
     assert "Zurück in den Fotobox-Modus" in manual
     assert "192.168.4.1/admin" in manual  # der Weg ohne Netzwerk
+
+
+# --- back to the photobooth when a camera turns up ---------------------------
+#
+# Deliberately one-way. A detected camera says something definite; a missing one
+# does not, because at boot there is no telling whether a device is absent or
+# merely late.
+
+
+def _cameras(engine, available: bool) -> None:
+    """Both backends report the same thing; the camera sits in a fallback
+    wrapper, so there is no set_available() to reach for."""
+    engine.backends.camera.available = lambda: available
+    engine.backends.preview.available = lambda: available
+
+
+def _printserver(tmp_path, **overrides):
+    from app.clock import FakeClock
+
+    config = make_config(tmp_path, **overrides)
+    config.data_dir.mkdir(parents=True, exist_ok=True)
+    (config.data_dir / "mode").write_text("printserver\n", encoding="utf-8")
+    clock = FakeClock()
+    engine = create_app(config, clock).state.engine
+    return engine, clock
+
+
+def test_a_camera_ends_print_server_mode(tmp_path):
+    engine, clock = _printserver(tmp_path)
+    assert engine.mode_status()["running"] == "printserver"
+
+    _cameras(engine, False)
+    assert engine.consider_camera_return() is False  # arms the trigger
+    _cameras(engine, True)
+    assert engine.consider_camera_return() is False  # first sighting only
+    assert engine.consider_camera_return() is True  # confirmed
+
+    assert engine.kiosk_mode() == "fotobox"
+    assert engine.mode_status()["running"] == "fotobox"
+    assert (engine.config.data_dir / "mode").read_text(encoding="utf-8").strip() == "fotobox"
+
+
+def test_one_sighting_is_not_a_camera(tmp_path):
+    """The webcam once enumerated and dropped off the bus a second later."""
+    engine, clock = _printserver(tmp_path)
+    _cameras(engine, False)
+    engine.consider_camera_return()  # armed
+    _cameras(engine, True)
+    engine.consider_camera_return()  # seen once
+
+    _cameras(engine, False)
+    assert engine.consider_camera_return() is False
+
+    _cameras(engine, True)
+    assert engine.consider_camera_return() is False  # counting starts over
+    assert engine.kiosk_mode() == "printserver"
+
+
+def test_the_window_closes_when_one_is_configured(tmp_path):
+    """Optional: by default there is no window, because the trigger is an edge."""
+    engine, clock = _printserver(tmp_path, mode__return_grace_seconds=120)
+    _cameras(engine, False)
+
+    clock.advance(engine.config.mode.return_grace_seconds + 1)
+    assert engine.consider_camera_return() is False
+    assert engine.mode_watch_finished is True
+
+    _cameras(engine, True)
+    assert engine.consider_camera_return() is False
+    assert engine.kiosk_mode() == "printserver"
+
+
+def test_it_never_runs_the_other_way(tmp_path):
+    """Nothing turns a photobooth into a print server on its own."""
+    client, engine = _client(tmp_path)  # boots as fotobox
+    assert engine.mode_watch_finished is True
+    _cameras(engine, True)
+
+    assert engine.consider_camera_return() is False
+    assert engine.kiosk_mode() == "fotobox"
+
+
+def test_it_can_be_switched_off(tmp_path):
+    engine, clock = _printserver(tmp_path, mode__return_on_camera=False)
+    _cameras(engine, False)
+    engine.consider_camera_return()
+    _cameras(engine, True)
+    assert engine.consider_camera_return() is False
+    assert engine.consider_camera_return() is False
+    assert engine.kiosk_mode() == "printserver"
+
+
+def test_a_camera_that_never_left_does_not_trigger(tmp_path):
+    """Switching to print server with the camera still plugged in must stick —
+    otherwise the mode would be unreachable, undone by the next check."""
+    engine, clock = _printserver(tmp_path)
+    _cameras(engine, True)
+
+    for _ in range(10):
+        assert engine.consider_camera_return() is False
+    assert engine.kiosk_mode() == "printserver"
+    assert engine.mode_status()["running"] == "printserver"
+
+
+def test_unplugging_and_plugging_back_in_is_what_triggers_it(tmp_path):
+    """The trigger is the edge, not the level."""
+    engine, clock = _printserver(tmp_path)
+    _cameras(engine, True)
+    assert engine.consider_camera_return() is False  # still attached, nothing
+
+    _cameras(engine, False)
+    assert engine.consider_camera_return() is False  # now armed
+    _cameras(engine, True)
+    engine.consider_camera_return()
+    assert engine.consider_camera_return() is True
+
+
+def test_the_kiosk_picks_the_change_up_without_a_reboot(tmp_path):
+    """Rebooting a print server would throw away its queue (tmpfs spool)."""
+    from pathlib import Path
+
+    script = (Path(__file__).resolve().parents[2] / "deploy" / "kiosk.sh").read_text(
+        encoding="utf-8"
+    )
+    assert 'while [ "$MODE" = "printserver" ]' in script
+    assert "exec sleep infinity" not in script  # would never notice the change

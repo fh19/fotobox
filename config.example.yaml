@@ -81,6 +81,16 @@ screensaver:
   max_photos: 200               # so viele Bilder in der Zufallsliste
   variant: processed            # processed (mit Rahmen) | original
 
+mode:
+  # Zurück aus dem Druckserver-Modus, sobald eine Kamera angesteckt wird.
+  # Scharf wird das erst, nachdem einmal KEINE Kamera da war — sonst ließe sich
+  # der Druckserver-Modus mit angesteckter Kamera gar nicht einschalten, weil
+  # die nächste Prüfung ihn sofort wieder aufhöbe.
+  # Nur diese Richtung: aus einer Fotobox wird nie von selbst ein Druckserver.
+  return_on_camera: true
+  return_grace_seconds: 0       # 0 = unbegrenzt, sonst nur so lange nach dem Start
+  return_poll_seconds: 5
+
 pipeline:
   # Reihenfolge der versuchten Verfahren, wenn ein Hintergrund "auto" gesetzt hat
   chroma_defaults:

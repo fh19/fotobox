@@ -250,6 +250,23 @@ class ScreensaverConfig(_Model):
     variant: Literal["processed", "original"] = "processed"
 
 
+class ModeConfig(_Model):
+    """Rückkehr aus dem Druckserver-Modus.
+
+    Bewusst nur in **eine** Richtung: Eine erkannte Kamera ist ein eindeutiges
+    Signal, ein fehlendes Gerät nicht — beim Booten steht nicht fest, ob es weg
+    ist oder nur noch nicht angemeldet. Deshalb macht eine Kamera aus dem
+    Druckserver eine Fotobox, aber nie umgekehrt.
+    """
+
+    return_on_camera: bool = True
+    # Nur so lange nach dem Start wird darauf gewartet; 0 = unbegrenzt. Das ist
+    # gefahrlos, weil erst eine *fehlende* Kamera den Auslöser scharf macht —
+    # ausgelöst wird also auf das Anstecken, nicht auf das bloße Vorhandensein.
+    return_grace_seconds: int = Field(default=0, ge=0)
+    return_poll_seconds: float = Field(default=5, gt=0)
+
+
 class NetworkConfig(_Model):
     gallery_enabled: bool = True
     # Wie lange die Galerie am Touchscreen ohne Bedienung offen bleibt, bevor sie
@@ -277,6 +294,7 @@ class Config(_Model):
     countdown: CountdownConfig
     timeouts: TimeoutsConfig
     ui: UIConfig
+    mode: ModeConfig = Field(default_factory=ModeConfig)
     screensaver: ScreensaverConfig = Field(default_factory=ScreensaverConfig)
     pipeline: PipelineConfig
     printing: PrintingConfig
