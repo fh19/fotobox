@@ -149,6 +149,9 @@ class Engine:
         # First moment the box was seen without a network; the guest AP opens on
         # its own once this is older than access_point.auto_grace_seconds.
         self._offline_since = None
+        # Has there been a network at all since the start? If yes, a later
+        # outage is a hiccup to wait out, not a venue without WiFi.
+        self._was_connected = False
         # Shuffled photo URLs for the slideshow; refilled on entering SCREENSAVER.
         self._screensaver_photos: list[str] = []
         # Progress of a running re-render, polled via GET /api/admin/rerender.
@@ -875,6 +878,14 @@ class Engine:
         Only ever switches *on*. In AP mode wlan0 no longer sees the home
         network, so "is it back?" cannot be answered without dropping every
         guest — that decision stays with the operator.
+
+        And only if the box has *never* been connected since it started. A box
+        that had a network and lost it is roaming or recovering, and opening the
+        AP takes wlan0 away from it — the recovery can then never happen. That is
+        not theory: with a mesh SSID the box bounced between nodes for two
+        minutes ("Authentication ... timed out", "ASSOC-REJECT status_code=16"),
+        the AP came up in that window, and the box stayed off the network until
+        somebody switched it off by hand.
         """
         from app import system
 
@@ -882,8 +893,22 @@ class Engine:
         if not ap.auto_when_offline:
             self._offline_since = None
             return False
-        if system.network_connected() or system.ap_active():
+        if system.network_connected():
+            self._was_connected = True
             self._offline_since = None
+            return False
+        if system.ap_active():
+            self._offline_since = None
+            return False
+        if self._was_connected:
+            if self._offline_since is not None:
+                self._offline_since = None
+                self._log(
+                    "info",
+                    "system",
+                    "ap_auto_held",
+                    "Netzwerk weg, aber es war schon einmal da — kein Access-Point",
+                )
             return False
 
         now = self.clock.now()

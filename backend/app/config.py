@@ -230,6 +230,9 @@ class AccessPointConfig(_Model):
     # aufmachen. Nur einschalten, nie automatisch wieder aus: im AP-Modus sieht
     # wlan0 das Heimnetz nicht mehr, und ein Rückschalten mitten in der Feier
     # würde allen Gästen die Verbindung abschneiden.
+    # Nur, wenn seit dem Start überhaupt noch nie ein Netz da war. Eine
+    # Verbindung, die verloren geht, ist Roaming oder ein Router-Schluckauf —
+    # der AP nähme wlan0 weg und verhinderte genau die Erholung.
     auto_when_offline: bool = True
     auto_check_seconds: int = Field(default=30, ge=5)
     # Erst nach dieser Zeit ohne Netz; überbrückt Router-Neustarts und den

@@ -145,7 +145,11 @@ Zwei Ausnahmen — **bewusst nicht dauerhaft**:
   Box immer ins normale Netz zurückkehrt). Nach einem Neustart bei Bedarf erneut
   einschalten.
   **Ausnahme:** Findet die Box zwei Minuten lang gar kein Netzwerk — der Normalfall an
-  einer fremden Location —, schaltet sie den Access-Point von selbst ein. Sie schaltet ihn
+  einer fremden Location —, schaltet sie den Access-Point von selbst ein. Das gilt
+  nur, wenn seit dem Einschalten **noch nie** ein Netz da war. Bricht eine
+  bestehende Verbindung ab, wartet sie stattdessen: das ist meist Roaming zwischen
+  mehreren Zugangspunkten, und der Access-Point würde `wlan0` genau dann wegnehmen,
+  wenn die Box sich gerade wieder verbinden will. Sie schaltet ihn
   nie von selbst wieder aus: im AP-Betrieb sieht sie das Heimnetz gar nicht mehr, und ein
   Zurückschalten mitten in der Feier würde alle Gäste trennen. Der Schalter dafür steht
   im Admin unter *Netzwerk*.

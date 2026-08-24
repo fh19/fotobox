@@ -229,3 +229,33 @@ def test_an_unclear_answer_counts_as_connected(tmp_path, monkeypatch):
 
     monkeypatch.setattr(system.subprocess, "run", boom)
     assert system.network_connected() is True
+
+
+def test_an_outage_after_a_working_network_is_waited_out(tmp_path, monkeypatch):
+    """The box was connected and lost it — that is roaming or a router hiccup.
+    Opening the AP takes wlan0 away and the recovery can never happen.
+
+    Not theory: with a mesh SSID the box bounced between nodes for two minutes,
+    the AP came up in that window, and it stayed off the network until somebody
+    switched it off by hand.
+    """
+    engine, clock, switched = _offline_engine(tmp_path, monkeypatch, connected=True)
+    engine.consider_offline_ap()  # sees a network
+
+    monkeypatch.setattr(system, "network_connected", lambda: False)
+    engine.consider_offline_ap()
+    clock.advance(10 * engine.config.network.access_point.auto_grace_seconds)
+
+    assert engine.consider_offline_ap() is False
+    assert switched == []
+
+
+def test_a_venue_without_any_network_still_gets_the_access_point(tmp_path, monkeypatch):
+    """Never connected since the start — that is the case the feature is for."""
+    engine, clock, switched = _offline_engine(tmp_path, monkeypatch, connected=False)
+
+    engine.consider_offline_ap()
+    clock.advance(engine.config.network.access_point.auto_grace_seconds + 1)
+
+    assert engine.consider_offline_ap() is True
+    assert switched == [True]
