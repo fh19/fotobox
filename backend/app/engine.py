@@ -153,6 +153,9 @@ class Engine:
         self._screensaver_photos: list[str] = []
         # Progress of a running re-render, polled via GET /api/admin/rerender.
         self._rerender = _idle_rerender()
+        # What the box actually booted with. The file may already name a
+        # different mode for the next start; these two are not the same thing.
+        self._booted_mode = self.kiosk_mode()
         self._last_avail = None
         self._printer_resume_at = None
 
@@ -685,6 +688,45 @@ class Engine:
 
     # --- network / export (M7b) ---------------------------------------------
 
+    # --- operating mode -----------------------------------------------------
+
+    # What the box boots into. Deliberately a file the operator sets, not a guess
+    # from which devices happen to enumerate: USB enumeration is not
+    # deterministic at boot, and a webcam that comes up three seconds late must
+    # not decide whether this is a photobooth or a print server.
+    _MODES = ("fotobox", "printserver")
+
+    def _mode_path(self) -> Path:
+        # On the data partition, so it survives the read-only root.
+        return self.config.data_dir / "mode"
+
+    def kiosk_mode(self) -> str:
+        try:
+            value = self._mode_path().read_text(encoding="utf-8").strip()
+        except OSError:
+            return "fotobox"
+        return value if value in self._MODES else "fotobox"
+
+    def mode_status(self) -> dict:
+        """The chosen mode, plus whether it is the one currently running."""
+        chosen = self.kiosk_mode()
+        return {
+            "mode": chosen,
+            "running": self._booted_mode,
+            "reboot_required": chosen != self._booted_mode,
+        }
+
+    def set_kiosk_mode(self, mode: str) -> dict:
+        """Choose the personality for the next boot. Takes effect on restart."""
+        if mode not in self._MODES:
+            raise ActionRejected("invalid_value", f"Unbekannte Betriebsart: {mode}")
+        try:
+            self._mode_path().write_text(mode + "\n", encoding="utf-8")
+        except OSError as exc:
+            raise ActionRejected("write_failed", f"Betriebsart nicht gespeichert: {exc}") from exc
+        self._log("warning", "system", "mode_changed", f"Betriebsart ab dem Neustart: {mode}")
+        return self.mode_status()
+
     # --- photo lamp ---------------------------------------------------------
 
     def _apply_lamp(self) -> None:
@@ -696,6 +738,8 @@ class Engine:
         lamp = self.backends.lamp
         if lamp is None:
             return
+        if self._booted_mode == "printserver":
+            return  # im Druckserver-Betrieb ist die Lampe gar nicht angesteckt
         wanted = str(self.sm.state) not in self.config.hardware.lamp.off_states
         try:
             if lamp.available() and lamp.is_on() != wanted:

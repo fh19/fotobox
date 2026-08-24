@@ -292,6 +292,8 @@ Falsche PIN: `401`. Nach 5 Fehlversuchen 60 s Sperre.
 | `POST` | `/api/admin/photos/delete` | `{ids: [12,13]}` — als gelöscht markieren; Dateien bleiben |
 | `GET` | `/api/admin/photos/deleted` | `{count, bytes}` — was ein endgültiges Entfernen freigäbe |
 | `POST` | `/api/admin/photos/purge` | Dateien der markierten Bilder endgültig entfernen |
+| `GET` | `/api/admin/mode` | `{mode, running, reboot_required}` — gewählte und laufende Betriebsart |
+| `POST` | `/api/admin/mode` | `{mode: "fotobox"\|"printserver"}` — gilt ab dem nächsten Neustart |
 | `POST` | `/api/admin/events/{id}/rerender` | Pipeline erneut über alle Bilder eines Events; 409 `rerender_busy` |
 | `GET` | `/api/admin/rerender` | Fortschritt `{running, finished, done, failed, total, event, error}` |
 | `POST` | `/api/admin/export/usb` | Aktives Event auf USB-Stick kopieren (startet Hintergrund-Kopie) |

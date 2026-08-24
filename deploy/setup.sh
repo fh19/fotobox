@@ -10,7 +10,8 @@
 #   RuntimeWatchdogSec drop-in triggered a reboot loop on this Pi; do not re-add.)
 # - Screen blanking: on labwc, blanking only happens if a `swayidle ... wlopm`
 #   line is in the autostart. Our kiosk autostart omits it, so the screen stays on.
-# - Kiosk crash recovery: launched via `lwrespawn` (respawns Chromium in < 5 s).
+# - Kiosk crash recovery: launched via `lwrespawn` (restarts it in a loop, 1 s apart,
+#   for as long as labwc runs — so the script must never exit quickly).
 # - Backend crash recovery: systemd `Restart=always` (see the .service file).
 set -euo pipefail
 
@@ -115,8 +116,9 @@ kiosk_autostart() {
   cat > "$HOME/.config/labwc/autostart" <<EOF
 # Fotobox-Kiosk. Ersetzt den Standard-Desktop-Autostart bewusst (kein Panel).
 /usr/bin/kanshi &
-# lwrespawn startet den Kiosk neu, falls Chromium abstürzt/gekillt wird (< 5 s zurück).
-/usr/bin/lwrespawn $APP_DIR/deploy/kiosk.sh http://localhost/ >/tmp/fotobox-kiosk.log 2>&1 &
+# lwrespawn startet den Kiosk neu, falls Chromium abstürzt/gekillt wird — in einer
+# Schleife im Sekundentakt, solange labwc läuft.
+/usr/bin/lwrespawn $APP_DIR/deploy/kiosk.sh http://localhost/ $DATA_DIR/mode >/tmp/fotobox-kiosk.log 2>&1 &
 EOF
   # Desktop-Autologin, damit der Kiosk ohne Anmeldung hochkommt (B4 = Desktop Autologin).
   sudo raspi-config nonint do_boot_behaviour B4 || true

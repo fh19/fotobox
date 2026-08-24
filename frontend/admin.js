@@ -87,6 +87,7 @@ async function loadAll() {
     loadNetwork(),
     loadDeleted(),
     loadEventsForRerender(),
+    loadMode(),
   ]);
 }
 
@@ -827,6 +828,42 @@ async function pollRerender() {
   }
 }
 
+/* Betriebsart: bewusst eine Entscheidung des Betreibers, nicht geraten aus den
+   Geräten, die beim Booten zufällig da sind. */
+async function loadMode() {
+  try {
+    const res = await api("GET", "/api/admin/mode");
+    $("sys-mode").value = res.mode;
+    const label = res.mode === "printserver" ? "Druckserver" : "Fotobox";
+    $("sys-mode-status").textContent = res.reboot_required
+      ? `${label} ab dem nächsten Neustart — läuft gerade als ${
+          res.running === "printserver" ? "Druckserver" : "Fotobox"
+        }.`
+      : res.mode === "printserver"
+        ? "Läuft als Druckserver — kein Kiosk, kein Live-Bild."
+        : "Läuft als Fotobox.";
+  } catch (e) {
+    $("sys-mode-status").textContent = "";
+  }
+}
+
+async function switchMode() {
+  const mode = $("sys-mode").value;
+  const label = mode === "printserver" ? "Druckserver" : "Fotobox";
+  if (!window.confirm(`Als ${label} starten? Die Box startet dazu neu.`)) {
+    await loadMode();
+    return;
+  }
+  try {
+    await api("POST", "/api/admin/mode", { mode });
+    note("sys-mode-status", `Betriebsart ${label} — Box startet neu …`);
+    await api("POST", "/api/admin/reboot");
+  } catch (e) {
+    note("sys-mode-status", "Fehler: " + e.message, false);
+    await loadMode();
+  }
+}
+
 async function exportUSB() {
   $("export-usb").disabled = true;
   note("export-status", "Starte Export …");
@@ -891,6 +928,7 @@ window.addEventListener("DOMContentLoaded", () => {
   $("net-ap-auto").addEventListener("change", toggleAPAuto);
   $("gal-purge").addEventListener("click", purgeDeleted);
   $("gal-rerender").addEventListener("click", startRerender);
+  $("sys-mode").addEventListener("change", switchMode);
   $("export-usb").addEventListener("click", exportUSB);
   $("sys-reboot").addEventListener("click", reboot);
   $("sys-shutdown").addEventListener("click", shutdown);

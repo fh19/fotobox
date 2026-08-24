@@ -284,6 +284,25 @@ async def post_reboot(
     return JSONResponse(_engine(request).reboot())
 
 
+class ModeChoice(BaseModel):
+    mode: str
+
+
+@router.get("/mode")
+async def get_mode(request: Request, x_fotobox_pin: str | None = Header(default=None)) -> Response:
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(_engine(request).mode_status())
+
+
+@router.post("/mode")
+async def post_mode(
+    request: Request, body: ModeChoice, x_fotobox_pin: str | None = Header(default=None)
+) -> Response:
+    """Pick what the box boots into. Takes effect on the next restart."""
+    _require_pin(request, x_fotobox_pin)
+    return JSONResponse(_engine(request).set_kiosk_mode(body.mode))
+
+
 # --- gallery management -----------------------------------------------------
 #
 # "Anschauen und Löschen aller Veranstaltungsbilder aus dem Konfig-Menü heraus".

@@ -177,6 +177,14 @@
       <!-- System -->
       <section class="card">
         <h2>System</h2>
+        <label
+          >Betriebsart
+          <select id="sys-mode">
+            <option value="fotobox">Fotobox (Bildschirm und Kamera)</option>
+            <option value="printserver">Druckserver (ohne Bildschirm)</option>
+          </select></label
+        >
+        <p id="sys-mode-status" class="muted"></p>
         <button id="sys-reboot" class="btn btn--danger">Fotobox neu starten</button>
         <button id="sys-shutdown" class="btn btn--danger">Herunterfahren</button>
       </section>

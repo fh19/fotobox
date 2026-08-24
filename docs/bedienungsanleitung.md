@@ -122,7 +122,7 @@ Die Kacheln:
 | **Galerie** | Alle Veranstaltungen durchsehen, Bilder auswählen, herunterladen, löschen; Bilder neu berechnen (Abschnitt 7) |
 | **Netzwerk** | Access-Point ein/aus und automatisch, IP-Adresse, Galerie-URL (Abschnitt 7) |
 | **Export** | Aktives Event auf USB-Stick kopieren (Abschnitt 7) |
-| **System** | Fotobox neu starten, Herunterfahren |
+| **System** | Betriebsart (Fotobox / Druckserver), Fotobox neu starten, Herunterfahren |
 
 **„Drucker fortsetzen"** ist die Handbremse für das häufigste Problem (Papier oder
 Kassette leer). Meist braucht man ihn nicht: nach dem Nachlegen gibt die Box die
@@ -253,6 +253,21 @@ das ist Absicht.
 ### Fotos auf USB-Stick sichern
 USB-Stick (FAT32/exFAT) einstecken → Admin → **Export** → **„Auf USB-Stick kopieren"**.
 Der Fortschritt wird angezeigt; kopiert wird das **komplette aktive Event**.
+
+### Betriebsart wechseln
+
+Die Box kann statt als Fotobox auch nur als **Druckserver** im Heimnetz laufen —
+dann bleibt der Bildschirm dunkel, Chromium und das Live-Bild starten gar nicht erst.
+Sinnvoll, wenn Bildschirm und Webcam ohnehin abgesteckt sind und nur der Drucker
+im Netz bereitstehen soll.
+
+Admin → **System** → **Betriebsart** umstellen. Die Box startet dazu neu; die
+Auswahl liegt auf der Datenpartition und übersteht den schreibgeschützten Root.
+
+Das ist bewusst eine **Auswahl und keine automatische Erkennung**. Beim Booten
+steht nicht verlässlich fest, welche USB-Geräte schon angemeldet sind — eine
+Webcam, die drei Sekunden später kommt, würde sonst darüber entscheiden, ob auf
+der Hochzeit eine Fotobox hochfährt. Der Fehler wäre lautlos und vollständig.
 
 ### Ausschalten
 **Immer** über Admin → **System → „Herunterfahren"** — erst danach den Strom trennen.

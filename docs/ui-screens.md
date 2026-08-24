@@ -324,7 +324,11 @@ Kacheln:
    automatisch ausschalten: im AP-Modus sieht `wlan0` das Heimnetz nicht mehr, und
    ein Rückschalten mitten in der Feier würde alle Gäste trennen.
 9. **Export** — `Auf USB-Stick kopieren` mit Fortschrittsanzeige
-10. **System** — `Fotobox neu starten`, `Herunterfahren`
+10. **System** — `Betriebsart` (`Fotobox` / `Druckserver`), `Fotobox neu starten`,
+    `Herunterfahren`. Die Betriebsart ist bewusst eine Auswahl und **keine
+    Erkennung**: Beim Booten ist nicht verlässlich, welche USB-Geräte schon da
+    sind, und eine Fehlentscheidung wäre lautlos und vollständig. Der Wechsel
+    gilt ab dem nächsten Neustart; bis dahin steht darunter, was gerade läuft.
 
 Der Button `Drucker fortsetzen` ist der wichtigste im ganzen Admin-Bereich und gehört
 ganz oben, groß. Er ist die Antwort auf das häufigste Problem des Abends.
