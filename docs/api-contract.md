@@ -295,9 +295,9 @@ Falsche PIN: `401`. Nach 5 Fehlversuchen 60 s Sperre.
 | `GET` | `/api/admin/mode` | `{mode, running, reboot_required}` — gewählte und laufende Betriebsart |
 | `POST` | `/api/admin/mode` | `{mode: "fotobox"\|"printserver"}` — gilt ab dem nächsten Neustart |
 
-Im Druckserver-Betrieb kehrt die Box von selbst zur Fotobox zurück, sobald eine
+Im Druckermodus kehrt die Box von selbst zur Fotobox zurück, sobald eine
 Kamera angesteckt wird (`mode.return_on_camera`). Scharf wird das erst, nachdem
-einmal keine Kamera erkannt wurde — sonst wäre der Druckserver-Modus mit
+einmal keine Kamera erkannt wurde — sonst wäre der Druckermodus mit
 angesteckter Kamera nicht erreichbar. Nur diese Richtung, nie die umgekehrte.
 | `POST` | `/api/admin/events/{id}/rerender` | Pipeline erneut über alle Bilder eines Events; 409 `rerender_busy` |
 | `GET` | `/api/admin/rerender` | Fortschritt `{running, finished, done, failed, total, event, error}` |

@@ -122,7 +122,7 @@ Die Kacheln:
 | **Galerie** | Alle Veranstaltungen durchsehen, Bilder auswählen, herunterladen, löschen; Bilder neu berechnen (Abschnitt 7) |
 | **Netzwerk** | Access-Point ein/aus und automatisch, IP-Adresse, Galerie-URL (Abschnitt 7) |
 | **Export** | Aktives Event auf USB-Stick kopieren (Abschnitt 7) |
-| **System** | Betriebsart (Fotobox / Druckserver), Fotobox neu starten, Herunterfahren |
+| **System** | Betriebsart (Fotobox / Druckermodus), Fotobox neu starten, Herunterfahren |
 
 **„Drucker fortsetzen"** ist die Handbremse für das häufigste Problem (Papier oder
 Kassette leer). Meist braucht man ihn nicht: nach dem Nachlegen gibt die Box die
@@ -256,8 +256,12 @@ Der Fortschritt wird angezeigt; kopiert wird das **komplette aktive Event**.
 
 ### Betriebsart wechseln
 
-Die Box kann statt als Fotobox auch nur als **Druckserver** im Heimnetz laufen —
-dann bleibt der Bildschirm dunkel, Chromium und das Live-Bild starten gar nicht erst.
+Die Box kann statt als Fotobox auch im **Druckermodus** laufen und dann nur noch
+als Netzwerkdrucker im Heimnetz dienen. Chromium und das Live-Bild starten gar
+nicht erst; auf dem Bildschirm steht dann nur noch eine feste Seite:
+
+> **Druckermodus** — Diese Box arbeitet gerade als Netzwerkdrucker.
+> Zurück zur Fotobox: Kamera anstecken oder `http://fotobox.local/admin`
 Sinnvoll, wenn Bildschirm und Webcam ohnehin abgesteckt sind und nur der Drucker
 im Netz bereitstehen soll.
 
@@ -271,13 +275,13 @@ der Hochzeit eine Fotobox hochfährt. Der Fehler wäre lautlos und vollständig.
 
 #### Zurück in den Fotobox-Modus
 
-Im Druckserver-Modus läuft **kein Kiosk** — der Bildschirm bleibt dunkel, und auf
-der Box selbst kommt man nicht mehr in den Admin. Der Rückweg führt über das Netz;
+Im Druckermodus läuft **keine Fotobox-Oberfläche** — auf der Box selbst kommt man
+nicht mehr in den Admin. Der Rückweg führt über das Netz;
 das Backend läuft ja weiter:
 
 1. **Von einem anderen Gerät im Netz:** `http://fotobox.local/admin` (oder die
    IP-Adresse der Box). Dort *System → Betriebsart → Fotobox*. Diese Adresse steht
-   auch in der Rückfrage, wenn du auf Druckserver umschaltest — sie ist der Grund,
+   auch in der Rückfrage, wenn du auf Druckermodus umschaltest — sie ist der Grund,
    warum sie dort steht.
 2. **Ohne Netzwerk:** Die Box macht nach zwei Minuten von selbst ihren
    Access-Point auf. Handy mit dem WLAN „Fotobox" verbinden, dann
@@ -287,16 +291,16 @@ das Backend läuft ja weiter:
    zurück in die Box, fertig.
 
 **Am bequemsten aber:** einfach die Kamera anstecken. Erkennt die Box im
-Druckserver-Betrieb eine Kamera, wird sie von selbst wieder zur Fotobox — ohne
-Neustart, der Kiosk startet innerhalb weniger Sekunden.
+Druckermodus eine Kamera, wird sie von selbst wieder zur Fotobox — ohne Neustart,
+der Kiosk startet innerhalb weniger Sekunden (gemessen: unter fünf).
 
-Damit das den Wechsel *in* den Druckserver-Modus nicht sofort rückgängig macht,
+Damit das den Wechsel *in* den Druckermodus nicht sofort rückgängig macht,
 wird der Auslöser erst scharf, **nachdem einmal keine Kamera da war**. Umschalten
 mit noch angesteckter Kamera bleibt also bestehen; ausgelöst wird auf das
 Anstecken, nicht auf das bloße Vorhandensein. Abschaltbar über
 `mode.return_on_camera`.
 
-Die Richtung gilt nur so: Aus einer Fotobox wird nie von selbst ein Druckserver.
+Die Richtung gilt nur so: Aus einer Fotobox wird nie von selbst ein Druckermodus.
 Eine erkannte Kamera ist ein eindeutiges Signal — eine fehlende nicht, denn beim
 Booten steht nicht fest, ob ein Gerät weg ist oder sich nur noch nicht angemeldet
 hat.
@@ -322,6 +326,7 @@ Stromtrennung: **„Fotobox neu starten"**.
 | Gäste finden das WLAN nicht | Access-Point im Admin eingeschaltet? WLAN heißt „Fotobox". |
 | Live-Bild bleibt schwarz, Webcam „hängt" | Meist die USB-Strecke, nicht die Software. Im Log steht `uvcvideo ... -71` (Protokollfehler beim Abfragen der Regler) gefolgt von `USB disconnect` — die Kamera stirbt dann schon eine Sekunde nach dem Anmelden, bevor ein Bild fließt. Zum Eingrenzen die Webcam **direkt an den Pi** stecken, also ohne den externen Hub. Laufen Touchscreen und Drucker am selben Hub störungsfrei, liegt es eher an Kamera oder Kabel. (Der interne VIA-Hub des Pi 4 ist immer im Spiel — der Root-Hub hat nur einen Port. Das ist normal.) |
 | Galerie lädt quälend langsam | Funkstrecke prüfen: `nmcli -f IN-USE,SSID,CHAN,SIGNAL dev wifi list`. Hängt die Box im 5-GHz-Band derselben SSID, kann der Durchsatz zusammenbrechen — siehe `docs/installation.md`, Abschnitt 9. |
+| Bildschirm bleibt dunkel, obwohl die Box läuft | Steht dort „Druckermodus", ist das kein Fehler — Kamera anstecken oder im Admin umstellen (Abschnitt 7). |
 | Bilder mit Rahmen sind kleiner als die Originale | `pipeline.processed_scale: auto` setzen und die Veranstaltung neu berechnen lassen (Admin → Galerie). |
 
 ---
@@ -345,5 +350,8 @@ Stromtrennung: **„Fotobox neu starten"**.
 | Auflösung der Download-Fassung | `auto` (Rahmen wächst auf Originalgröße) |
 | Access-Point automatisch | ein, nach 2 min ohne Netzwerk |
 | Name im Netzwerk (Drucker) | Fotodrucker Fotobox |
+| Betriebsart | Fotobox (umschaltbar auf Druckermodus) |
+| Zurück aus dem Druckermodus | Kamera anstecken — oder im Admin |
+| Vorschau im Leerlauf | rechnet nach 5 s Ruhe nicht mehr mit |
 
 Diese Werte lassen sich im Admin (Einstellungen / Netzwerk) jederzeit ändern.

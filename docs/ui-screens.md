@@ -85,7 +85,7 @@ es, und seine JPEG-Kodierung ist die größte Dauerlast der Box.
 
 ## Druckermodus (kein Zustand des Automaten)
 
-Läuft die Box als Druckserver, startet der Kiosk keine Fotobox-Oberfläche. Statt
+Läuft die Box im Druckermodus, startet der Kiosk keine Fotobox-Oberfläche. Statt
 eines schwarzen Bildschirms zeigt sie eine feste Seite — sonst sieht ein
 angeschlossener Monitor aus wie ein Defekt:
 
@@ -343,8 +343,12 @@ Kacheln:
    automatisch ausschalten: im AP-Modus sieht `wlan0` das Heimnetz nicht mehr, und
    ein Rückschalten mitten in der Feier würde alle Gäste trennen.
 9. **Export** — `Auf USB-Stick kopieren` mit Fortschrittsanzeige
-10. **System** — `Betriebsart` (`Fotobox` / `Druckserver`), `Fotobox neu starten`,
-    `Herunterfahren`. Die Betriebsart ist bewusst eine Auswahl und **keine
+10. **System** — `Betriebsart`, `Fotobox neu starten`, `Herunterfahren`.
+
+    Die Auswahl heißt **`Fotobox`** und **`Druckermodus (ohne Bildschirm)`** —
+    derselbe Begriff wie auf dem Bildschirm im Druckermodus. „Druckserver" ist
+    die Beschreibung dessen, was die Box dann *tut*, nicht der Name der
+    Betriebsart. Die Betriebsart ist bewusst eine Auswahl und **keine
     Erkennung**: Beim Booten ist nicht verlässlich, welche USB-Geräte schon da
     sind, und eine Fehlentscheidung wäre lautlos und vollständig. Der Wechsel
     gilt ab dem nächsten Neustart; bis dahin steht darunter, was gerade läuft.

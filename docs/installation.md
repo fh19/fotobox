@@ -300,6 +300,31 @@ Das CLI-`gphoto2` von Debian (libgphoto2 2.5.31) kann die a7 IV **nicht** auslö
 Fotobox-Fehler: das `python-gphoto2`-Rad im venv bringt libgphoto2 2.5.34 mit, und die
 funktioniert. Zum Testen also immer den venv-Python nehmen, nicht `gphoto2` aus der Shell.
 
+### Stromverbrauch und Dauerlast
+
+Zwei Stellschrauben, die zusammen den Unterschied zwischen „warm und laut" und
+„läuft nebenbei" ausmachen — beide gemessen auf dem Pi 4:
+
+**Die Vorschau rechnet nur, wenn jemand hinsieht.** Der Greifer-Thread holte und
+kodierte früher rund um die Uhr Bilder, unabhängig davon, ob sie jemand abrief.
+`preview.idle_after_seconds` (Standard 5) sagt, wie lange „niemand" dauert;
+danach wird nur noch `grab()` aufgerufen — der Datenstrom bleibt in Bewegung,
+Dekodieren und JPEG-Kodieren entfallen.
+
+| Lage | Backend-CPU |
+|---|---|
+| Live-Bild sichtbar | 76 % |
+| Bildschirmschoner | **5 %** |
+| Druckermodus, niemand schaut | **0,7 %** |
+
+Der erste Abruf nach 30 Sekunden Ruhe kam in 2,4 ms als volles 1280×720-Bild
+zurück — die Ersparnis kostet also keine Reaktionszeit. `0` stellt das alte
+Verhalten wieder her.
+
+**Der Druckermodus** lässt Chromium ganz weg (Abschnitt in
+`docs/bedienungsanleitung.md`). Die dort gezeigte Hinweisseite ist statisch und
+taucht in der Prozessliste nach dem Zeichnen nicht mehr auf.
+
 ## 8. Read-only Root (overlayroot) — als Letztes
 
 Schützt die SD gegen Korruption bei Stromausfall. Auf diesem System bereits eingerichtet;

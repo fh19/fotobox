@@ -691,7 +691,7 @@ async function reboot() {
 // --- network / export -------------------------------------------------------
 
 let apEnabled = false;
-let boxAddress = null; // IP der Box, für den Rückweg aus dem Druckserver-Modus
+let boxAddress = null; // IP der Box, für den Rückweg aus dem Druckermodus
 
 function galleryUrl(ip) {
   if (!ip) return "";
@@ -838,13 +838,13 @@ async function loadMode() {
   try {
     const res = await api("GET", "/api/admin/mode");
     $("sys-mode").value = res.mode;
-    const label = res.mode === "printserver" ? "Druckserver" : "Fotobox";
+    const label = res.mode === "printserver" ? "Druckermodus" : "Fotobox";
     $("sys-mode-status").textContent = res.reboot_required
       ? `${label} ab dem nächsten Neustart — läuft gerade als ${
-          res.running === "printserver" ? "Druckserver" : "Fotobox"
+          res.running === "printserver" ? "Druckermodus" : "Fotobox"
         }.`
       : res.mode === "printserver"
-        ? `Läuft als Druckserver — kein Kiosk, kein Live-Bild. Umschalten über ${adminUrls()}`
+        ? `Läuft im Druckermodus — kein Kiosk, kein Live-Bild. Umschalten über ${adminUrls()}`
         : "Läuft als Fotobox.";
   } catch (e) {
     $("sys-mode-status").textContent = "";
@@ -859,15 +859,15 @@ function adminUrls() {
 
 async function switchMode() {
   const mode = $("sys-mode").value;
-  const label = mode === "printserver" ? "Druckserver" : "Fotobox";
-  // Im Druckserver-Modus gibt es keinen Kiosk mehr — der Rückweg gehört genau
+  const label = mode === "printserver" ? "Druckermodus" : "Fotobox";
+  // Im Druckermodus gibt es keinen Kiosk mehr — der Rückweg gehört genau
   // hierhin, nicht in eine Dokumentation, die man dann nicht mehr aufrufen kann.
   const warning =
     mode === "printserver"
       ? `\n\nDanach bleibt der Bildschirm dunkel. Zurückschalten von einem anderen ` +
         `Gerät im Netz:\n${adminUrls()}`
       : "";
-  if (!window.confirm(`Als ${label} starten? Die Box startet dazu neu.${warning}`)) {
+  if (!window.confirm(`Auf ${label} umschalten? Die Box startet dazu neu.${warning}`)) {
     await loadMode();
     return;
   }

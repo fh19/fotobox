@@ -22,6 +22,9 @@ einem Canon Selphy CP1500. **Läuft komplett offline.**
   Verwaltung aller Veranstaltungen, USB-Export, Neustart/Herunterfahren
 - Netzwerkdrucker: die Box gibt den Selphy im Heimnetz frei — AirPrint und Mopria
   ohne Treiberinstallation
+- Zwei Betriebsarten: Fotobox oder **Druckermodus** (nur Netzwerkdrucker, kein
+  Kiosk, kein Live-Bild). Umschalten im Admin; zurück geht es auch dadurch, dass
+  man eine Kamera ansteckt
 - Robust für den Dauerbetrieb: Zustandsautomat mit Timeouts im Backend,
   read-only Root gegen SD-Korruption, Hardware-RTC für korrekte Zeit ohne Netz
 

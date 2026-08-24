@@ -266,3 +266,17 @@ def test_the_kiosk_shows_that_screen_and_replaces_it(tmp_path):
     assert "printserver.html" in script
     # It has to go away again when a camera brings the photobooth back.
     assert 'kill "$NOTICE"' in script
+
+
+def test_the_admin_and_the_screen_use_the_same_word(tmp_path):
+    """docs/ui-screens.md exists so the box does not call one thing two names.
+    The screen says "Druckermodus"; so must the switch that leads to it."""
+    admin_html = (FRONTEND_DIR / "admin.html").read_text(encoding="utf-8")
+    admin_js = (FRONTEND_DIR / "admin.js").read_text(encoding="utf-8")
+    screen = (FRONTEND_DIR / "printserver.html").read_text(encoding="utf-8")
+
+    assert "Druckermodus" in screen
+    assert "Druckermodus" in admin_html
+    # "Druckserver" describes what the box does, not what the mode is called.
+    for text, name in ((admin_html, "admin.html"), (admin_js, "admin.js")):
+        assert "Druckserver" not in text, f"{name} nennt die Betriebsart anders als der Bildschirm"
