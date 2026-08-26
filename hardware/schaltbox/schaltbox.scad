@@ -48,7 +48,9 @@ iec_z   = iec_cut[0] / 2 + 3;
 // the limit, and every millimetre saved there is headroom for the relay above.
 shelf_z  = max(sock_z[front_count - 1] + sock_h / 2 + 1 + rib_h / 2,
                iec_z + iec_cut[0] / 2 + 0.5 + rib_h / 2);
-shelf_y  = inner[1] - 8;
+// All the way to the lid. What used to be an 8 mm slot at the back is now the
+// U-shaped notch in the shelf.
+shelf_y  = inner[1];
 shelf_ok = shelf_z - rib_h / 2 > iec_z + iec_cut[0] / 2;
 
 // What is left above the shelf, right of the socket column.
@@ -125,7 +127,9 @@ lid_screw_xz = [[lid_screw_c, lid_screw_c],
 // both left the lid's cutout stopping halfway through the plate.
 module socket_in_front_wall() {
     rotate([90, 0, 0]) {
-        translate([0, 0, -wall - 1]) linear_extrude(wall + 2)
+        // rotate([90,0,0]) sends +z to -y, so the extrusion runs outwards from
+        // here. Starting at -wall-1 left the outer 2 mm of the wall standing.
+        translate([0, 0, -1]) linear_extrude(wall + 2)
             square([sock_w, sock_h], center = true);
         snap_pocket(sock_w, sock_h, snap_margin, 0, wall - socket_snap_wall);
     }
@@ -154,10 +158,11 @@ module iec_opening() {
         rotate([0, 90, 0]) snap_pocket(iec_cut[0], iec_cut[1], 0, snap_margin, depth);
 }
 
+// Right wall, above the shelf and next to the board. The shelf keeps it apart
+// from the inlet below, so mains and 3.3 V never share a stretch of wall.
 module control_opening() {
-    if (with_pcb)
-        translate([-wall - 1, inner[1] / 2, inner[2] * 0.9])
-            rotate([0, 90, 0]) cylinder(d = ctrl_hole_d, h = wall + 2);
+    translate([inner[0] - 1, inner[1] / 2, shelf_z + rib_h / 2 + ctrl_hole_d / 2 + 4])
+        rotate([0, 90, 0]) cylinder(d = ctrl_hole_d, h = wall + 2);
 }
 
 // --- inside -----------------------------------------------------------------
@@ -165,8 +170,21 @@ module control_opening() {
 module shelf() {
     // Full width, as asked, but 8 mm short of the lid: without that slot no
     // wire gets from the inlet at the bottom up to the relay on top.
-    translate([-0.5, 0, shelf_z - rib_h / 2])
-        cube([inner[0] + 1, shelf_y, rib_h]);
+    difference() {
+        translate([-0.5, 0, shelf_z - rib_h / 2])
+            cube([inner[0] + 1, shelf_y, rib_h]);
+        cable_notch();
+    }
+}
+
+// Open towards the lid, so a bundle can be laid in from behind rather than
+// threaded through. Placed left of where the relay sits.
+module cable_notch() {
+    cx = sock_x + sfl_w / 2 - 4;
+    hull()
+        for (cy = [inner[1] - notch_d + notch_w / 2, inner[1] + 1])
+            translate([cx, cy, shelf_z - rib_h / 2 - 1])
+                cylinder(d = notch_w, h = rib_h + 2);
 }
 
 module lower_rib() {
@@ -174,19 +192,24 @@ module lower_rib() {
     // beside them leave that wall springy, so it is tied to the back.
     if (front_count > 1) {
         cz = (front_z[0] + front_z[1]) / 2;
-        translate([sock_x - sock_w / 2 - rib_overhang, 0, cz - rib_h / 2])
-            cube([sock_w + 2 * rib_overhang, shelf_y, rib_h]);
+        // From the left wall across to just past the column, and back to the lid.
+        translate([-0.5, 0, cz - rib_h / 2])
+            cube([sock_x + sock_w / 2 + rib_overhang, shelf_y, rib_h]);
     }
 }
 
 module lid_bosses() {
     // Brass inserts go in from the lid face; the dome gives them material.
+    // Flush with the lid face, not past it, and short enough that the lower
+    // right dome stays clear of the inlet body behind the wall.
+    boss_len = insert_len + 1.5;
     for (p = lid_screw_xz)
-        translate([p[0], inner[1] - insert_len - 2, p[1]])
+        translate([p[0], inner[1] - boss_len, p[1]])
             rotate([-90, 0, 0])
                 difference() {
-                    cylinder(d = boss_d, h = insert_len + 2.5);
-                    translate([0, 0, 2.5]) cylinder(d = insert_d, h = insert_len + 1);
+                    cylinder(d = boss_d, h = boss_len);
+                    translate([0, 0, boss_len - insert_len - 0.5])
+                        cylinder(d = insert_d, h = insert_len + 1);
                 }
 }
 

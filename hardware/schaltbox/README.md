@@ -14,12 +14,19 @@ Die **Rückwand ist der Deckel** und wird von hinten mit vier M3-Schrauben in
 Laschen gibt es nicht — sie stünden nur im Weg.
 
 Zwischen der mittleren und der oberen Dose läuft ein **Steg über die gesamte
-Breite**; darauf sitzt das SSR. Ein zweiter, schmaler Steg zwischen den beiden
-vorderen Öffnungen bindet die Vorderwand nach hinten an: drei Ausschnitte und
-die dünnen Snap-Felder daneben lassen sie sonst federn.
+Breite**; darauf sitzt das SSR. Ein zweiter Steg zwischen den beiden vorderen
+Öffnungen reicht von der linken Wand bis knapp hinter die Säule und bindet die
+Vorderwand nach hinten an: drei Ausschnitte und die dünnen Snap-Felder daneben
+lassen sie sonst federn.
 
-Beide Stege enden **8 mm vor dem Deckel**. Ohne diesen Schlitz käme keine Ader
-von der Buchse unten zum SSR oben.
+**Beide Stege reichen bis an die Rückwand.** Die Kabel gehen nicht mehr hinten
+herum, sondern durch eine **U-förmige Aussparung** im oberen Steg — zum Deckel
+hin offen, sodass sich ein Bündel von hinten einlegen lässt statt eingefädelt zu
+werden. Sie sitzt links neben dem SSR.
+
+Für das **Steuerkabel** hat die rechte Wand über dem Steg ein **8-mm-Loch**,
+direkt neben der Platine. Der Steg trennt es von der Kaltgerätebuchse darunter —
+Netz und 3,3 V teilen sich damit kein Stück Wand.
 
 ```
 Dateien   schaltbox_parts.scad   gemessene Maße und die Vorgaben

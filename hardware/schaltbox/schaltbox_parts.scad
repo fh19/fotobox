@@ -77,12 +77,17 @@ snap_margin      = 4;         // how far the thinned area reaches past the cutou
 // socket column remain free for wiring and the board.
 rib_h            = 5;         // height of the band between two openings
 rib_t            = 2.5;       // thickness front to back is the depth, this is z
-rib_overhang     = 4;         // how far past the column the rib reaches
+rib_overhang     = 4;         // how far past the column the upper rib reaches
+
+// U-shaped notch in the shelf, open towards the lid, so cables can be laid in
+// from behind instead of threaded through a hole.
+notch_w          = 18;
+notch_d          = 18;
 
 // --- Control lead ------------------------------------------------------------
 // Its own hole on the other side of the rib, so 3.3 V never shares a run with
 // 230 V. The mains no longer needs one: it arrives through the inlet.
-ctrl_hole_d      = 7.0;
+ctrl_hole_d      = 8.0;
 
 // --- The box itself ---------------------------------------------------------
 // Given, not derived: the box size is the requirement, so the parts are checked
