@@ -29,14 +29,18 @@ sock_s  = socket_cut[0];     // 13.2, across
 sfl_l   = socket_flange[1];  // 44
 sfl_s   = socket_flange[0];  // 20
 
-// Underside: inlet first, then one socket, spread over the length.
-under_margin = (inner[0] - iec_flange[0] - sfl_l) / 3;
-iec_x    = under_margin + iec_flange[0] / 2;
-under_x  = 2 * under_margin + iec_flange[0] + sfl_l / 2;
+// Everything is pushed towards x = 0 rather than spread out, so whatever length
+// is left over stays in one piece at the far end -- that is the only place a
+// board with an upright SSR could ever stand.
+end_margin = 5;
+part_gap   = 8;
+iec_x    = end_margin + iec_flange[0] / 2;
+under_x  = end_margin + iec_flange[0] + part_gap + sfl_l / 2;
+left_x   = [end_margin + sfl_l / 2, end_margin + sfl_l + part_gap + sfl_l / 2];
 
-// Left side: two sockets, evenly spread.
-left_margin = (inner[0] - 2 * sfl_l) / 3;
-left_x   = [left_margin + sfl_l / 2, 2 * left_margin + 1.5 * sfl_l];
+// Free of every built-in part, over the full cross section.
+free_x0  = max(under_x + sfl_l / 2, left_x[1] + sfl_l / 2) + 4;
+free_len = inner[0] - free_x0;
 
 pcb_x0 = (inner[0] - pcb[0]) / 2;
 pcb_z0 = socket_depth + 2;          // above whatever the underside parts occupy
@@ -57,9 +61,12 @@ echo(str("Unterseite, Teile ragen in z (", inner[2], " frei): ",
          iec_depth <= inner[2] && socket_depth <= inner[2] ? "passt" : "PASST NICHT"));
 echo(str("Linke Seite, Teile ragen in y (", inner[1], " frei): ",
          socket_depth <= inner[1] ? "passt" : "PASST NICHT"));
-echo(str("Platine+SSR ", pcb_stack, " mm; ueber den Unterseiten-Teilen ",
+echo(str("Platine+SSR ", pcb_stack, " mm hoch; ueber den Unterseiten-Teilen ",
          free_over_under, " mm frei -> ",
-         pcb_stack <= free_over_under ? "passt" : "PASST NICHT"));
+         pcb_stack <= free_over_under ? "passt liegend" : "PASST NICHT liegend"));
+echo(str("Freier Abschnitt am Ende: ", free_len, " x ", inner[1], " x ", inner[2],
+         " mm; Platine ist ", pcb[0], " x ", pcb[1],
+         " -> ", pcb[0] <= free_len ? "passt stehend" : "PASST NICHT stehend"));
 
 // --- helpers ----------------------------------------------------------------
 

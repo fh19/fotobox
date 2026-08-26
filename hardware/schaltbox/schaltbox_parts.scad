@@ -77,7 +77,7 @@ ctrl_hole_d      = 7.0;
 // checked against it instead of setting it. x is the length, the underside is
 // the x-y face at z = 0, the left side the x-z face at y = 0. The lid is the
 // opposite long face, so removing it opens the whole bar sideways.
-box = [120, 50, 60];
+box = [150, 60, 60];
 
 // The vertical SSR needs 6 + 1.6 + 25 = 32.6 mm above its floor. There is not
 // that much room left over the built-in parts, so the board is optional -- see
