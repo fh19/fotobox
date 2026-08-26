@@ -73,11 +73,12 @@ snap_margin      = 4;         // how far the thinned area reaches past the cutou
 ctrl_hole_d      = 7.0;
 
 // --- The box itself ---------------------------------------------------------
-// Given, not derived: 50 x 60 x 120 was the requirement, so the parts are
-// checked against it instead of setting it. x is the length, the underside is
-// the x-y face at z = 0, the left side the x-z face at y = 0. The lid is the
-// opposite long face, so removing it opens the whole bar sideways.
-box = [150, 60, 60];
+// Given, not derived: the box size is the requirement, so the parts are checked
+// against it instead of setting it. Layout follows the second sketch: the three
+// Euro sockets sit in a column on the front (the x-z face at y = 0), the inlet
+// stands upright on the right (the y-z face at x = inner). The lid is the back,
+// so taking it off opens everything at once.
+box = [80, 50, 90];
 
 // The vertical SSR needs 6 + 1.6 + 25 = 32.6 mm above its floor. There is not
 // that much room left over the built-in parts, so the board is optional -- see

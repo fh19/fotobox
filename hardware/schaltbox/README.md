@@ -1,13 +1,12 @@
 # Schaltbox — Netzverteilung und Lampenschalter
 
-Ein Riegel von **150 × 60 × 60 mm** zum Einbau ins Fotobox-Gehäuse. Auf der
-**Unterseite** die Kaltgerätebuchse — sie bringt Netzanschluss, Feinsicherung und
-Hauptschalter in einem Teil — und eine Euro-Buchse, in Linie. Auf der **linken
-Seite** die beiden anderen Euro-Buchsen, ebenfalls in Linie. Layout nach der
-Handskizze `photo_2026-08-26_21-06-01.jpg`.
+Ein Kasten von **80 × 50 × 90 mm** zum Einbau ins Fotobox-Gehäuse. Auf der
+**Vorderseite** stehen die drei Euro-Buchsen in einer Säule übereinander, auf der
+**rechten Seite** hochkant die Kaltgerätebuchse — sie bringt Netzanschluss,
+Feinsicherung und Hauptschalter in einem Teil. Layout nach
+`photo_2026-08-26_21-35-32.jpg`.
 
-Der **Deckel ist die lange Fläche gegenüber der linken Seite**: abgenommen liegt
-der ganze Riegel seitlich offen, und beide Buchsengruppen sind erreichbar.
+Der **Deckel ist die Rückseite**: abgenommen liegt alles auf einmal offen.
 
 ```
 Dateien   schaltbox_parts.scad   gemessene Maße und die Vorgaben
@@ -16,41 +15,37 @@ Dateien   schaltbox_parts.scad   gemessene Maße und die Vorgaben
 
 ## Das Maß ist die Vorgabe — also wird geprüft, nicht gerechnet
 
-Die Größe ist gesetzt, also müssen sich die Teile fügen. Jeder Render gibt aus,
-was passt und was nicht:
+Die Größe ist gesetzt, also müssen sich die Teile fügen. Jeder Render sagt, was
+passt und was nicht:
 
 ```
-Aussen 150 x 60 x 60  ->  innen 144 x 54 x 54
+Aussen 80 x 50 x 90  ->  innen 74 x 44 x 84
 Verbindung loeten: Kaltgeraetebuchse 29 mm, Euro 35 mm
-Unterseite, Teile ragen in z (54 frei): passt
-Linke Seite, Teile ragen in y (54 frei): passt
-Platine+SSR 16.6 mm hoch; ueber den Unterseiten-Teilen 19 mm frei -> passt liegend
-Freier Abschnitt am Ende: 32 x 54 x 54 mm; Platine ist 70 x 30 -> PASST NICHT stehend
+Vorderseite, Dosen ragen in y (44 frei): passt
+Rechte Seite, Buchse ragt in x (74 frei): passt
+Saeule: 3 Rahmen a 20 mm im Raster 26 -> 72 von 84 mm Hoehe
+Platine+SSR 16.6 mm Aufbau.
+  neben der Saeule: 18 x 44 x 84 mm -> passt stehend
+  hinter den Dosen: 9 mm -> PASST NICHT
 ```
 
-Alle Einbauteile werden an **ein Ende** geschoben, damit die übrige Länge in
-einem Stück am anderen Ende bleibt — dort ist der einzige Platz, an dem eine
-stehende Platine je Platz fände.
+### Löten ist bei dieser Tiefe Pflicht
 
-### Löten bleibt die bessere Wahl
+Die Euro-Buchsen ragen mit Flachsteckern 50 mm hinein, innen sind in y aber nur
+**44 mm**. Gelötet sind es 35 mm, mit 9 mm Luft dahinter. `connection = "loeten"`.
 
-Geometrisch passen Flachstecker jetzt: 50 mm in 54 mm. Es blieben aber nur
-**4 mm** hinter den Buchsen, und darin lässt sich keine Ader biegen. Mit
-Lötverbindung sind es 35 mm und **19 mm** Luft dahinter.
+### Die Platine steht neben der Säule
 
-### Und die Platine?
+Die Buchsensäule ist 34 mm breit (der 44-mm-Rahmen sitzt ja außen), also bleiben
+innen **18 mm** neben ihr — über die volle Tiefe und Höhe, 18 × 44 × 84 mm.
 
 | SSR | Aufbau | passt? |
 |---|---|---|
-| flach `AQ2A2-J-ZP3` | 16,6 mm | **ja**, liegend über den Unterseiten-Teilen (19 mm frei) |
-| stehend `AQ2A2-ZP3` | 30,6 mm | nein — braucht **72 mm Gehäusehöhe** (dann 31 mm frei) |
+| flach `AQ2A2-J-ZP3` | 16,6 mm | **ja**, stehend neben der Säule |
+| stehend `AQ2A2-ZP3` | 30,6 mm | nein — bräuchte **106 mm Breite** statt 80 |
 
-Der freie Abschnitt am Ende misst **32 × 54 × 54 mm**. Für die 70 mm lange
-Platine in Reihe (Klemme – SSR – Klemme) reicht das nicht; für ein kompakteres
-Layout mit den Klemmen *neben* dem SSR statt dahinter schon.
-
-Bleibt es bei 60 mm Höhe und stehendem SSR, gehört das Relais aus dieser Box
-heraus — sie wird dann reine Verteilung, und das SSR sitzt näher am Pi.
+Rechts nimmt die Kaltgerätebuchse 29 mm der Tiefe; der freie Streifen links
+daneben ist unberührt.
 
 ## Dünne Wand für die Snaps
 
@@ -59,15 +54,15 @@ Wand bleibt 3 mm und wird **nur um jede Öffnung** ausgedünnt:
 
 | Teil | auf | an welchen Kanten |
 |---|---|---|
-| Kaltgerätebuchse | 1,5 mm | den beiden langen (48 mm) |
+| Kaltgerätebuchse | 1,5 mm | den beiden langen (48 mm), hier oben und unten |
 | Euro-Buchsen | 2,0 mm | den beiden schmalen (13,2 mm) |
 
 Die Taschen laufen mit 45° aus — eine Stufe wäre eine Decke, die der Drucker
 überbrücken müsste. Und sie greifen nur dort, wo die Snaps wirklich sitzen; rings
 um die Öffnung ausgedünnt würde unnötig Material schwächen.
 
-Die Buchsen liegen **quer**: die 44-mm-Seite des Rahmens läuft entlang der
-120 mm, sodass die schmalen Flächen nur seine 20 mm tragen müssen. Beim
+Die Buchsen liegen **quer**: die 44-mm-Seite des Rahmens läuft über die Breite,
+die 20-mm-Seite stapelt sich über die Höhe. Beim
 Kaltgeräteeinbau überdeckt der Flansch die Öffnung nur um 1,45 mm je Seite — der
 Ausschnitt muss also sitzen. Die zwei 5-mm-Fasen sitzen an einer **Schmalseite** (27,4 mm) und sind die
 Verdrehsicherung; `iec_key_flip` dreht sie auf die andere Seite.
@@ -75,7 +70,7 @@ Verdrehsicherung; `iec_key_flip` dreht sie auf die andere Seite.
 ## Verdrahtung
 
 ```
-Kaltgerätebuchse (Netz + Sicherung 1 A + Schalter), Unterseite
+Kaltgerätebuchse (Netz + Sicherung 1 A + Schalter), rechte Seite
    PE ──────────────────────────┬── Euro-Buchsen (PE, falls vorhanden)
                                 └── zur Lampe
    N  ──────────────────────────┬── Euro-Buchsen (N)
@@ -109,13 +104,13 @@ die Sicherung, ist nicht sie zu klein, sondern die Summe zu groß.
 
 ```bash
 openscad -o unterteil.stl -D 'part="unterteil"' -D 'connection="loeten"' schaltbox.scad
-
-# mit stehendem SSR: 72 statt 60 mm hoch
-openscad -D 'part="beides"' -D 'connection="loeten"' -D 'box=[150,60,72]' \
-         -D 'with_pcb=true' -D 'pcb_standoff=4' schaltbox.scad
 openscad -o deckel.stl    -D 'part="deckel"'    schaltbox.scad
 
 # mit flachem SSR und Platine
 openscad -D 'part="beides"' -D 'connection="loeten"' \
          -D 'with_pcb=true' -D 'ssr_flat=true' -D 'pcb_standoff=4' schaltbox.scad
+
+# mit stehendem SSR: 106 statt 80 mm breit
+openscad -D 'part="beides"' -D 'connection="loeten"' -D 'box=[106,50,90]' \
+         -D 'with_pcb=true' -D 'pcb_standoff=4' schaltbox.scad
 ```

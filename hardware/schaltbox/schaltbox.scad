@@ -22,25 +22,25 @@ $fn = 48;
 inner = [box[0] - 2 * wall, box[1] - 2 * wall, box[2] - 2 * wall];
 ssr_body = ssr_flat ? ssr_body_f : ssr_body_v;
 
-// Sockets lie down: the 44 mm side of the frame runs along the length, so the
-// 50 and 60 mm faces only have to carry its 20 mm side.
-sock_l  = socket_cut[1];     // 34, along x
-sock_s  = socket_cut[0];     // 13.2, across
-sfl_l   = socket_flange[1];  // 44
-sfl_s   = socket_flange[0];  // 20
+// Sockets sit in a column on the front: the 44 mm side of the frame runs across
+// the width, the 20 mm side stacks up the height.
+sock_w  = socket_cut[1];     // 34, across the width
+sock_h  = socket_cut[0];     // 13.2, up the height
+sfl_w   = socket_flange[1];  // 44
+sfl_h   = socket_flange[0];  // 20
 
-// Everything is pushed towards x = 0 rather than spread out, so whatever length
-// is left over stays in one piece at the far end -- that is the only place a
-// board with an upright SSR could ever stand.
-end_margin = 5;
-part_gap   = 8;
-iec_x    = end_margin + iec_flange[0] / 2;
-under_x  = end_margin + iec_flange[0] + part_gap + sfl_l / 2;
-left_x   = [end_margin + sfl_l / 2, end_margin + sfl_l + part_gap + sfl_l / 2];
+sock_x  = inner[0] / 2;
+sock_pitch = max(sfl_h + 6, sock_h + 10);
+sock_z  = [for (i = [0 : socket_count - 1])
+              (inner[2] - (socket_count - 1) * sock_pitch) / 2 + i * sock_pitch];
 
-// Free of every built-in part, over the full cross section.
-free_x0  = max(under_x + sfl_l / 2, left_x[1] + sfl_l / 2) + 4;
-free_len = inner[0] - free_x0;
+// The inlet stands upright on the right wall: 48 mm up, 27.4 across the depth.
+iec_z   = inner[2] / 2;
+
+// What is left over beside the socket column. The frame sits outside, so what
+// counts in here is the body, which has to pass through the cutout -- plus a
+// couple of millimetres in case it flares behind the panel.
+free_w  = (inner[0] - sock_w - 4) / 2;
 
 pcb_x0 = (inner[0] - pcb[0]) / 2;
 pcb_z0 = socket_depth + 2;          // above whatever the underside parts occupy
@@ -49,24 +49,25 @@ pcb_z0 = socket_depth + 2;          // above whatever the underside parts occupy
 // Printed on every render. A box with a given size can only be honest about
 // what does not go in.
 
-free_over_under = inner[2] - socket_depth;
-free_beside_left = inner[1] - socket_depth;
-pcb_stack = pcb_standoff + pcb[2] + ssr_body[2];
+free_behind = inner[1] - socket_depth;
+pcb_stack   = pcb_standoff + pcb[2] + ssr_body[2];
 
 echo(str("Aussen ", box[0], " x ", box[1], " x ", box[2],
          "  ->  innen ", inner[0], " x ", inner[1], " x ", inner[2]));
 echo(str("Verbindung ", connection,
          ": Kaltgeraetebuchse ", iec_depth, " mm, Euro ", socket_depth, " mm"));
-echo(str("Unterseite, Teile ragen in z (", inner[2], " frei): ",
-         iec_depth <= inner[2] && socket_depth <= inner[2] ? "passt" : "PASST NICHT"));
-echo(str("Linke Seite, Teile ragen in y (", inner[1], " frei): ",
+echo(str("Vorderseite, Dosen ragen in y (", inner[1], " frei): ",
          socket_depth <= inner[1] ? "passt" : "PASST NICHT"));
-echo(str("Platine+SSR ", pcb_stack, " mm hoch; ueber den Unterseiten-Teilen ",
-         free_over_under, " mm frei -> ",
-         pcb_stack <= free_over_under ? "passt liegend" : "PASST NICHT liegend"));
-echo(str("Freier Abschnitt am Ende: ", free_len, " x ", inner[1], " x ", inner[2],
-         " mm; Platine ist ", pcb[0], " x ", pcb[1],
-         " -> ", pcb[0] <= free_len ? "passt stehend" : "PASST NICHT stehend"));
+echo(str("Rechte Seite, Buchse ragt in x (", inner[0], " frei): ",
+         iec_depth <= inner[0] ? "passt" : "PASST NICHT"));
+echo(str("Saeule: ", socket_count, " Rahmen a ", sfl_h, " mm im Raster ", sock_pitch,
+         " -> ", (socket_count - 1) * sock_pitch + sfl_h, " von ", inner[2], " mm Hoehe"));
+echo(str("Platine+SSR ", pcb_stack, " mm Aufbau."));
+echo(str("  neben der Saeule: ", free_w, " x ", inner[1], " x ", inner[2],
+         " mm (rechts davon nimmt die Buchse ", iec_depth, ") -> ",
+         pcb_stack <= free_w ? "passt stehend" : "PASST NICHT stehend"));
+echo(str("  hinter den Dosen: ", free_behind, " mm -> ",
+         pcb_stack <= free_behind ? "passt" : "PASST NICHT"));
 
 // --- helpers ----------------------------------------------------------------
 
@@ -95,41 +96,35 @@ module keyed_rect(w, h, cham) {
 
 // --- openings ---------------------------------------------------------------
 
-module underside_openings() {
-    depth_iec = wall - iec_snap_wall;
-    depth_eu  = wall - socket_snap_wall;
-
-    // IEC: 48.1 along x, snaps on those long edges -> the wall gives way in y.
-    translate([iec_x, inner[1] / 2, -wall - 1])
-        linear_extrude(wall + 2)
-            rotate([0, 0, iec_key_flip ? 180 : 0])
-                keyed_rect(iec_cut[0], iec_cut[1], iec_chamfer);
-    translate([iec_x, inner[1] / 2, 0])
-        rotate([180, 0, 0]) snap_pocket(iec_cut[0], iec_cut[1], 0, snap_margin, depth_iec);
-
-    // Euro lying down: 34 along x, snaps on the 13.2 edges -> gives way in x.
-    translate([under_x, inner[1] / 2, -wall - 1])
-        linear_extrude(wall + 2) square([sock_l, sock_s], center = true);
-    translate([under_x, inner[1] / 2, 0])
-        rotate([180, 0, 0]) snap_pocket(sock_l, sock_s, snap_margin, 0, depth_eu);
+// The inlet stands upright on the right wall. Snaps on its long (48 mm) edges,
+// so the wall gives way above and below the opening.
+module iec_opening() {
+    depth = wall - iec_snap_wall;
+    translate([inner[0] - 1, inner[1] / 2, iec_z])
+        rotate([0, 90, 0]) linear_extrude(wall + 2)
+            rotate([0, 0, 90]) keyed_rect(iec_cut[0], iec_cut[1], iec_chamfer);
+    translate([inner[0], inner[1] / 2, iec_z])
+        rotate([0, 90, 0]) snap_pocket(iec_cut[1], iec_cut[0], 0, snap_margin, depth);
 }
 
-module left_openings() {
-    depth_eu = wall - socket_snap_wall;
-    for (cx = left_x) {
-        translate([cx, -wall - 1, inner[2] / 2])
+// Three sockets in a column on the front. Snaps on their narrow (13.2 mm)
+// edges, which now run across the width -- so the wall gives way sideways.
+module front_openings() {
+    depth = wall - socket_snap_wall;
+    for (cz = sock_z) {
+        translate([sock_x, -wall - 1, cz])
             rotate([-90, 0, 0]) linear_extrude(wall + 2)
-                square([sock_l, sock_s], center = true);
-        translate([cx, 0, inner[2] / 2])
-            rotate([90, 0, 0]) snap_pocket(sock_l, sock_s, snap_margin, 0, depth_eu);
+                square([sock_w, sock_h], center = true);
+        translate([sock_x, 0, cz])
+            rotate([90, 0, 0]) snap_pocket(sock_w, sock_h, snap_margin, 0, depth);
     }
 }
 
 module control_opening() {
     // Only needed while the board lives in here.
     if (with_pcb)
-        translate([inner[0] + 1, inner[1] / 2, inner[2] * 0.8])
-            rotate([0, -90, 0]) cylinder(d = ctrl_hole_d, h = wall + 2);
+        translate([-wall - 1, inner[1] / 2, inner[2] * 0.85])
+            rotate([0, 90, 0]) cylinder(d = ctrl_hole_d, h = wall + 2);
 }
 
 // --- parts ------------------------------------------------------------------
@@ -142,8 +137,8 @@ module unterteil() {
         }
         // open towards +y, that face is the lid
         translate([0, 0, 0]) cube([inner[0], inner[1] + wall + 1, inner[2]]);
-        underside_openings();
-        left_openings();
+        iec_opening();
+        front_openings();
         control_opening();
         lid_screw_holes();
     }
@@ -199,15 +194,12 @@ module deckel() {
 
 module fitting_dummies() {
     color("gray")
-        translate([iec_x - iec_cut[0] / 2, (inner[1] - iec_cut[1]) / 2, 0])
-            cube([iec_cut[0], iec_cut[1], iec_depth]);
-    color("silver")
-        translate([under_x - sock_l / 2, (inner[1] - sock_s) / 2, 0])
-            cube([sock_l, sock_s, socket_depth]);
-    for (cx = left_x)
+        translate([inner[0] - iec_depth, (inner[1] - iec_cut[1]) / 2, iec_z - iec_cut[0] / 2])
+            cube([iec_depth, iec_cut[1], iec_cut[0]]);
+    for (cz = sock_z)
         color("silver")
-            translate([cx - sock_l / 2, 0, (inner[2] - sock_s) / 2])
-                cube([sock_l, socket_depth, sock_s]);
+            translate([sock_x - sock_w / 2, 0, cz - sock_h / 2])
+                cube([sock_w, socket_depth, sock_h]);
 }
 
 module pcb_dummy() {
