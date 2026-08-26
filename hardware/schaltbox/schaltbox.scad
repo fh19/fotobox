@@ -75,10 +75,15 @@ module snap_pocket(w, h, mx, my, depth) {
     }
 }
 
-// Rectangle with two corners cut off at one short side -- the inlet's key.
+// Rectangle with two corners cut off at one SHORT side -- the inlet's key.
+// w is the long dimension, so the chamfers belong on the edge of length h.
 module keyed_rect(w, h, cham) {
-    polygon([[-w/2, -h/2], [w/2, -h/2], [w/2, h/2 - cham],
-             [w/2 - cham, h/2], [-w/2 + cham, h/2], [-w/2, h/2 - cham]]);
+    polygon([[-w/2,        -h/2],
+             [ w/2 - cham, -h/2],
+             [ w/2,        -h/2 + cham],
+             [ w/2,         h/2 - cham],
+             [ w/2 - cham,  h/2],
+             [-w/2,         h/2]]);
 }
 
 // --- openings ---------------------------------------------------------------
@@ -89,7 +94,9 @@ module underside_openings() {
 
     // IEC: 48.1 along x, snaps on those long edges -> the wall gives way in y.
     translate([iec_x, inner[1] / 2, -wall - 1])
-        linear_extrude(wall + 2) keyed_rect(iec_cut[0], iec_cut[1], iec_chamfer);
+        linear_extrude(wall + 2)
+            rotate([0, 0, iec_key_flip ? 180 : 0])
+                keyed_rect(iec_cut[0], iec_cut[1], iec_chamfer);
     translate([iec_x, inner[1] / 2, 0])
         rotate([180, 0, 0]) snap_pocket(iec_cut[0], iec_cut[1], 0, snap_margin, depth_iec);
 

@@ -58,7 +58,7 @@ Wand bleibt 3 mm und wird **nur um jede Öffnung** ausgedünnt:
 
 | Teil | auf | an welchen Kanten |
 |---|---|---|
-| Kaltgerätebuchse | 1,5 mm | den beiden langen (48,1 mm) |
+| Kaltgerätebuchse | 1,5 mm | den beiden langen (48 mm) |
 | Euro-Buchsen | 2,0 mm | den beiden schmalen (13,2 mm) |
 
 Die Taschen laufen mit 45° aus — eine Stufe wäre eine Decke, die der Drucker
@@ -68,8 +68,8 @@ um die Öffnung ausgedünnt würde unnötig Material schwächen.
 Die Buchsen liegen **quer**: die 44-mm-Seite des Rahmens läuft entlang der
 120 mm, sodass die schmalen Flächen nur seine 20 mm tragen müssen. Beim
 Kaltgeräteeinbau überdeckt der Flansch die Öffnung nur um 1,45 mm je Seite — der
-Ausschnitt muss also sitzen. Die zwei 5-mm-Fasen an einer Schmalseite sind die
-Verdrehsicherung und stecken in der Geometrie.
+Ausschnitt muss also sitzen. Die zwei 5-mm-Fasen sitzen an einer **Schmalseite** (27,4 mm) und sind die
+Verdrehsicherung; `iec_key_flip` dreht sie auf die andere Seite.
 
 ## Verdrahtung
 

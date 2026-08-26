@@ -33,11 +33,13 @@ pcb_standoff = 6;             // board sits this high above the floor
 // --- IEC inlet with fuse holder and switch, snap-in -------------------------
 // Measured on the part. This one piece replaces what used to be three: the
 // mains entry, the fuse holder and a switch. The two chamfered corners sit at
-// one short side and are the orientation key -- the part only goes in one way.
-iec_cut        = [48.1, 27.6];
+// one SHORT side -- they are the orientation key, and putting them on the long
+// side would make an opening the part does not go into.
+iec_cut        = [48, 27.4];  // Gesamtabmessung, Fasen eingerechnet
 iec_flange     = [51, 31];    // the visible frame; only 1.45 mm wider per side,
                               // so the cutout has to be accurate and the wall flat
 iec_chamfer    = 5;
+iec_key_flip   = false;       // which short side carries the chamfers
 // Soldering instead of push-on connectors buys depth: 29 instead of 40 for the
 // inlet, 35 instead of 50 for the sockets. It also gives up something -- a
 // soldered joint on a flat tab is more brittle than a crimp, and this box gets
