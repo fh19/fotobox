@@ -8,7 +8,8 @@
 // --- Panasonic/Matsushita AQ2A2-ZP3 -----------------------------------------
 // Verified against ds_61601_0001_en_aq1, "AC output, 2A and 3A types (Vertical)".
 // Pins in one row: 1,2 = load (LAST), 3,4 = input (STEUERUNG).
-ssr_body    = [33, 10, 25];   // length, width, height above the board
+ssr_body_v  = [33, 10, 25];   // vertical type, length x width x height
+ssr_body_f  = [33, 25, 11];   // AQ2A2-J, the flat one
 ssr_pin_d   = 0.8;
 ssr_pitches = [7.62, 12.7, 5.08];  // 1->2, 2->3, 3->4; 25.4 in total
 ssr_pin_len = 5.3;            // below the body
@@ -68,6 +69,21 @@ snap_margin      = 4;         // how far the thinned area reaches past the cutou
 // Its own hole on the other side of the rib, so 3.3 V never shares a run with
 // 230 V. The mains no longer needs one: it arrives through the inlet.
 ctrl_hole_d      = 7.0;
+
+// --- The box itself ---------------------------------------------------------
+// Given, not derived: 50 x 60 x 120 was the requirement, so the parts are
+// checked against it instead of setting it. x is the length, the underside is
+// the x-y face at z = 0, the left side the x-z face at y = 0. The lid is the
+// opposite long face, so removing it opens the whole bar sideways.
+box = [120, 50, 60];
+
+// The vertical SSR needs 6 + 1.6 + 25 = 32.6 mm above its floor. There is not
+// that much room left over the built-in parts, so the board is optional -- see
+// the fit report the file echoes when it renders.
+with_pcb = false;
+
+// The flat variant AQ2A2-J-ZP3 is 33 x 25 x 11 instead of 33 x 10 x 25.
+ssr_flat = false;
 
 // --- Print and assembly -----------------------------------------------------
 // 3 mm is the floor, not a target: an FDM wall is porous along the layer lines

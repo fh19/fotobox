@@ -1,95 +1,72 @@
-// Mains switch box for the photo lamp, built into the Fotobox enclosure.
+// Mains distribution box for the Fotobox, with the switch for the photo lamp.
 //
-// Holds the SSR on a small board between a 2-pole control terminal and a 3-pole
-// lamp terminal, three snap-in Euro sockets, and one snap-in IEC inlet that
-// brings in the mains, the fuse and the main switch in a single part.
+// A bar of 50 x 60 x 120 mm. The underside carries the IEC inlet -- which
+// brings mains, fuse and main switch in one part -- and one Euro socket, in
+// line. The left side carries the other two Euro sockets, also in line. The lid
+// is the long face opposite the left side, so taking it off opens the whole bar
+// sideways and both groups of sockets are reachable.
 //
-// The floor carries a rib splitting the inside in two: mains on the socket
-// side, the 3.3 V control lead on the other, each with its own way in. A 3D
-// print is a good holder and a poor insulator -- the rib and the walls hold
-// things apart, sleeving and the parts themselves do the insulating.
+// The box size is given, not derived. Every part is therefore checked against
+// it and the file says what fits and what does not when it renders.
 //
-// Origin is the inner floor corner on the inlet side. x runs along the socket
-// wall, y from the socket wall towards the control side, z upwards.
+// x runs along the 120 mm length, y from the left side towards the lid, z from
+// the underside upwards. Origin is the inner corner at the underside/left end.
 
 include <schaltbox_parts.scad>
 
 part = "beides";   // "unterteil" | "deckel" | "beides" | "explosion"
 $fn = 48;
 
-// --- derived sizes ----------------------------------------------------------
+// --- derived ----------------------------------------------------------------
 
-// Orientation first: everything below follows from it.
-sock_w   = socket_upright ? socket_cut[0] : socket_cut[1];
-sock_h   = socket_upright ? socket_cut[1] : socket_cut[0];
-flange_w = socket_upright ? socket_flange[0] : socket_flange[1];
-flange_h = socket_upright ? socket_flange[1] : socket_flange[0];
+inner = [box[0] - 2 * wall, box[1] - 2 * wall, box[2] - 2 * wall];
+ssr_body = ssr_flat ? ssr_body_f : ssr_body_v;
 
-// The gap is measured between cutouts, but it is the frames that must not
-// touch: they overhang the opening by (flange - cut) / 2 on each side.
-socket_pitch = max(sock_w + socket_gap, flange_w + 4);
-socket_span  = (socket_count - 1) * socket_pitch + sock_w;
+// Sockets lie down: the 44 mm side of the frame runs along the length, so the
+// 50 and 60 mm faces only have to carry its 20 mm side.
+sock_l  = socket_cut[1];     // 34, along x
+sock_s  = socket_cut[0];     // 13.2, across
+sfl_l   = socket_flange[1];  // 44
+sfl_s   = socket_flange[0];  // 20
 
-// Behind the socket bodies the mains side needs room for wiring -- and the
-// inlet sits in the same zone, lying on its long edge, so the zone has to be at
-// least as deep as the inlet cutout is wide.
-wire_room  = 15;
-mains_zone = max(socket_depth + wire_room, iec_cut[0] + 2 * snap_margin + 8);
+// Underside: inlet first, then one socket, spread over the length.
+under_margin = (inner[0] - iec_flange[0] - sfl_l) / 3;
+iec_x    = under_margin + iec_flange[0] / 2;
+under_x  = 2 * under_margin + iec_flange[0] + sfl_l / 2;
 
-rib_y = mains_zone;
-rib_t = 2.4;
+// Left side: two sockets, evenly spread.
+left_margin = (inner[0] - 2 * sfl_l) / 3;
+left_x   = [left_margin + sfl_l / 2, 2 * left_margin + 1.5 * sfl_l];
 
-// The inlet reaches into the box along x; the sockets must start beyond it.
-socket_x0 = iec_depth + creep_gap;
+pcb_x0 = (inner[0] - pcb[0]) / 2;
+pcb_z0 = socket_depth + 2;          // above whatever the underside parts occupy
 
-inner_x = max(socket_x0 + socket_span + creep_gap, pcb[0] + 2 * creep_gap);
-inner_y = rib_y + rib_t + creep_gap + pcb[1] + creep_gap;
-// The frames sit on the wall, so the wall has to be taller than they are.
-inner_z = max(ssr_body[2] + pcb_standoff + pcb[2] + 6,
-              flange_h + 6,
-              iec_flange[1] + 6);
+// --- fit report -------------------------------------------------------------
+// Printed on every render. A box with a given size can only be honest about
+// what does not go in.
 
-outer_x = inner_x + 2 * wall;
-outer_y = inner_y + 2 * wall;
-outer_z = inner_z + floor_t;
+free_over_under = inner[2] - socket_depth;
+free_beside_left = inner[1] - socket_depth;
+pcb_stack = pcb_standoff + pcb[2] + ssr_body[2];
 
-pcb_x0 = (inner_x - pcb[0]) / 2;
-pcb_y0 = rib_y + rib_t + creep_gap / 2;
+echo(str("Aussen ", box[0], " x ", box[1], " x ", box[2],
+         "  ->  innen ", inner[0], " x ", inner[1], " x ", inner[2]));
+echo(str("Verbindung ", connection,
+         ": Kaltgeraetebuchse ", iec_depth, " mm, Euro ", socket_depth, " mm"));
+echo(str("Unterseite, Teile ragen in z (", inner[2], " frei): ",
+         iec_depth <= inner[2] && socket_depth <= inner[2] ? "passt" : "PASST NICHT"));
+echo(str("Linke Seite, Teile ragen in y (", inner[1], " frei): ",
+         socket_depth <= inner[1] ? "passt" : "PASST NICHT"));
+echo(str("Platine+SSR ", pcb_stack, " mm; ueber den Unterseiten-Teilen ",
+         free_over_under, " mm frei -> ",
+         pcb_stack <= free_over_under ? "passt" : "PASST NICHT"));
 
 // --- helpers ----------------------------------------------------------------
 
-module pcb_hole_positions() {
-    for (dx = [pcb_inset, pcb[0] - pcb_inset])
-        for (dy = [pcb_inset, pcb[1] - pcb_inset])
-            translate([pcb_x0 + dx, pcb_y0 + dy, 0]) children();
-}
-
-module lid_boss_positions() {
-    // Pulled into the corners so the bosses cut into the walls instead of
-    // standing tangent to them, which would leave a non-manifold seam.
-    for (x = [boss_d / 2 - 0.8, inner_x - boss_d / 2 + 0.8])
-        for (y = [boss_d / 2 - 0.8, inner_y - boss_d / 2 + 0.8])
-            translate([x, y, 0]) children();
-}
-
-// A rectangle with two corners cut off at one short side -- the inlet's
-// orientation key, so the part cannot go in upside down.
-module keyed_rect(w, h, cham) {
-    polygon([[-w/2,        -h/2],
-             [ w/2,        -h/2],
-             [ w/2,         h/2 - cham],
-             [ w/2 - cham,  h/2],
-             [-w/2 + cham,  h/2],
-             [-w/2,         h/2 - cham]]);
-}
-
-// The wall stays 3 mm and is thinned only around an opening, so a snap-in part
-// finds the panel thickness it expects. The pocket is wider at the inner face
-// than at its floor: a step would be a ceiling the printer has to bridge.
-// mx/my say on which pair of edges the snaps sit; only there does the wall have
-// to give way. Thinning all round would merge the three socket pockets into one
-// weak field, because the gap between them is exactly a pocket wide.
-module snap_pocket_profile(w, h, mx, my, depth) {
+// The wall stays thick and is thinned only around an opening, on the two edges
+// the snaps actually grip. mx/my say which. The pocket is wider at the inner
+// face than at its floor: a step would be a ceiling the printer has to bridge.
+module snap_pocket(w, h, mx, my, depth) {
     hull() {
         linear_extrude(0.01)
             square([w + 2 * (mx + depth), h + 2 * (my + depth)], center = true);
@@ -98,44 +75,47 @@ module snap_pocket_profile(w, h, mx, my, depth) {
     }
 }
 
+// Rectangle with two corners cut off at one short side -- the inlet's key.
+module keyed_rect(w, h, cham) {
+    polygon([[-w/2, -h/2], [w/2, -h/2], [w/2, h/2 - cham],
+             [w/2 - cham, h/2], [-w/2 + cham, h/2], [-w/2, h/2 - cham]]);
+}
+
 // --- openings ---------------------------------------------------------------
 
-module socket_openings() {
-    z_mid = inner_z / 2;
-    depth = wall - socket_snap_wall;
-    for (i = [0 : socket_count - 1]) {
-        cx = socket_x0 + i * socket_pitch + sock_w / 2;
-        // through hole
-        translate([cx, -wall - 1, z_mid])
-            rotate([-90, 0, 0])
-                linear_extrude(wall + 2)
-                    square([sock_w, sock_h], center = true);
-        // thinning, opening towards the inside
-        translate([cx, 0, z_mid])
-            rotate([90, 0, 0])
-                snap_pocket_profile(sock_w, sock_h,
-                                    socket_upright ? 0 : snap_margin,
-                                    socket_upright ? snap_margin : 0, depth);
+module underside_openings() {
+    depth_iec = wall - iec_snap_wall;
+    depth_eu  = wall - socket_snap_wall;
+
+    // IEC: 48.1 along x, snaps on those long edges -> the wall gives way in y.
+    translate([iec_x, inner[1] / 2, -wall - 1])
+        linear_extrude(wall + 2) keyed_rect(iec_cut[0], iec_cut[1], iec_chamfer);
+    translate([iec_x, inner[1] / 2, 0])
+        rotate([180, 0, 0]) snap_pocket(iec_cut[0], iec_cut[1], 0, snap_margin, depth_iec);
+
+    // Euro lying down: 34 along x, snaps on the 13.2 edges -> gives way in x.
+    translate([under_x, inner[1] / 2, -wall - 1])
+        linear_extrude(wall + 2) square([sock_l, sock_s], center = true);
+    translate([under_x, inner[1] / 2, 0])
+        rotate([180, 0, 0]) snap_pocket(sock_l, sock_s, snap_margin, 0, depth_eu);
+}
+
+module left_openings() {
+    depth_eu = wall - socket_snap_wall;
+    for (cx = left_x) {
+        translate([cx, -wall - 1, inner[2] / 2])
+            rotate([-90, 0, 0]) linear_extrude(wall + 2)
+                square([sock_l, sock_s], center = true);
+        translate([cx, 0, inner[2] / 2])
+            rotate([90, 0, 0]) snap_pocket(sock_l, sock_s, snap_margin, 0, depth_eu);
     }
 }
 
-module iec_opening() {
-    cy = mains_zone / 2;
-    z_mid = inner_z / 2;
-    depth = wall - iec_snap_wall;
-    // through hole, keyed corners towards the top
-    translate([-wall - 1, cy, z_mid])
-        rotate([0, 90, 0])
-            linear_extrude(wall + 2) rotate([0, 0, 90]) keyed_rect(iec_cut[1], iec_cut[0], iec_chamfer);
-    // thinning
-    translate([0, cy, z_mid])
-        rotate([0, -90, 0])
-            snap_pocket_profile(iec_cut[0], iec_cut[1], 0, snap_margin, depth);
-}
-
 module control_opening() {
-    translate([inner_x / 2, inner_y + 1, inner_z / 2])
-        rotate([90, 0, 0]) cylinder(d = ctrl_hole_d, h = wall + 2);
+    // Only needed while the board lives in here.
+    if (with_pcb)
+        translate([inner[0] + 1, inner[1] / 2, inner[2] * 0.8])
+            rotate([0, -90, 0]) cylinder(d = ctrl_hole_d, h = wall + 2);
 }
 
 // --- parts ------------------------------------------------------------------
@@ -143,103 +123,94 @@ module control_opening() {
 module unterteil() {
     difference() {
         union() {
-            translate([-wall, -wall, -floor_t]) cube([outer_x, outer_y, outer_z]);
+            translate([-wall, -wall, -wall]) cube([box[0], box[1], box[2]]);
             mounting_ears();
         }
-        translate([0, 0, 0]) cube([inner_x, inner_y, inner_z + 1]);
-        socket_openings();
-        iec_opening();
+        // open towards +y, that face is the lid
+        translate([0, 0, 0]) cube([inner[0], inner[1] + wall + 1, inner[2]]);
+        underside_openings();
+        left_openings();
         control_opening();
-        lid_boss_positions()
-            translate([0, 0, inner_z - 12]) cylinder(d = screw_pilot, h = 14);
+        lid_screw_holes();
     }
-    separation_rib();
-    pcb_standoffs();
-    lid_bosses();
+    if (with_pcb) pcb_standoffs();
 }
 
-module separation_rib() {
-    // Reaches 0.5 mm into both side walls: faces that merely touch leave a
-    // non-manifold seam, and slicers take that badly.
-    translate([-0.5, rib_y, -0.5]) cube([inner_x + 1, rib_t, inner_z - 1.5]);
+module lid_screw_positions() {
+    for (x = [8, inner[0] - 8])
+        for (z = [8, inner[2] - 8])
+            translate([x, inner[1], z]) children();
+}
+
+module lid_screw_holes() {
+    lid_screw_positions()
+        rotate([-90, 0, 0]) translate([0, 0, -14]) cylinder(d = screw_pilot, h = 15);
 }
 
 module pcb_standoffs() {
-    pcb_hole_positions()
-        translate([0, 0, -0.5])
-            difference() {
-                cylinder(d = boss_d, h = pcb_standoff + 0.5);
-                translate([0, 0, 2]) cylinder(d = screw_pilot, h = pcb_standoff);
-            }
-}
-
-module lid_bosses() {
-    lid_boss_positions()
-        translate([0, 0, -0.5])
-            difference() {
-                cylinder(d = boss_d, h = inner_z + 0.5);
-                translate([0, 0, inner_z - 11.5]) cylinder(d = screw_pilot, h = 13);
-            }
+    for (dx = [pcb_inset, pcb[0] - pcb_inset])
+        for (dy = [pcb_inset, pcb[1] - pcb_inset])
+            translate([pcb_x0 + dx, dy + 4, pcb_z0 - pcb_standoff])
+                difference() {
+                    cylinder(d = boss_d, h = pcb_standoff);
+                    translate([0, 0, 2]) cylinder(d = screw_pilot, h = pcb_standoff);
+                }
 }
 
 module mounting_ears() {
-    for (x = [outer_x * 0.25, outer_x * 0.75])
-        translate([x - wall, outer_y - wall - 1, -floor_t])
+    // On the top face, so the bar can be screwed up into the Fotobox.
+    for (x = [box[0] * 0.25, box[0] * 0.75])
+        translate([x - wall, inner[1] - 1, inner[2]])
             difference() {
-                translate([-ear_len / 2, 0, 0]) cube([ear_len, ear_len + 1, floor_t]);
-                translate([0, ear_len * 0.6, -1]) cylinder(d = ear_hole_d, h = floor_t + 2);
+                translate([-ear_len / 2, 0, 0]) cube([ear_len, ear_len + 1, wall]);
+                translate([0, ear_len * 0.6, -1]) cylinder(d = ear_hole_d, h = wall + 2);
             }
 }
 
 module deckel() {
     difference() {
         union() {
-            translate([-wall, -wall, 0]) cube([outer_x, outer_y, lid_t]);
-            translate([clearance, clearance, -3])
-                cube([inner_x - 2 * clearance, inner_y - 2 * clearance, 3]);
+            translate([-wall, 0, -wall]) cube([box[0], lid_t, box[2]]);
+            translate([clearance, -3, clearance])
+                cube([inner[0] - 2 * clearance, 3, inner[2] - 2 * clearance]);
         }
-        lid_boss_positions() translate([0, 0, -4]) cylinder(d = screw_d + 0.4, h = lid_t + 6);
-        lid_boss_positions() translate([0, 0, lid_t - 1.8]) cylinder(d = screw_d * 2, h = 2);
-        translate([-1, rib_y - clearance, -3.1])
-            cube([inner_x + 2, rib_t + 2 * clearance, 3.2]);
+        lid_screw_positions()
+            rotate([-90, 0, 0]) translate([0, 0, -4]) cylinder(d = screw_d + 0.4, h = lid_t + 6);
+        lid_screw_positions()
+            rotate([-90, 0, 0]) translate([0, 0, lid_t - 1.8]) cylinder(d = screw_d * 2, h = 2);
     }
 }
 
-// --- assembly view ----------------------------------------------------------
-
-module pcb_dummy() {
-    color("darkgreen") translate([pcb_x0, pcb_y0, pcb_standoff]) cube(pcb);
-    color("dimgray")
-        translate([pcb_x0 + term_2p_w + 4, pcb_y0 + (pcb[1] - ssr_body[1]) / 2,
-                   pcb_standoff + pcb[2]]) cube(ssr_body);
-    color("cornflowerblue")
-        translate([pcb_x0 + 2, pcb_y0 + (pcb[1] - term_depth) / 2, pcb_standoff + pcb[2]])
-            cube([term_2p_w, term_depth, term_height]);
-    color("indianred")
-        translate([pcb_x0 + pcb[0] - term_3p_w - 2, pcb_y0 + (pcb[1] - term_depth) / 2,
-                   pcb_standoff + pcb[2]]) cube([term_3p_w, term_depth, term_height]);
-}
+// --- what goes inside -------------------------------------------------------
 
 module fitting_dummies() {
-    // Bodies of the bought parts, to check nothing shares a space.
     color("gray")
-        translate([0, (mains_zone - iec_cut[0]) / 2, (inner_z - iec_cut[1]) / 2])
-            cube([iec_depth, iec_cut[0], iec_cut[1]]);
-    for (i = [0 : socket_count - 1])
+        translate([iec_x - iec_cut[0] / 2, (inner[1] - iec_cut[1]) / 2, 0])
+            cube([iec_cut[0], iec_cut[1], iec_depth]);
+    color("silver")
+        translate([under_x - sock_l / 2, (inner[1] - sock_s) / 2, 0])
+            cube([sock_l, sock_s, socket_depth]);
+    for (cx = left_x)
         color("silver")
-            translate([socket_x0 + i * socket_pitch, 0, (inner_z - sock_h) / 2])
-                cube([sock_w, socket_depth, sock_h]);
+            translate([cx - sock_l / 2, 0, (inner[2] - sock_s) / 2])
+                cube([sock_l, socket_depth, sock_s]);
+}
+
+module pcb_dummy() {
+    if (with_pcb) {
+        color("darkgreen") translate([pcb_x0, 4, pcb_z0]) cube(pcb);
+        color("dimgray")
+            translate([pcb_x0 + term_2p_w + 4, 4 + (pcb[1] - ssr_body[1]) / 2,
+                       pcb_z0 + pcb[2]]) cube(ssr_body);
+    }
 }
 
 if (part == "unterteil") unterteil();
 else if (part == "deckel") deckel();
 else if (part == "explosion") {
-    unterteil(); pcb_dummy(); fitting_dummies();
-    translate([0, 0, inner_z + 30]) deckel();
+    unterteil(); fitting_dummies(); pcb_dummy();
+    translate([0, 40, 0]) deckel();
 } else {
-    unterteil(); pcb_dummy(); fitting_dummies();
-    translate([outer_x + 15, 0, 0]) deckel();
+    unterteil(); fitting_dummies(); pcb_dummy();
+    translate([0, box[1] + 20, 0]) deckel();
 }
-
-echo(str("Verbindung: ", connection,
-         " -- Aussenmass ", outer_x, " x ", outer_y, " x ", outer_z + lid_t, " mm"));
