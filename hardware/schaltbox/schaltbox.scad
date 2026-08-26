@@ -113,6 +113,9 @@ module keyed_rect(w, h, cham) {
 // Right into the corners: set in, the domes stand about in the middle of a wall
 // and look like an afterthought. At boss_d/2 - 1 they bite into the corner and
 // read as part of it.
+lip_w = 4;    // Breite des Randes am Deckel
+lip_d = 3;    // wie tief er in das Gehaeuse greift
+
 lid_screw_c  = boss_d / 2 - 1;
 lid_screw_xz = [[lid_screw_c, lid_screw_c],
                 [lid_screw_c, inner[2] - lid_screw_c],
@@ -137,7 +140,8 @@ module socket_in_front_wall() {
 
 module socket_in_lid() {
     rotate([-90, 0, 0]) {
-        translate([0, 0, -1]) linear_extrude(lid_t + 2)
+        // From behind the rim right through the plate.
+        translate([0, 0, -lip_d - 1]) linear_extrude(lid_t + lip_d + 2)
             square([sock_w, sock_h], center = true);
         snap_pocket(sock_w, sock_h, snap_margin, 0, lid_t - socket_snap_wall);
     }
@@ -245,9 +249,15 @@ module deckel() {
     difference() {
         union() {
             translate([-wall, 0, -wall]) cube([box[0], lid_t, box[2]]);
-            // lip into the shell, so there is no straight gap at the seam
-            translate([clearance, -3, clearance])
-                cube([inner[0] - 2 * clearance, 3, inner[2] - 2 * clearance]);
+            // A rim, not a plate. As a full slab it sat behind the socket
+            // opening and closed it again, and made the panel 6 mm thick where
+            // the snaps want 2.
+            difference() {
+                translate([clearance, -lip_d, clearance])
+                    cube([inner[0] - 2 * clearance, lip_d, inner[2] - 2 * clearance]);
+                translate([lip_w, -lip_d - 1, lip_w])
+                    cube([inner[0] - 2 * lip_w, lip_d + 2, inner[2] - 2 * lip_w]);
+            }
         }
         // the third socket, directly opposite the place it had in front
         translate([sock_x, 0, rear_z]) socket_in_lid();
@@ -259,9 +269,10 @@ module deckel() {
                 cylinder(d1 = screw_d + 0.4, d2 = screw_d * 2, h = 1.7);
         }
         // clear the shelf and the rib
+        // Aussparungen fuer die Stege, die bis an die Rueckwand reichen.
         for (cz = [shelf_z, (front_z[0] + front_z[1]) / 2])
-            translate([-1, -3.1, cz - rib_h / 2 - clearance])
-                cube([inner[0] + 2, 3.2, rib_h + 2 * clearance]);
+            translate([-1, -lip_d - 0.1, cz - rib_h / 2 - clearance])
+                cube([inner[0] + 2, lip_d + 0.2, rib_h + 2 * clearance]);
     }
 }
 

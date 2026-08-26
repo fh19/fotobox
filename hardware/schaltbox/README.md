@@ -11,6 +11,10 @@ rechte Wand  die Kaltgerätebuchse, hochkant und unten
 
 Die **Rückwand ist der Deckel** und wird von hinten mit vier M3-Schrauben in
 **Messing-Schmelzbuchsen** verschraubt; die Dome dafür sitzen in den vier Ecken.
+Innen hat der Deckel einen umlaufenden **Rand** von 4 mm Breite, der 3 mm in das
+Gehäuse greift — bewusst ein Rahmen und keine Platte: als volle Fläche säße er
+hinter dem Steckdosenausschnitt und verschlösse ihn wieder, und er machte die
+Wand dort 6 mm dick, wo die Snaps 2 mm brauchen.
 Laschen gibt es nicht — sie stünden nur im Weg.
 
 Zwischen der mittleren und der oberen Dose läuft ein **Steg über die gesamte
@@ -19,7 +23,8 @@ Breite**; darauf sitzt das SSR. Ein zweiter Steg zwischen den beiden vorderen
 Vorderwand nach hinten an: drei Ausschnitte und die dünnen Snap-Felder daneben
 lassen sie sonst federn.
 
-**Beide Stege reichen bis an die Rückwand.** Die Kabel gehen nicht mehr hinten
+**Beide Stege reichen über die gesamte Tiefe** bis an die Rückwand; der Deckel
+hat dafür zwei Aussparungen in seinem Rand. Die Kabel gehen nicht mehr hinten
 herum, sondern durch eine **U-förmige Aussparung** im oberen Steg — zum Deckel
 hin offen, sodass sich ein Bündel von hinten einlegen lässt statt eingefädelt zu
 werden. Sie sitzt links neben dem SSR.
