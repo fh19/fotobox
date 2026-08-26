@@ -67,6 +67,14 @@ socket_count     = 3;
 // sides: a step there would be a ceiling the printer has to bridge.
 snap_margin      = 4;         // how far the thinned area reaches past the cutout
 
+// Ribs between the sockets, running back to the rear wall. Three openings and
+// the thinned strips beside them leave the front wall bending; these tie it to
+// the back. They stay narrow enough that the channels left and right of the
+// socket column remain free for wiring and the board.
+rib_h            = 5;         // height of the band between two openings
+rib_t            = 2.5;       // thickness front to back is the depth, this is z
+rib_overhang     = 4;         // how far past the column the rib reaches
+
 // --- Control lead ------------------------------------------------------------
 // Its own hole on the other side of the rib, so 3.3 V never shares a run with
 // 230 V. The mains no longer needs one: it arrives through the inlet.

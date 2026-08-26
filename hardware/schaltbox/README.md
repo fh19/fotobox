@@ -1,12 +1,19 @@
 # Schaltbox — Netzverteilung und Lampenschalter
 
 Ein Kasten von **80 × 50 × 90 mm** zum Einbau ins Fotobox-Gehäuse. Auf der
-**Vorderseite** stehen die drei Euro-Buchsen in einer Säule übereinander, auf der
-**rechten Seite** hochkant die Kaltgerätebuchse — sie bringt Netzanschluss,
-Feinsicherung und Hauptschalter in einem Teil. Layout nach
+**Vorderseite** stehen die drei Euro-Buchsen in einer Säule übereinander, an den
+**linken Rand** gerückt. Auf der **rechten Seite** steht hochkant die
+Kaltgerätebuchse — sie bringt Netzanschluss, Feinsicherung und Hauptschalter in
+einem Teil — nach oben geschoben, damit darunter eine freie Ecke bleibt. Layout nach
 `photo_2026-08-26_21-35-32.jpg`.
 
-Der **Deckel ist die Rückseite**: abgenommen liegt alles auf einmal offen.
+Der **Deckel ist die Rückseite**, mit vier kleinen Schrauben. Abgenommen liegt
+alles auf einmal offen.
+
+Zwischen den Öffnungen laufen zwei **Stege** von der Vorderwand bis zur
+Rückwand. Drei Ausschnitte und die dünnen Snap-Felder daneben lassen die
+Vorderwand sonst federn; die Stege binden sie nach hinten an. Sie reichen nur
+über die Säule plus 4 mm, damit die Kanäle links und rechts frei bleiben.
 
 ```
 Dateien   schaltbox_parts.scad   gemessene Maße und die Vorgaben
@@ -23,29 +30,40 @@ Aussen 80 x 50 x 90  ->  innen 74 x 44 x 84
 Verbindung loeten: Kaltgeraetebuchse 29 mm, Euro 35 mm
 Vorderseite, Dosen ragen in y (44 frei): passt
 Rechte Seite, Buchse ragt in x (74 frei): passt
+  Ausschnitt hochkant 48 hoch x 27.4 tief auf einer Flaeche 84 x 44 -> passt
+  Flansch 51 x 31 auf 90 x 50 -> passt
 Saeule: 3 Rahmen a 20 mm im Raster 26 -> 72 von 84 mm Hoehe
-Platine+SSR 16.6 mm Aufbau.
-  neben der Saeule: 18 x 44 x 84 mm -> passt stehend
-  hinter den Dosen: 9 mm -> PASST NICHT
+  Ecke rechts unter der Buchse: 25 breit x 44 tief x 30 hoch
 ```
+
+Geprüft wird auch, ob der Ausschnitt auf die **Fläche** passt und nicht nur die
+Tiefe in den Kasten. Genau das war einmal falsch herum gedreht: hochkant gehört
+die 48-mm-Seite auf die Höhe, nicht über die 44 mm Tiefe.
 
 ### Löten ist bei dieser Tiefe Pflicht
 
 Die Euro-Buchsen ragen mit Flachsteckern 50 mm hinein, innen sind in y aber nur
 **44 mm**. Gelötet sind es 35 mm, mit 9 mm Luft dahinter. `connection = "loeten"`.
 
-### Die Platine steht neben der Säule
+### Die freie Ecke rechts
 
-Die Buchsensäule ist 34 mm breit (der 44-mm-Rahmen sitzt ja außen), also bleiben
-innen **18 mm** neben ihr — über die volle Tiefe und Höhe, 18 × 44 × 84 mm.
+Weil die Säule links steht und die Buchse oben, bleibt rechts darunter ein Stück
+am Stück: **25 breit × 44 tief × 30 hoch**.
 
-| SSR | Aufbau | passt? |
+```
+    liegend, SSR nach oben: groesste Platine 44 x 25 mm, Aufbau bis 30 mm
+    stehend an der Wand:    Aufbau bis 25 mm
+```
+
+| SSR | Aufbau | wie |
 |---|---|---|
-| flach `AQ2A2-J-ZP3` | 16,6 mm | **ja**, stehend neben der Säule |
-| stehend `AQ2A2-ZP3` | 30,6 mm | nein — bräuchte **106 mm Breite** statt 80 |
+| stehend `AQ2A2-ZP3` | 29,6 mm bei `pcb_standoff = 3` | **liegend** auf dem Boden, SSR nach oben |
+| flach `AQ2A2-J-ZP3` | 16,6 mm | liegend oder stehend an der Wand |
 
-Rechts nimmt die Kaltgerätebuchse 29 mm der Tiefe; der freie Streifen links
-daneben ist unberührt.
+**Die Platine muss dafür anders bestückt werden.** In Reihe — Klemme, SSR,
+Klemme — ist sie rund 70 mm lang und passt in diese Ecke nicht. Mit den Klemmen
+**neben** dem SSR statt dahinter kommt man auf etwa 44 × 25 mm, und das geht.
+Das SSR selbst ist nur 33 × 10 mm, der Platz reicht also.
 
 ## Dünne Wand für die Snaps
 
