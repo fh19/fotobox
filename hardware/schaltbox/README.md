@@ -1,68 +1,96 @@
 # Schaltbox — Netzverteilung und Lampenschalter
 
 Ein Einbaugehäuse für das Fotobox-Gehäuse. Darin: das Halbleiterrelais für die
-Fotolampe auf einer kleinen Platine, ein 1-A-Feinsicherungshalter, drei
-Euro-Steckdosen für die Versorgung der Box und eine Kabeleinführung.
+Fotolampe auf einer kleinen Platine, drei Euro-Buchsen für die Versorgung der Box
+und eine Kaltgerätebuchse, die Netzanschluss, Feinsicherung und Hauptschalter in
+einem Teil mitbringt.
 
 ```
-Außenmaß  132 × 105 × 45 mm   (ergibt sich aus den Teilen, siehe unten)
 Dateien   schaltbox_parts.scad   gemessene Maße, nur hier ändern
           schaltbox.scad         Geometrie
 ```
 
-## Aufteilung
+## Vier Größen — du hast die Wahl
 
-Das Gehäuse ist innen durch einen **Trennsteg** in zwei Bereiche geteilt, und das
-ist der eigentliche Grund, warum sich der Druck lohnt:
+Zwei Entscheidungen bestimmen das Format, beide oben in `schaltbox_parts.scad`:
+
+| | `flachstecker` | `loeten` |
+|---|---|---|
+| **`socket_upright = true`** | 123 × 119 × 56 mm | **112 × 119 × 56 mm** |
+| **`socket_upright = false`** | 192 × 119 × 45 mm | 181 × 119 × 45 mm |
+
+**Stehende Buchsen** ergeben ein schmales, hohes Gehäuse; **liegende** ein breites,
+flaches. Bei liegenden Buchsen stecken die Stifte nebeneinander und das Kabel geht
+seitlich ab — das solltest du vor dem Drucken einmal durchdenken.
+
+**Löten statt Flachstecker** spart 11 mm (Kaltgerätebuchse: 29 statt 40) und
+15 mm (Euro-Buchse: 35 statt 50). Der Preis: eine Lötstelle an einer Flachsteckfahne
+ist spröder als eine Crimpverbindung, und diese Box wird transportiert. Deshalb ist
+`flachstecker` die Voreinstellung.
+
+## Aufteilung
 
 ```
    ┌──────────────────────────────────────────────┐
-   │  [Steckdose] [Steckdose] [Steckdose]         │  Vorderwand
+   │  [Buchse] [Buchse] [Buchse]                  │  Vorderwand
    │                                              │
-   │   Verdrahtungsstreifen: Netz                 │
- ○ │   Kabeleinführung ←            → Sicherung   │ ○   kurze Wände
-   │                                              │
+ ▤ │   Verdrahtungsstreifen: Netz                 │   ▤ = Kaltgerätebuchse
+   │                                              │       mit Sicherung + Schalter
    │ ════════════ Trennsteg ═══════════════════   │
-   │                                              │
    │   [2-pol] ── SSR ── [3-pol]   auf Platine    │  Steuerseite
-   │                                              │
-   └───────────────────○──────────────────────────┘  Steuerleitung
+   └───────────────────○──────────────────────────┘
+                  Steuerleitung
 ```
 
-Die Netzseite hat ihre eigene Einführung, die Steuerleitung vom Pi ihre eigene.
-Die 3,3 V teilen sich damit keinen Weg mit 230 V.
+Ein **Trennsteg** teilt das Innere: vorn Netz, hinten die Steuerung. Die
+Steuerleitung vom Pi hat ihre eigene Einführung, damit sich 3,3 V keinen Weg mit
+230 V teilen. Das Netz braucht keine mehr — es kommt durch die Kaltgerätebuchse.
 
-Der Verdrahtungsstreifen hinter den Steckdosen ist nicht Zierde: Der
-Sicherungshalter ragt **32 mm** in das Gehäuse, die Steckdosenkörper **26 mm** —
-ohne diesen Streifen säße die Sicherung in der dritten Steckdose.
+Die Tiefe der Netzseite ergibt sich aus zwei Dingen: die Buchsenkörper ragen 50 mm
+(bzw. 35 mm) hinein, und die Kaltgerätebuchse liegt mit ihren 48,1 mm quer davor.
+Der Streifen dahinter nimmt die Verdrahtung auf.
 
-## Was gemessen werden muss
+## Dünne Wand für die Snaps
 
-Nur ein Bauteil steht fest, weil es ein Datenblatt hat:
+Ein Snap-in-Teil will eine dünne Platte, ein Netzgehäuse eine dicke Wand. Die Wand
+bleibt deshalb 3 mm und wird **nur um jede Öffnung herum** ausgedünnt:
 
-| Teil | Maß | Quelle |
+- Kaltgerätebuchse: auf **1,5 mm**, an den beiden langen Kanten
+- Euro-Buchsen: auf **2,0 mm**, an den beiden schmalen Kanten
+
+Die Taschen laufen mit 45° aus. Eine Stufe wäre eine Decke, die der Drucker
+überbrücken müsste. Und sie greifen nur dort, wo die Snaps sitzen — würde man
+ringsum ausdünnen, flössen die drei Steckdosentaschen zu einem einzigen schwachen
+Feld zusammen, weil ihr Abstand genau einer Taschenbreite entspricht.
+
+**Die Flansche bestimmen die Gehäusehöhe.** Der Steckdosenrahmen ist 44 mm hoch und
+muss auf der Wand aufliegen, nicht über ihre Kante ragen — daraus folgt die
+Innenhöhe, nicht aus dem SSR.
+
+Beim Kaltgeräteeinbau überdeckt der Flansch die Öffnung nur um **1,45 mm je Seite**.
+Der Ausschnitt muss also genau sitzen und die Wand ringsum eben sein. Die beiden
+angefasten Ecken (5 mm) an einer Schmalseite sind die Verdrehsicherung und stecken
+in der Geometrie.
+
+## Was noch gemessen werden muss
+
+| Teil | Maß | Stand |
 |---|---|---|
-| SSR AQ2A2-ZP3 | 33 × 10 × 25 mm, 4 Pins Ø0,8, Raster 7,62/12,7/5,08 | Datenblatt |
+| SSR AQ2A2-ZP3 | 33 × 10 × 25 mm, Pins 7,62/12,7/5,08 | Datenblatt |
+| Kaltgerätebuchse | Ausschnitt 48,1 × 27,6, Flansch 51 × 31, 40 mm tief | gemessen |
+| Euro-Buchse | Ausschnitt 13,2 × 34, Flansch 20 × 44, 50 mm tief | gemessen |
 | Schraubklemmen | Tiefe, Höhe | **messen** |
-| Sicherungshalter | Lochdurchmesser, Einbautiefe | **messen** |
-| Euro-Steckdosen | Ausschnitt, Einbautiefe | **messen** |
-
-Alles mit `MESSEN` markierte in `schaltbox_parts.scad` ist ein Platzhalter, der
-nicht zufällig passen wird. Besonders die Steckdosen: „Euro-Steckdose" nennt eine
-Form, keine Größe. Für runde Ausschnitte `socket_round = true` setzen.
-
-Nach dem Ändern rechnet sich das Gehäuse selbst neu — Innenmaße, Trennsteg und
-Platinenfüße folgen den Teilen.
+| Platine | Größe, Lochbild | nach Bedarf |
 
 ## Verdrahtung
 
 ```
-Netz ein (Kabelverschraubung)
-   PE ──────────────────────────┬── Steckdosen (PE)
+Kaltgerätebuchse (Netz + Sicherung 1 A + Schalter)
+   PE ──────────────────────────┬── Euro-Buchsen (PE, falls vorhanden)
                                 └── 3-pol Klemme, Pin PE  → Lampe
-   N  ──────────────────────────┬── Steckdosen (N)
+   N  ──────────────────────────┬── Euro-Buchsen (N)
                                 └── 3-pol Klemme, Pin N   → Lampe
-   L  ──── Sicherung 1 A ───────┬── Steckdosen (L)
+   L  (geschaltet, abgesichert) ┬── Euro-Buchsen (L)
                                 └── SSR Pin 1  ┐
                      SSR Pin 2 ───► 3-pol Klemme, Pin L → Lampe (geschaltet)
 
@@ -71,35 +99,33 @@ Steuerleitung vom Pi (eigene Einführung)
    GND     ──► 2-pol Klemme ──► SSR Pin 4 (−)      über Pin 3/4
 ```
 
-**PE wird nie geschaltet** und läuft durchgehend. Geschaltet wird ausschließlich
-L, und zwar nur der Zweig zur Lampe — die Steckdosen bleiben immer versorgt.
+**PE wird nie geschaltet.** Der Schalter der Kaltgerätebuchse trennt L (bei
+zweipoligen Ausführungen L und N) für alles; das SSR schaltet danach nur noch den
+Lampenzweig. Die Steckdosen bleiben versorgt, solange der Hauptschalter an ist.
 
-**Zur Sicherung:** 1 A sind bei 230 V rund 230 W. Schützt sie **nur den
-Lampenzweig** (50 W ≈ 0,22 A), ist sie großzügig und richtig. Sitzt sie dagegen
-vor allem, teilen sich Pi, Drucker und Lampe diese 230 W — der Selphy zieht beim
-Drucken kräftig, das kann eng werden. Die Zeichnung oben legt sie deshalb in den
-gemeinsamen L-Pfad; wer sie nur für die Lampe will, setzt sie zwischen Verteilung
-und SSR Pin 1.
+**Zur Sicherung:** 1 A sind bei 230 V rund 230 W, und sie sitzt in der
+Kaltgerätebuchse — also vor allem. Pi, Drucker und Lampe teilen sich diese 230 W.
+Der Selphy zieht beim Drucken kräftig; falls die Sicherung fällt, ist nicht sie zu
+klein gewählt, sondern die Summe zu groß.
 
 ## Drucken
 
-- **Kein PLA.** Es erweicht bei etwa 60 °C und brennt bereitwillig. Flammhemmendes
-  Filament mit UL94 V-0 nehmen (PC/ABS FR, ABS-FR oder PETG V0).
-- **Wandstärke 3 mm** ist die Vorgabe in `schaltbox_parts.scad` und die Untergrenze,
-  nicht ein Ziel. Eine FDM-Wand ist entlang der Schichtgrenzen porös und ist
-  elektrisch nicht das, was eine gespritzte gleicher Dicke wäre.
-- **Der Druck hält, isolieren muss etwas anderes.** Spannungsführende Teile
-  zusätzlich mit Schrumpfschlauch oder Klemmenabdeckung versehen.
-- Liegend drucken, Öffnung nach oben. Stützen braucht nur der Kragen der
-  Kabelverschraubung.
-- Schrauben: M3 selbstschneidend in die Dome, Lochdurchmesser über `screw_pilot`.
+- **Kein PLA.** Erweicht bei etwa 60 °C und brennt bereitwillig. Flammhemmendes
+  Filament mit UL94 V-0 (PC/ABS FR, ABS-FR oder PETG V0).
+- **Wandstärke 3 mm** ist die Untergrenze, nicht das Ziel — außer den ausgedünnten
+  Feldern um die Snaps, und die sind so dünn, wie die Teile es verlangen.
+- **Der Druck hält, isolieren muss etwas anderes.** Eine FDM-Wand ist entlang der
+  Schichtgrenzen porös. Spannungsführende Teile zusätzlich mit Schrumpfschlauch
+  oder Klemmenabdeckung versehen.
+- Liegend drucken, Öffnung nach oben. Die Snap-Taschen laufen mit 45° aus und
+  brauchen keine Stützen.
+- Schrauben: M3 selbstschneidend in die Dome.
 
 ## Rendern
 
 ```bash
 openscad -o unterteil.stl -D 'part="unterteil"' schaltbox.scad
 openscad -o deckel.stl    -D 'part="deckel"'    schaltbox.scad
-openscad -D 'part="explosion"' schaltbox.scad        # Ansicht mit Einbauten
+openscad -D 'part="beides"' schaltbox.scad          # mit Einbauten
+openscad -D 'part="unterteil"' -D 'socket_upright=false' -D 'connection="loeten"' schaltbox.scad
 ```
-
-`part` kennt `unterteil`, `deckel`, `beides` und `explosion`.

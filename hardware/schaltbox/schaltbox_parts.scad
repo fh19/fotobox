@@ -29,28 +29,45 @@ pcb_hole_d   = 3.2;
 pcb_inset    = 4;             // hole centres from the edges
 pcb_standoff = 6;             // board sits this high above the floor
 
-// --- Fuse holder, 5 x 20 mm, panel mount ------------------------------------
-// MESSEN: the common ones want a 12.2 mm hole and 30 mm of room behind it.
-fuse_hole_d  = 12.2;          // MESSEN
-fuse_depth   = 32;            // MESSEN: behind the panel, including the cap
-fuse_flat    = 0;             // MESSEN: >0 if the hole has an anti-turn flat
+// --- IEC inlet with fuse holder and switch, snap-in -------------------------
+// Measured on the part. This one piece replaces what used to be three: the
+// mains entry, the fuse holder and a switch. The two chamfered corners sit at
+// one short side and are the orientation key -- the part only goes in one way.
+iec_cut        = [48.1, 27.6];
+iec_flange     = [51, 31];    // the visible frame; only 1.45 mm wider per side,
+                              // so the cutout has to be accurate and the wall flat
+iec_chamfer    = 5;
+// Soldering instead of push-on connectors buys depth: 29 instead of 40 for the
+// inlet, 35 instead of 50 for the sockets. It also gives up something -- a
+// soldered joint on a flat tab is more brittle than a crimp, and this box gets
+// carried to venues. "flachstecker" is therefore the default.
+connection     = "flachstecker";   // "flachstecker" | "loeten"
+iec_depth      = (connection == "loeten") ? 29 : 40;
+iec_snap_wall  = 1.5;         // the snaps grip a wall no thicker than this
+iec_snap_edge  = "long";      // which pair of cutout edges the snaps sit on
 
-// --- Euro sockets -----------------------------------------------------------
-// MESSEN: this is the number most likely to be wrong. Two shapes are common:
-// a rectangular snap-in and a round flush socket. Set socket_round accordingly.
-socket_round  = false;        // true = round cutout of socket_cut[0] diameter
-socket_cut    = [30, 30];     // MESSEN: cutout, not the visible frame
-socket_depth  = 26;           // MESSEN: how far it reaches into the box
-socket_gap    = 10;           // free space between two cutouts
-socket_count  = 3;
+// --- Euro sockets, snap-in --------------------------------------------------
+socket_cut       = [13.2, 34];   // snaps on the narrow sides
+socket_flange    = [20, 44];     // sets the box height: the frame has to sit on
+                                 // the wall, not hang over its edge
+// Turned flat the sockets make a wide, low box instead of a narrow, tall one.
+// The plug then goes in with its pins side by side and its cable leaves
+// sideways -- worth thinking about before printing.
+socket_upright   = true;
+socket_depth     = (connection == "loeten") ? 35 : 50;
+socket_snap_wall = 2.0;
+socket_gap       = 10;        // free space between two cutouts
+socket_count     = 3;
 
-// --- Cable entries ----------------------------------------------------------
-// Mains in through a gland (that is the strain relief). The control lead gets
-// its own hole on the other side, so 3.3 V never shares a run with 230 V.
-gland_hole_d   = 16.5;        // M16, for H05VV-F 3G1.0 (~8 mm)
-gland_boss_d   = 24;
-gland_boss_len = 6;           // thicker wall so the thread has something to hold
-ctrl_hole_d    = 7.0;         // grommet for the two-wire control lead
+// A snap-in part wants a thin panel, a mains enclosure wants a thick wall. So
+// the wall stays 3 mm and is thinned only around each opening, with 45-degree
+// sides: a step there would be a ceiling the printer has to bridge.
+snap_margin      = 4;         // how far the thinned area reaches past the cutout
+
+// --- Control lead ------------------------------------------------------------
+// Its own hole on the other side of the rib, so 3.3 V never shares a run with
+// 230 V. The mains no longer needs one: it arrives through the inlet.
+ctrl_hole_d      = 7.0;
 
 // --- Print and assembly -----------------------------------------------------
 // 3 mm is the floor, not a target: an FDM wall is porous along the layer lines
