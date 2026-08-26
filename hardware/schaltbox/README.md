@@ -2,6 +2,10 @@
 
 Ein Kasten von **80 × 50 × 90 mm** zum Einbau ins Fotobox-Gehäuse.
 
+Die 50 mm Tiefe teilen sich auf: **3 mm Vorderwand + 44 mm Hohlraum + 3 mm
+Deckel**. Die Schale endet deshalb bei 44 — genau dort hören auch die Stege auf,
+und der Deckel legt sich davor, statt obendrauf zu kommen.
+
 ```
 Vorderwand   die unteren zwei Euro-Buchsen, Säule am linken Rand
 Rückwand     die dritte Buchse, genau gegenüber ihrer Position in der Säule

@@ -231,7 +231,12 @@ module pcb_holes() {
 
 module unterteil() {
     difference() {
-        translate([-wall, -wall, -wall]) cube([box[0], box[1], box[2]]);
+        // Only as deep as the box minus the lid: front wall 3 + cavity 44 +
+        // lid 3 = 50. Drawn to the full 50 the shell ran 3 mm past where the
+        // lid begins, the total came to 53, and the ribs -- which do end at the
+        // cavity -- stood back from the rear edge by exactly that.
+        translate([-wall, -wall, -wall])
+            cube([box[0], box[1] - lid_t, box[2]]);
         translate([0, 0, 0]) cube([inner[0], inner[1] + wall + 1, inner[2]]);
         front_openings();
         iec_opening();
