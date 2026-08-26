@@ -1,19 +1,25 @@
 # Schaltbox — Netzverteilung und Lampenschalter
 
-Ein Kasten von **80 × 50 × 90 mm** zum Einbau ins Fotobox-Gehäuse. Auf der
-**Vorderseite** stehen die drei Euro-Buchsen in einer Säule übereinander, an den
-**linken Rand** gerückt. Auf der **rechten Seite** steht hochkant die
-Kaltgerätebuchse — sie bringt Netzanschluss, Feinsicherung und Hauptschalter in
-einem Teil — nach oben geschoben, damit darunter eine freie Ecke bleibt. Layout nach
-`photo_2026-08-26_21-35-32.jpg`.
+Ein Kasten von **80 × 50 × 90 mm** zum Einbau ins Fotobox-Gehäuse.
 
-Der **Deckel ist die Rückseite**, mit vier kleinen Schrauben. Abgenommen liegt
-alles auf einmal offen.
+```
+Vorderwand   die unteren zwei Euro-Buchsen, Säule am linken Rand
+Rückwand     die dritte Buchse, genau gegenüber ihrer Position in der Säule
+rechte Wand  die Kaltgerätebuchse, hochkant und unten
+             (Netzanschluss + Feinsicherung + Hauptschalter in einem Teil)
+```
 
-Zwischen den Öffnungen laufen zwei **Stege** von der Vorderwand bis zur
-Rückwand. Drei Ausschnitte und die dünnen Snap-Felder daneben lassen die
-Vorderwand sonst federn; die Stege binden sie nach hinten an. Sie reichen nur
-über die Säule plus 4 mm, damit die Kanäle links und rechts frei bleiben.
+Die **Rückwand ist der Deckel** und wird von hinten mit vier M3-Schrauben in
+**Messing-Schmelzbuchsen** verschraubt; die Dome dafür sitzen in den vier Ecken.
+Laschen gibt es nicht — sie stünden nur im Weg.
+
+Zwischen der mittleren und der oberen Dose läuft ein **Steg über die gesamte
+Breite**; darauf sitzt das SSR. Ein zweiter, schmaler Steg zwischen den beiden
+vorderen Öffnungen bindet die Vorderwand nach hinten an: drei Ausschnitte und
+die dünnen Snap-Felder daneben lassen sie sonst federn.
+
+Beide Stege enden **8 mm vor dem Deckel**. Ohne diesen Schlitz käme keine Ader
+von der Buchse unten zum SSR oben.
 
 ```
 Dateien   schaltbox_parts.scad   gemessene Maße und die Vorgaben
@@ -22,48 +28,29 @@ Dateien   schaltbox_parts.scad   gemessene Maße und die Vorgaben
 
 ## Das Maß ist die Vorgabe — also wird geprüft, nicht gerechnet
 
-Die Größe ist gesetzt, also müssen sich die Teile fügen. Jeder Render sagt, was
-passt und was nicht:
-
 ```
 Aussen 80 x 50 x 90  ->  innen 74 x 44 x 84
 Verbindung loeten: Kaltgeraetebuchse 29 mm, Euro 35 mm
-Vorderseite, Dosen ragen in y (44 frei): passt
-Rechte Seite, Buchse ragt in x (74 frei): passt
-  Ausschnitt hochkant 48 hoch x 27.4 tief auf einer Flaeche 84 x 44 -> passt
-  Flansch 51 x 31 auf 90 x 50 -> passt
-Saeule: 3 Rahmen a 20 mm im Raster 26 -> 72 von 84 mm Hoehe
-  Ecke rechts unter der Buchse: 25 breit x 44 tief x 30 hoch
+Dosen ragen 35 mm in 44 mm Tiefe -> passt
+Buchse ragt 29 mm in 74 mm Breite -> passt
+  Ausschnitt hochkant 48 hoch x 27.4 tief auf 84 x 44 -> passt
+Steg auf z=54, Buchse endet bei 51 -> frei
+Ueber dem Steg, rechts der Saeule: 25 breit x 44 tief x 27.5 hoch
+  SSR allein 25 mm hoch -> passt
+  mit Platine 26.6 mm -> passt
 ```
 
-Geprüft wird auch, ob der Ausschnitt auf die **Fläche** passt und nicht nur die
-Tiefe in den Kasten. Genau das war einmal falsch herum gedreht: hochkant gehört
-die 48-mm-Seite auf die Höhe, nicht über die 44 mm Tiefe.
+**Löten ist Pflicht.** Mit Flachsteckern ragen die Dosen 50 mm in 44 mm Tiefe.
 
-### Löten ist bei dieser Tiefe Pflicht
+**Der Steg liegt so tief wie möglich**, nicht mittig: nach unten begrenzen ihn
+die Kaltgerätebuchse (endet bei z = 51) und die mittlere Dose, nach oben zählt
+jeder Millimeter für das SSR. So bleiben **27,5 mm**, und die Platine mit dem
+stehenden `AQ2A2-ZP3` braucht 26,6.
 
-Die Euro-Buchsen ragen mit Flachsteckern 50 mm hinein, innen sind in y aber nur
-**44 mm**. Gelötet sind es 35 mm, mit 9 mm Luft dahinter. `connection = "loeten"`.
-
-### Die freie Ecke rechts
-
-Weil die Säule links steht und die Buchse oben, bleibt rechts darunter ein Stück
-am Stück: **25 breit × 44 tief × 30 hoch**.
-
-```
-    liegend, SSR nach oben: groesste Platine 44 x 25 mm, Aufbau bis 30 mm
-    stehend an der Wand:    Aufbau bis 25 mm
-```
-
-| SSR | Aufbau | wie |
-|---|---|---|
-| stehend `AQ2A2-ZP3` | 29,6 mm bei `pcb_standoff = 3` | **liegend** auf dem Boden, SSR nach oben |
-| flach `AQ2A2-J-ZP3` | 16,6 mm | liegend oder stehend an der Wand |
-
-**Die Platine muss dafür anders bestückt werden.** In Reihe — Klemme, SSR,
-Klemme — ist sie rund 70 mm lang und passt in diese Ecke nicht. Mit den Klemmen
-**neben** dem SSR statt dahinter kommt man auf etwa 44 × 25 mm, und das geht.
-Das SSR selbst ist nur 33 × 10 mm, der Platz reicht also.
+**Die Platine liegt flach auf dem Steg**, ohne Abstandshalter — dafür ist kein
+Platz. Die Schrauben gehen direkt in die 5 mm Kunststoff des Stegs; die Löcher
+sind vorgesehen. Und sie muss **quer** bestückt sein: 33 mm SSR passen längs der
+Tiefe (44 mm), quer sind nur 25 frei.
 
 ## Dünne Wand für die Snaps
 
@@ -80,7 +67,8 @@ Die Taschen laufen mit 45° aus — eine Stufe wäre eine Decke, die der Drucker
 um die Öffnung ausgedünnt würde unnötig Material schwächen.
 
 Die Buchsen liegen **quer**: die 44-mm-Seite des Rahmens läuft über die Breite,
-die 20-mm-Seite stapelt sich über die Höhe. Beim
+die 20-mm-Seite stapelt sich über die Höhe. Für die Dose im Deckel gilt dasselbe,
+nur ist dort die Wand 3 mm dick statt der Gehäusewand. Beim
 Kaltgeräteeinbau überdeckt der Flansch die Öffnung nur um 1,45 mm je Seite — der
 Ausschnitt muss also sitzen. Die zwei 5-mm-Fasen sitzen an einer **Schmalseite** (27,4 mm) und sind die
 Verdrehsicherung; `iec_key_flip` dreht sie auf die andere Seite.

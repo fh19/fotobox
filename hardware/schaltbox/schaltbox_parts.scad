@@ -28,7 +28,10 @@ term_3p_w   = 3 * term_pitch + 2.2;   // ~17.4
 pcb          = [70, 30, 1.6];
 pcb_hole_d   = 3.2;
 pcb_inset    = 4;             // hole centres from the edges
-pcb_standoff = 6;             // board sits this high above the floor
+// Flat on the shelf, not on standoffs: over the shelf there are 27.5 mm and the
+// board with the upright SSR already needs 26.6. Screws go straight into the
+// shelf, which is 5 mm of solid plastic.
+pcb_standoff = 0;
 
 // --- IEC inlet with fuse holder and switch, snap-in -------------------------
 // Measured on the part. This one piece replaces what used to be three: the
@@ -60,7 +63,8 @@ socket_upright   = true;
 socket_depth     = (connection == "loeten") ? 35 : 50;
 socket_snap_wall = 2.0;
 socket_gap       = 10;        // free space between two cutouts
-socket_count     = 3;
+socket_count     = 3;         // zwei in der Vorderwand, eine in der Rueckwand
+front_count      = 2;
 
 // A snap-in part wants a thin panel, a mains enclosure wants a thick wall. So
 // the wall stays 3 mm and is thinned only around each opening, with 45-degree
@@ -103,11 +107,11 @@ wall        = 3.0;
 floor_t     = 3.0;
 lid_t       = 3.0;
 clearance   = 0.3;            // printing play, per side
-screw_d     = 3.0;            // lid screws, self-tapping into the bosses
-screw_pilot = 2.5;
-boss_d      = 8.0;
-ear_hole_d  = 4.2;            // mounting into the Fotobox enclosure
-ear_len     = 12;
+screw_d     = 3.0;            // M3, from behind through the lid
+insert_d    = 4.2;            // MESSEN: Aussendurchmesser der Messing-Schmelzbuchse
+insert_len  = 6;              // MESSEN: Laenge; der Dom bekommt etwas Zugabe
+boss_d      = 9.0;            // Dom um die Buchse herum
+screw_pilot = 2.5;            // nur noch fuer Platinenfuesse
 
 // Mains parts must keep their distance from anything a finger can reach. The
 // print is a holder, not the insulation -- sleeve the live parts as well.
