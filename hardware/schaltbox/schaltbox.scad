@@ -16,7 +16,9 @@
 
 include <schaltbox_parts.scad>
 
-part = "beides";   // "unterteil" | "deckel" | "beides"
+//part = "beides";   // "unterteil" | "deckel" | "beides"
+//part = "unterteil";// | "deckel" | "beides"
+part = "deckel";// | "beides"
 $fn = 48;
 
 // --- derived ----------------------------------------------------------------
@@ -75,6 +77,9 @@ echo(str("  Ausschnitt hochkant ", iec_cut[0], " hoch x ", iec_cut[1],
              ? "passt" : "PASST NICHT"));
 echo(str("Steg auf z=", shelf_z, ", Buchse endet bei ", iec_z + iec_cut[0] / 2,
          " -> ", shelf_ok ? "frei" : "STOSSEN ZUSAMMEN"));
+echo(str("Dom unten rechts beginnt bei y=", inner[1] - (insert_len + 1.5),
+         ", Buchsenkoerper endet bei y=", (inner[1] + iec_cut[1]) / 2, " -> ",
+         inner[1] - (insert_len + 1.5) - (inner[1] + iec_cut[1]) / 2, " mm Luft"));
 echo(str("Ueber dem Steg, rechts der Saeule: ", free_w, " breit x ", inner[1],
          " tief x ", free_z, " hoch"));
 echo(str("  SSR allein ", ssr_body[2], " mm hoch -> ",
@@ -207,11 +212,18 @@ module lid_bosses() {
     // Flush with the lid face, not past it, and short enough that the lower
     // right dome stays clear of the inlet body behind the wall.
     boss_len = insert_len + 1.5;
+    // The free end runs out at 45 degrees instead of standing there as a flat
+    // disc in mid-air. The taper sits inside the existing length -- lengthening
+    // the dome instead would push the lower right one into the inlet.
+    ch = 2;
     for (p = lid_screw_xz)
         translate([p[0], inner[1] - boss_len, p[1]])
             rotate([-90, 0, 0])
                 difference() {
-                    cylinder(d = boss_d, h = boss_len);
+                    union() {
+                        cylinder(d1 = boss_d - 2 * ch, d2 = boss_d, h = ch);
+                        translate([0, 0, ch]) cylinder(d = boss_d, h = boss_len - ch);
+                    }
                     translate([0, 0, boss_len - insert_len - 0.5])
                         cylinder(d = insert_d, h = insert_len + 1);
                 }

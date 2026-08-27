@@ -119,8 +119,15 @@ die Sicherung, ist nicht sie zu klein, sondern die Summe zu groß.
   so dünn, wie die Teile es verlangen.
 - **Der Druck hält, isolieren muss etwas anderes.** Eine FDM-Wand ist entlang der
   Schichtgrenzen porös; spannungsführende Teile zusätzlich isolieren.
-- Auf der Deckelöffnung liegend drucken. Die Snap-Taschen laufen mit 45° aus und
-  brauchen keine Stützen.
+- **Mit der Deckelöffnung nach oben drucken**, also die Vorderwand auf das Bett.
+  Dann sind alle Wände senkrecht, die Steckdosenausschnitte liegen in der
+  Bodenschicht, und die Stege stehen als senkrechte Platten.
+- Stützenfrei bleiben dabei: die **Snap-Taschen** (laufen mit 45° aus), die
+  **Schraubdome** (ihr freies Ende läuft ebenfalls schräg aus statt als Scheibe
+  in der Luft zu stehen) und die U-Aussparung.
+- Was übrig bleibt: die **Kaltgerätebuchse** überbrückt in dieser Lage 48 mm an
+  ihrer Oberkante. Das schaffen die meisten Drucker als Brücke; wer sichergehen
+  will, gibt der Öffnung dort eine Fase oder druckt sie mit Stütze.
 
 ## Rendern
 
