@@ -129,6 +129,22 @@ die Sicherung, ist nicht sie zu klein, sondern die Summe zu groß.
   ihrer Oberkante. Das schaffen die meisten Drucker als Brücke; wer sichergehen
   will, gibt der Öffnung dort eine Fase oder druckt sie mit Stütze.
 
+## Fertige STL-Dateien
+
+In `stl/` liegen beide Teile, erzeugt mit `connection = "loeten"` und sonst den
+Vorgaben aus `schaltbox_parts.scad`:
+
+| Datei | Maße | Dreiecke |
+|---|---|---|
+| `schaltbox_unterteil.stl` | 80 × 47 × 90 mm | 2534 |
+| `schaltbox_deckel.stl` | 80 × 6 × 90 mm | 1752 |
+
+Die Schale ist 47 mm tief, der Deckel 6 mm (3 mm Platte plus 3 mm Rand, der in
+das Gehäuse greift) — zusammengesetzt die geforderten 50 mm.
+
+Nach jeder Änderung an den Maßen neu erzeugen, sonst passen Datei und Doku nicht
+mehr zusammen.
+
 ## Rendern
 
 ```bash
